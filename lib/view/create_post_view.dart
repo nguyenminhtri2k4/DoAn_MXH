@@ -1,25 +1,26 @@
-// lib/view/create_post_view.dart
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:mangxahoi/constant/app_colors.dart';
+import 'package:mangxahoi/model/model_user.dart';
 import 'package:mangxahoi/viewmodel/post_view_model.dart';
 import 'package:mangxahoi/notification/notification_service.dart';
 
 class CreatePostView extends StatelessWidget {
-  const CreatePostView({super.key});
+  final UserModel currentUser;
+  const CreatePostView({super.key, required this.currentUser});
 
   @override
   Widget build(BuildContext context) {
-    // Sử dụng ChangeNotifierProvider để cung cấp PostViewModel
     return ChangeNotifierProvider(
       create: (_) => PostViewModel(),
-      child: const _CreatePostViewContent(),
+      child: _CreatePostViewContent(currentUser: currentUser),
     );
   }
 }
 
 class _CreatePostViewContent extends StatefulWidget {
-  const _CreatePostViewContent();
+  final UserModel currentUser;
+  const _CreatePostViewContent({required this.currentUser});
 
   @override
   State<_CreatePostViewContent> createState() => _CreatePostViewContentState();
@@ -34,18 +35,21 @@ class _CreatePostViewContentState extends State<_CreatePostViewContent> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Tạo bài viết mới'),
+        title: const Text('Tạo bài viết'),
         backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,
         actions: [
-          // Nút Đăng bài
           Padding(
             padding: const EdgeInsets.only(right: 8.0),
             child: TextButton(
               onPressed: viewModel.isLoading 
                   ? null 
                   : () async {
-                      final success = await viewModel.createPost(_selectedVisibility);
+                      final success = await viewModel.createPost(
+                        authorDocId: widget.currentUser.id, 
+                        visibility: _selectedVisibility
+                      );
+
                       if (success && mounted) {
                         Navigator.pop(context);
                         NotificationService().showSuccessDialog(
@@ -62,103 +66,135 @@ class _CreatePostViewContentState extends State<_CreatePostViewContent> {
                       }
                     },
               style: TextButton.styleFrom(
-                backgroundColor: viewModel.isLoading 
-                    ? AppColors.primary.withOpacity(0.5) 
-                    : AppColors.primary, // Thay đổi màu nền nút
+                backgroundColor: AppColors.primaryLight,
                 foregroundColor: AppColors.textWhite,
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                shape: RoundedRectangleBorder(
-                  borderRadius: AppRadius.mediumRadius,
-                ),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
               ),
               child: viewModel.isLoading
-                  ? const SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(
-                        color: AppColors.textWhite,
-                        strokeWidth: 2,
-                      ),
-                    )
-                  : const Text(
-                      'Đăng',
-                      style: TextStyle(fontWeight: FontWeight.bold),
-                    ),
+                  ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                  : const Text('Đăng', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
             ),
           ),
         ],
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Trường nhập nội dung
-            TextFormField(
-              controller: viewModel.contentController,
-              autofocus: true,
-              maxLines: null, // Cho phép nhiều dòng
-              keyboardType: TextInputType.multiline,
-              decoration: InputDecoration(
-                hintText: 'Bạn đang nghĩ gì?',
-                hintStyle: TextStyle(color: AppColors.textSecondary),
-                border: InputBorder.none,
-                filled: false,
-              ),
-              style: const TextStyle(fontSize: 18),
-            ),
-            const Divider(height: 30),
-
-            // Tùy chọn quyền riêng tư
-            Row(
-              children: [
-                const Icon(Icons.public, color: AppColors.textSecondary),
-                const SizedBox(width: 10),
-                const Text('Quyền riêng tư:', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
-                const Spacer(),
-                DropdownButton<String>(
-                  value: _selectedVisibility,
-                  onChanged: (String? newValue) {
-                    setState(() {
-                      _selectedVisibility = newValue!;
-                    });
-                  },
-                  items: <String>['public', 'private', 'friends']
-                      .map<DropdownMenuItem<String>>((String value) {
-                    return DropdownMenuItem<String>(
-                      value: value,
-                      child: Row(
-                        children: [
-                          Icon(_getVisibilityIcon(value)),
-                          const SizedBox(width: 8),
-                          Text(_getVisibilityText(value)),
-                        ],
+      body: Column(
+        children: [
+          Expanded(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                children: [
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      CircleAvatar(
+                        radius: 25,
+                        backgroundImage: widget.currentUser.avatar.isNotEmpty
+                            ? NetworkImage(widget.currentUser.avatar.first)
+                            : null,
+                        child: widget.currentUser.avatar.isEmpty
+                            ? const Icon(Icons.person)
+                            : null,
                       ),
-                    );
-                  }).toList(),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              widget.currentUser.name,
+                              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                            ),
+                            const SizedBox(height: 4),
+                            // ====> WIDGET CHỌN QUYỀN RIÊNG TƯ <====
+                            DropdownButton<String>(
+                              value: _selectedVisibility,
+                              underline: const SizedBox(), // Bỏ gạch chân
+                              isDense: true,
+                              items: <String>['public', 'friends', 'private']
+                                  .map<DropdownMenuItem<String>>((String value) {
+                                return DropdownMenuItem<String>(
+                                  value: value,
+                                  child: Row(
+                                    children: [
+                                      Icon(_getVisibilityIcon(value), size: 16, color: AppColors.textSecondary),
+                                      const SizedBox(width: 8),
+                                      Text(_getVisibilityText(value)),
+                                    ],
+                                  ),
+                                );
+                              }).toList(),
+                              onChanged: (String? newValue) {
+                                setState(() {
+                                  _selectedVisibility = newValue!;
+                                });
+                              },
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  TextFormField(
+                    controller: viewModel.contentController,
+                    autofocus: true,
+                    maxLines: null,
+                    keyboardType: TextInputType.multiline,
+                    decoration: const InputDecoration(
+                      hintText: 'Bạn đang nghĩ gì?',
+                      border: InputBorder.none,
+                      hintStyle: TextStyle(fontSize: 20),
+                    ),
+                    style: const TextStyle(fontSize: 20),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const Divider(height: 1),
+          // ====> CÁC NÚT CHỨC NĂNG <====
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 8.0),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                _buildActionButton(
+                  icon: Icons.photo_library,
+                  label: 'Ảnh/Video',
+                  color: Colors.green,
+                  onPressed: () {
+                    // TODO: Mở thư viện ảnh/video
+                    NotificationService().showInfoDialog(context: context, title: 'Đang phát triển', message: 'Chức năng chọn ảnh/video sẽ sớm có mặt!');
+                  },
+                ),
+                _buildActionButton(
+                  icon: Icons.person_add,
+                  label: 'Gắn thẻ',
+                  color: Colors.blue,
+                  onPressed: () {
+                    // TODO: Mở màn hình chọn bạn bè để gắn thẻ
+                    NotificationService().showInfoDialog(context: context, title: 'Đang phát triển', message: 'Chức năng gắn thẻ bạn bè sẽ sớm có mặt!');
+                  },
+                ),
+                _buildActionButton(
+                  icon: Icons.tag_faces,
+                  label: 'Cảm xúc',
+                  color: Colors.orange,
+                  onPressed: () {
+                    // TODO: Mở bảng chọn cảm xúc
+                    NotificationService().showInfoDialog(context: context, title: 'Đang phát triển', message: 'Chức năng thêm cảm xúc sẽ sớm có mặt!');
+                  },
                 ),
               ],
             ),
-            const Divider(height: 30),
-
-            // Nơi để thêm các nút thêm ảnh/video
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: [
-                _buildActionButton(Icons.photo_library, 'Ảnh/Video', () {
-                  NotificationService().showInfoDialog(context: context, title: 'Tính năng đang phát triển', message: 'Chức năng chọn ảnh/video sẽ sớm có mặt!');
-                }),
-                _buildActionButton(Icons.tag_faces, 'Cảm xúc', () {
-                  NotificationService().showInfoDialog(context: context, title: 'Tính năng đang phát triển', message: 'Chức năng thêm cảm xúc sẽ sớm có mặt!');
-                }),
-              ],
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
-  
+
+  // Helper để lấy icon tương ứng
   IconData _getVisibilityIcon(String visibility) {
     switch (visibility) {
       case 'private':
@@ -171,6 +207,7 @@ class _CreatePostViewContentState extends State<_CreatePostViewContent> {
     }
   }
 
+  // Helper để lấy text tương ứng
   String _getVisibilityText(String visibility) {
     switch (visibility) {
       case 'private':
@@ -183,11 +220,20 @@ class _CreatePostViewContentState extends State<_CreatePostViewContent> {
     }
   }
 
-  Widget _buildActionButton(IconData icon, String label, VoidCallback onPressed) {
+  // Helper để tạo nút chức năng
+  Widget _buildActionButton({
+    required IconData icon,
+    required String label,
+    required Color color,
+    required VoidCallback onPressed,
+  }) {
     return TextButton.icon(
       onPressed: onPressed,
-      icon: Icon(icon, color: AppColors.success),
+      icon: Icon(icon, color: color),
       label: Text(label, style: const TextStyle(color: AppColors.textPrimary)),
+      style: TextButton.styleFrom(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      ),
     );
   }
 }

@@ -1,4 +1,4 @@
-// lib/models/comment_model.dart
+// lib/model/model_comment.dart
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class CommentModel {

@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:mangxahoi/viewmodel/home_view_model.dart';
 import 'package:mangxahoi/constant/app_colors.dart';
+import 'package:mangxahoi/model/model_post.dart';
+import 'package:mangxahoi/view/widgets/post_widget.dart';
 
 class HomeView extends StatelessWidget {
   const HomeView({super.key});
@@ -9,7 +11,7 @@ class HomeView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ChangeNotifierProvider(
-      create: (_) => HomeViewModel()..loadCurrentUser(),
+      create: (_) => HomeViewModel(),
       child: const _HomeViewContent(),
     );
   }
@@ -28,11 +30,11 @@ class _HomeViewContent extends StatelessWidget {
         backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,
       ),
-      // FAB để đăng bài
-      floatingActionButton: FloatingActionButton( // <<<<< THÊM FAB
+      floatingActionButton: FloatingActionButton(
         onPressed: () {
-          // Điều hướng đến màn hình tạo bài viết
-          Navigator.pushNamed(context, '/create_post');
+          if (vm.currentUserData != null) {
+            Navigator.pushNamed(context, '/create_post', arguments: vm.currentUserData);
+          }
         },
         backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,
@@ -42,71 +44,27 @@ class _HomeViewContent extends StatelessWidget {
         child: ListView(
           padding: EdgeInsets.zero,
           children: [
-            // Header với SafeArea (giữ nguyên)
             Container(
-              width: double.infinity,
-              decoration: const BoxDecoration(
-                color: AppColors.primary,
-              ),
-              child: SafeArea(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      // Avatar column
-                      CircleAvatar(
-                        radius: 35,
-                        backgroundColor: Colors.white,
-                        backgroundImage: vm.currentUserData?.avatar.isNotEmpty == true
-                            ? NetworkImage(vm.currentUserData!.avatar.first)
-                            : null,
-                        child: vm.currentUserData?.avatar.isEmpty ?? true
-                            ? const Icon(Icons.person, size: 40, color: Colors.blue)
-                            : null,
-                      ),
-                      const SizedBox(width: 16),
-                      // Info column
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(
-                              vm.currentUserData?.name ?? 'Người dùng',
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              vm.currentUserData?.email ?? '',
-                              style: const TextStyle(
-                                color: Colors.white70,
-                                fontSize: 14,
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
+              padding: const EdgeInsets.only(top: 40, bottom: 20),
+              decoration: const BoxDecoration(color: AppColors.primary),
+              child: Column(
+                children: [
+                   CircleAvatar(
+                      radius: 35,
+                      backgroundColor: Colors.white,
+                      backgroundImage: vm.currentUserData?.avatar.isNotEmpty == true
+                          ? NetworkImage(vm.currentUserData!.avatar.first) : null,
+                      child: vm.currentUserData?.avatar.isEmpty ?? true
+                          ? const Icon(Icons.person, size: 40, color: Colors.blue) : null,
+                    ),
+                  const SizedBox(height: 10),
+                  Text(vm.currentUserData?.name ?? 'Đang tải...', style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 4),
+                  Text(vm.currentUserData?.email ?? '', style: const TextStyle(color: Colors.white70, fontSize: 14)),
+                ],
               ),
             ),
-            ListTile(
-              leading: const Icon(Icons.home),
-              title: const Text('Trang chủ'),
-              onTap: () {
-                Navigator.pop(context);
-              },
-            ),
+            ListTile(leading: const Icon(Icons.home), title: const Text('Trang chủ'), onTap: () => Navigator.pop(context)),
             ListTile(
               leading: const Icon(Icons.person),
               title: const Text('Thông tin cá nhân'),
@@ -115,43 +73,38 @@ class _HomeViewContent extends StatelessWidget {
                 Navigator.pushNamed(context, '/profile');
               },
             ),
-            ListTile( // <<<<< THÊM NÚT ĐĂNG BÀI VÀO DRAWER
-              leading: const Icon(Icons.edit_note, color: AppColors.primary), 
-              title: const Text('Tạo bài viết'),
-              onTap: () {
-                Navigator.pop(context);
-                Navigator.pushNamed(context, '/create_post');
-              },
-            ),
             const Divider(),
-            ListTile(
-              leading: const Icon(Icons.logout, color: Colors.red),
-              title: const Text('Đăng xuất'),
-              onTap: () => vm.signOut(context),
-            ),
+            ListTile(leading: const Icon(Icons.logout, color: Colors.red), title: const Text('Đăng xuất'), onTap: () => vm.signOut(context)),
           ],
         ),
       ),
-      body: Center(
-        child: vm.isLoading
-            ? const CircularProgressIndicator()
-            : Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Text(
-                    'Chào mừng bạn đến với Mạng Xã Hội!',
-                    style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 20),
-                  if (vm.currentUserData != null) ...[
-                    Text('👤 Tên: ${vm.currentUserData!.name}'),
-                    Text('📧 Email: ${vm.currentUserData!.email}'),
-                    Text('🆔 UID: ${vm.currentUserData!.uid}'),
-                  ],
-                ],
-              ),
-      ),
+      body: (vm.isLoading || vm.currentUserData == null)
+          ? const Center(child: CircularProgressIndicator())
+          : StreamBuilder<List<PostModel>>(
+              stream: vm.postsStream,
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+                if (snapshot.hasError) {
+                  return Center(child: Text('Lỗi tải bài đăng: ${snapshot.error}'));
+                }
+                if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                  return const Center(child: Text('Chưa có bài viết nào.'));
+                }
+                final posts = snapshot.data!;
+                return ListView.builder(
+                  padding: const EdgeInsets.all(8.0),
+                  itemCount: posts.length,
+                  itemBuilder: (context, index) {
+                    return PostWidget(
+                      post: posts[index],
+                      currentUserDocId: vm.currentUserData!.id,
+                    );
+                  },
+                );
+              },
+            ),
     );
   }
 }

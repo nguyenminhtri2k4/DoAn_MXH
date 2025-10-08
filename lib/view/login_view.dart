@@ -33,7 +33,7 @@ class _LoginFormState extends State<LoginForm> {
     super.initState();
     // Pre-fill with test credentials for development
     _emailController.text = 'tien@gmail.com';
-    _passwordController.text = 'your_password_here';
+    _passwordController.text = 'Susu@123';
   }
 
   @override
@@ -220,15 +220,15 @@ Widget build(BuildContext context) {
           ),
         ),
 
-        // 🟢 Logo sát góc trái trên, hiển thị to rõ
+        
           Positioned(
-            top: -50, // sát mép trên
-            left: -40, // sát mép trái
+            top: -50, 
+            left: -40, 
             child: Image.asset(
               'assets/logosybau.png',
-              height: 250, // 🔥 logo to hơn
-              width: 250,  // giúp giữ tỉ lệ chuẩn
-              fit: BoxFit.contain, // tránh méo hình
+              height: 250, 
+              width: 250,  
+              fit: BoxFit.contain, 
             ),
           ),
       ],
