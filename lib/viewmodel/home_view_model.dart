@@ -1,30 +1,42 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:mangxahoi/model/model_user.dart';
+import 'package:mangxahoi/model/model_post.dart';
 import 'package:mangxahoi/request/user_request.dart';
+import 'package:mangxahoi/request/post_request.dart';
 
 class HomeViewModel extends ChangeNotifier {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final UserRequest _userRequest = UserRequest();
+  final PostRequest _postRequest = PostRequest();
 
   UserModel? currentUserData;
-  bool isLoading = false;
+  Stream<List<PostModel>>? postsStream;
+  bool isLoading = true;
 
-  /// 📥 Lấy thông tin người dùng hiện tại
+  HomeViewModel() {
+    loadCurrentUser();
+  }
+
   Future<void> loadCurrentUser() async {
-    try {
-      isLoading = true;
-      notifyListeners();
+    isLoading = true;
+    notifyListeners();
 
+    try {
       final firebaseUser = _auth.currentUser;
       if (firebaseUser == null) {
         currentUserData = null;
+        isLoading = false;
+        notifyListeners();
         return;
       }
 
-      // Lấy thông tin từ Firestore
       final user = await _userRequest.getUserByUid(firebaseUser.uid);
       currentUserData = user;
+
+      if (currentUserData != null) {
+        _loadPosts();
+      }
     } catch (e) {
       print('❌ Lỗi khi tải thông tin người dùng: $e');
     } finally {
@@ -33,7 +45,10 @@ class HomeViewModel extends ChangeNotifier {
     }
   }
 
-  /// 🚪 Đăng xuất tài khoản
+  void _loadPosts() {
+    postsStream = _postRequest.getPosts();
+  }
+
   Future<void> signOut(BuildContext context) async {
     try {
       await _auth.signOut();
