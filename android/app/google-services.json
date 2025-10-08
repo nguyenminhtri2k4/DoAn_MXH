@@ -1,0 +1,30 @@
+{
+  "project_info": {
+    "project_number": "55399679019",
+    "firebase_url": "https://doanmxh-1015e-default-rtdb.asia-southeast1.firebasedatabase.app",
+    "project_id": "doanmxh-1015e",
+    "storage_bucket": "doanmxh-1015e.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:55399679019:android:d60be671725672b6ebd66e",
+        "android_client_info": {
+          "package_name": "com.example.mangxahoi"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAyX-4sSM3WybAG1C1LNnPRcjqiYb1KjK8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
