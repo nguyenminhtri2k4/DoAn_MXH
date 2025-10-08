@@ -28,11 +28,21 @@ class _HomeViewContent extends StatelessWidget {
         backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,
       ),
+      // FAB để đăng bài
+      floatingActionButton: FloatingActionButton( // <<<<< THÊM FAB
+        onPressed: () {
+          // Điều hướng đến màn hình tạo bài viết
+          Navigator.pushNamed(context, '/create_post');
+        },
+        backgroundColor: AppColors.primary,
+        foregroundColor: Colors.white,
+        child: const Icon(Icons.edit),
+      ),
       drawer: Drawer(
         child: ListView(
           padding: EdgeInsets.zero,
           children: [
-            // Header với SafeArea
+            // Header với SafeArea (giữ nguyên)
             Container(
               width: double.infinity,
               decoration: const BoxDecoration(
@@ -103,6 +113,14 @@ class _HomeViewContent extends StatelessWidget {
               onTap: () {
                 Navigator.pop(context);
                 Navigator.pushNamed(context, '/profile');
+              },
+            ),
+            ListTile( // <<<<< THÊM NÚT ĐĂNG BÀI VÀO DRAWER
+              leading: const Icon(Icons.edit_note, color: AppColors.primary), 
+              title: const Text('Tạo bài viết'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.pushNamed(context, '/create_post');
               },
             ),
             const Divider(),
