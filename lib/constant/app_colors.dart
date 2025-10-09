@@ -37,6 +37,10 @@ class AppColors {
   static const Color icon = textSecondary;
   static const Color iconActive = primary;
 
+ // ==================== ASSETS PATHS ====================
+  static const String logosybau = 'assets/logosybau.png';
+
+  
   // ==================== DIVIDERS ====================
   static const Color divider = Color(0xFFE4E6EB);  // Light gray line
   static const Color border = Color(0xFFCED0D4);   // Border

@@ -26,10 +26,17 @@ class _HomeViewContent extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Trang chủ'),
-        backgroundColor: AppColors.primary,
-        foregroundColor: Colors.white,
-      ),
+      title: AppColors.logosybau.isNotEmpty
+          ? Image.asset(
+              AppColors.logosybau,
+              height: 200, // 🔼 tăng từ 60 → 80 hoặc 100 tuỳ logo
+              fit: BoxFit.contain,
+            )
+          : const Text('Mạng Xã Hội'),
+      centerTitle: true,
+      backgroundColor: AppColors.background,
+      foregroundColor: Colors.black,
+    ),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
           if (vm.currentUserData != null) {
@@ -94,7 +101,7 @@ class _HomeViewContent extends StatelessWidget {
                 }
                 final posts = snapshot.data!;
                 return ListView.builder(
-                  padding: const EdgeInsets.all(8.0),
+                  padding: const EdgeInsets.symmetric(vertical: 8.0),
                   itemCount: posts.length,
                   itemBuilder: (context, index) {
                     return PostWidget(
