@@ -29,13 +29,24 @@ class _HomeViewContent extends StatelessWidget {
       title: AppColors.logosybau.isNotEmpty
           ? Image.asset(
               AppColors.logosybau,
-              height: 200, // 🔼 tăng từ 60 → 80 hoặc 100 tuỳ logo
+              height: 200,
               fit: BoxFit.contain,
             )
           : const Text('Mạng Xã Hội'),
       centerTitle: true,
       backgroundColor: AppColors.background,
       foregroundColor: Colors.black,
+       // ===> THÊM ACTIONS (Kính lúp) <===
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.search, size: 28, color: AppColors.textPrimary), // Biểu tượng kính lúp màu đen
+            onPressed: () {
+              // Chuyển hướng đến trang tìm kiếm
+              Navigator.pushNamed(context, '/search'); 
+            },
+          ),
+          const SizedBox(width: 8),
+        ],
     ),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
@@ -72,6 +83,16 @@ class _HomeViewContent extends StatelessWidget {
               ),
             ),
             ListTile(leading: const Icon(Icons.home), title: const Text('Trang chủ'), onTap: () => Navigator.pop(context)),
+            // ===> THÊM NÚT BẠN BÈ <===
+            ListTile(
+              leading: const Icon(Icons.people),
+              title: const Text('Bạn bè'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.pushNamed(context, '/friends'); // Chuyển đến trang FriendsView
+              },
+            ),
+            
             ListTile(
               leading: const Icon(Icons.person),
               title: const Text('Thông tin cá nhân'),

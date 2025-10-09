@@ -9,6 +9,8 @@ import 'package:mangxahoi/view/home_view.dart';
 import 'package:mangxahoi/authanet/firestore_listener.dart';
 import 'package:mangxahoi/view/profile_view.dart';
 import 'package:mangxahoi/view/create_post_view.dart';
+import 'package:mangxahoi/view/search_view.dart'; 
+import 'package:mangxahoi/view/friends_view.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -43,11 +45,12 @@ class MyApp extends StatelessWidget {
           '/register': (context) => const RegisterView(),
           '/home': (context) => const HomeView(),
           '/profile': (context) => const ProfileView(),
-          // Route được cập nhật để nhận UserModel
           '/create_post': (context) {
             final user = ModalRoute.of(context)!.settings.arguments as UserModel;
             return CreatePostView(currentUser: user);
           },
+          '/search': (context) => const SearchView(), 
+          '/friends': (context) => const FriendsView(),
         },
       ),
     );
