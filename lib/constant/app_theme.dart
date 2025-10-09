@@ -29,7 +29,7 @@ class AppTheme {
       
       // App Bar Theme
       appBarTheme: const AppBarTheme(
-        backgroundColor: AppColors.card,
+        backgroundColor: AppColors.background,
         foregroundColor: AppColors.textPrimary,
         elevation: 0,
         centerTitle: false,
@@ -51,7 +51,7 @@ class AppTheme {
       
       // Card Theme
       cardTheme: CardTheme(
-        color: AppColors.card,
+        color: AppColors.backgroundLight,
         elevation: 0,
         shape: RoundedRectangleBorder(
           borderRadius: AppRadius.mediumRadius,

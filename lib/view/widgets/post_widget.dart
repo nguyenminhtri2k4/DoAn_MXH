@@ -23,16 +23,12 @@ class PostWidget extends StatelessWidget {
     final author = context.select<FirestoreListener, UserModel?>(
       (listener) => listener.getUserById(post.authorId),
     );
-
-    // ===> THAY ĐỔI CỐT LÕI <===
-    // Thay vì dùng Consumer, chúng ta sẽ tạo và sử dụng ViewModel trực tiếp
-    // Điều này đảm bảo mỗi PostWidget có một ViewModel riêng biệt, không bị nhầm lẫn
+ 
     return ChangeNotifierProvider(
-      // Sử dụng key để Flutter biết rằng đây là một Provider mới cho mỗi bài đăng khác nhau
       key: ValueKey(post.id),
       create: (_) => PostInteractionViewModel(post.id),
       child: Card(
-        margin: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 4.0),
+        margin: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 0.0),
         elevation: 1,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         child: Padding(
@@ -49,7 +45,6 @@ class PostWidget extends StatelessWidget {
                 ),
               _buildPostStats(),
               const Divider(),
-              // Truyền trực tiếp context có chứa ViewModel xuống cho _buildActionButtons
               Builder(
                 builder: (BuildContext innerContext) {
                   return _buildActionButtons(innerContext);
