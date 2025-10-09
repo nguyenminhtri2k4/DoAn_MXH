@@ -140,7 +140,7 @@ class _ProfileContent extends StatelessWidget {
               children: [
                 _buildStatItem('Bài viết', vm.user!.posterList.length.toString()),
                 _buildStatItem('Người theo dõi', vm.user!.followerCount.toString()),
-                _buildStatItem('Đang theo dõi', vm.user!.followingCount.toString()),
+                _buildStatItem('Bạn Bè', vm.user!.followingCount.toString()),
               ],
             ),
           ),
