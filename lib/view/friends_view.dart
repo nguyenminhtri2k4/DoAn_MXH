@@ -1,3 +1,4 @@
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:mangxahoi/viewmodel/friends_view_model.dart';
@@ -43,47 +44,49 @@ class _FriendsViewContent extends StatelessWidget {
           ),
         ],
       ),
-      body: vm.isLoading
-          ? const Center(child: CircularProgressIndicator())
-          // Kiểm tra incomingRequestsStream có null không trước khi render SingleChildScrollView
-          : (vm.incomingRequestsStream == null) 
-              ? const Center(child: Text('Đang chờ dữ liệu người dùng...'))
-              : SingleChildScrollView(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // ==================================
-                  // === PHẦN 1: LỜI MỜI KẾT BẠN (INCOMING - toUserId) ===
-                  // ==================================
-                  _buildRequestSection(
-                    context,
-                    title: 'Lời mời kết bạn',
-                    stream: vm.incomingRequestsStream!,
-                    vm: vm,
-                    isIncoming: true,
-                  ),
-                  const SizedBox(height: 20),
-                  
-                  // ==================================
-                  // === PHẦN 2: LỜI MỜI ĐÃ GỬI (SENT - fromUserId) ===
-                  // ==================================
-                  _buildRequestSection(
-                    context,
-                    title: 'Lời mời đã gửi',
-                    stream: vm.sentRequestsStream!,
-                    vm: vm,
-                    isIncoming: false,
-                  ),
+      body: SafeArea( // Thêm SafeArea ở đây
+        child: vm.isLoading
+            ? const Center(child: CircularProgressIndicator())
+            // Kiểm tra incomingRequestsStream có null không trước khi render SingleChildScrollView
+            : (vm.incomingRequestsStream == null) 
+                ? const Center(child: Text('Đang chờ dữ liệu người dùng...'))
+                : SingleChildScrollView(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // ==================================
+                    // === PHẦN 1: LỜI MỜI KẾT BẠN (INCOMING - toUserId) ===
+                    // ==================================
+                    _buildRequestSection(
+                      context,
+                      title: 'Lời mời kết bạn',
+                      stream: vm.incomingRequestsStream!,
+                      vm: vm,
+                      isIncoming: true,
+                    ),
+                    const SizedBox(height: 20),
+                    
+                    // ==================================
+                    // === PHẦN 2: LỜI MỜI ĐÃ GỬI (SENT - fromUserId) ===
+                    // ==================================
+                    _buildRequestSection(
+                      context,
+                      title: 'Lời mời đã gửi',
+                      stream: vm.sentRequestsStream!,
+                      vm: vm,
+                      isIncoming: false,
+                    ),
 
-                  // Thêm phần "Những người bạn có thể biết" 
-                  const SizedBox(height: 20),
-                  const Text('Những người bạn có thể biết', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                  const Divider(),
-                  // ... (Placeholder cho Gợi ý bạn bè)
-                ],
+                    // Thêm phần "Những người bạn có thể biết" 
+                    const SizedBox(height: 20),
+                    const Text('Những người bạn có thể biết', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                    const Divider(),
+                    // ... (Placeholder cho Gợi ý bạn bè)
+                  ],
+                ),
               ),
-            ),
+      ),
     );
   }
 
