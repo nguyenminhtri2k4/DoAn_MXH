@@ -7,14 +7,20 @@ import 'package:mangxahoi/model/model_friend_request.dart';
 import 'package:mangxahoi/authanet/firestore_listener.dart';
 import 'package:mangxahoi/model/model_user.dart';
 import 'package:mangxahoi/model/model_friend.dart';
+import 'package:mangxahoi/request/friend_request_manager.dart';
 
 class FriendsView extends StatelessWidget {
   const FriendsView({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider(
-      create: (context) => FriendsViewModel(context.read<FirestoreListener>()),
+    return MultiProvider(
+      providers: [
+        Provider<FriendRequestManager>(create: (_) => FriendRequestManager()),
+        ChangeNotifierProvider(
+          create: (context) => FriendsViewModel(context.read<FirestoreListener>()),
+        ),
+      ],
       child: DefaultTabController(
         length: 2,
         child: Scaffold(
@@ -53,7 +59,6 @@ class FriendsView extends StatelessWidget {
   }
 }
 
-// _SuggestionsTab và các hàm con không thay đổi
 class _SuggestionsTab extends StatelessWidget {
   const _SuggestionsTab();
 
@@ -242,8 +247,6 @@ class _SuggestionsTab extends StatelessWidget {
   }
 }
 
-
-// Widget cho tab "Tất cả bạn bè" (ĐÃ CẬP NHẬT HOÀN TOÀN)
 class _AllFriendsTab extends StatefulWidget {
   const _AllFriendsTab();
 
@@ -253,96 +256,91 @@ class _AllFriendsTab extends StatefulWidget {
 
 class _AllFriendsTabState extends State<_AllFriendsTab> {
   final _searchController = TextEditingController();
-  late Stream<List<UserModel>> _friendsStream;
-
-  @override
-  void initState() {
-    super.initState();
-    _searchController.addListener(() => setState(() {}));
-
-    // Lấy viewModel và khởi tạo stream
+  
+  void _showFriendOptions(BuildContext context, UserModel friend) {
     final vm = context.read<FriendsViewModel>();
-    if (vm.currentUserDocId != null) {
-      _friendsStream = _getFriendsStream(vm.currentUserDocId!);
-    } else {
-      // Nếu chưa có ID, tạo một stream rỗng
-      _friendsStream = Stream.value([]);
-    }
-  }
+    final friendRequestManager = context.read<FriendRequestManager>();
 
-  // Hàm tạo stream để lấy danh sách bạn bè
-  Stream<List<UserModel>> _getFriendsStream(String userId) {
-    final firestore = FirebaseFirestore.instance;
-    final listener = context.read<FirestoreListener>();
-
-    // Query 1: Tìm document mà user hiện tại là user1
-    Stream<QuerySnapshot> stream1 = firestore
-        .collection('Friend')
-        .where('user1', isEqualTo: userId)
-        .where('status', isEqualTo: 'accepted')
-        .snapshots();
-
-    // Query 2: Tìm document mà user hiện tại là user2
-    Stream<QuerySnapshot> stream2 = firestore
-        .collection('Friend')
-        .where('user2', isEqualTo: userId)
-        .where('status', isEqualTo: 'accepted')
-        .snapshots();
-    
-    // Kết hợp kết quả từ hai stream
-    return Stream<List<UserModel>>.multi((controller) {
-      final Set<String> friendIds = {};
-      
-      void processSnapshots(List<QueryDocumentSnapshot> docs) {
-        for (var doc in docs) {
-          final friendData = FriendModel.fromMap(doc.id, doc.data() as Map<String, dynamic>);
-          friendIds.add(friendData.user1 == userId ? friendData.user2 : friendData.user1);
-        }
-
-        final userModels = friendIds
-            .map((id) => listener.getUserById(id))
-            .where((user) => user != null)
-            .cast<UserModel>()
-            .toList();
-        userModels.sort((a,b) => a.name.compareTo(b.name));
-        controller.add(userModels);
-      }
-
-      final sub1 = stream1.listen((snapshot) => processSnapshots(snapshot.docs));
-      final sub2 = stream2.listen((snapshot) => processSnapshots(snapshot.docs));
-
-      controller.onCancel = () {
-        sub1.cancel();
-        sub2.cancel();
-      };
-    });
+    showModalBottomSheet(
+      context: context,
+      builder: (context) {
+        return Wrap(
+          children: <Widget>[
+            ListTile(
+              leading: const Icon(Icons.person_remove, color: Colors.red),
+              title: const Text('Hủy kết bạn'),
+              onTap: () async {
+                Navigator.pop(context);
+                await friendRequestManager.unfriend(vm.currentUserDocId!, friend.id);
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Đã hủy kết bạn với ${friend.name}')),
+                  );
+                }
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.block, color: Colors.black),
+              title: Text('Chặn ${friend.name}'),
+              onTap: () async {
+                Navigator.pop(context);
+                await friendRequestManager.blockUser(vm.currentUserDocId!, friend.id);
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Đã chặn ${friend.name}')),
+                  );
+                }
+              },
+            ),
+          ],
+        );
+      },
+    );
   }
   
   @override
   Widget build(BuildContext context) {
+    final vm = context.watch<FriendsViewModel>();
+    final listener = context.watch<FirestoreListener>();
+
+    if (vm.currentUserDocId == null) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16.0),
       child: Column(
         children: [
           const SizedBox(height: 16),
-          Expanded(
-            child: StreamBuilder<List<UserModel>>(
-              stream: _friendsStream,
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting && !snapshot.hasData) {
-                  return const Center(child: CircularProgressIndicator());
-                }
-                if (snapshot.hasError) {
-                  return const Center(child: Text('Lỗi tải danh sách bạn bè.'));
-                }
+          StreamBuilder<DocumentSnapshot>(
+            stream: FirebaseFirestore.instance.collection('User').doc(vm.currentUserDocId).snapshots(),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Expanded(child: Center(child: CircularProgressIndicator()));
+              }
+              if (snapshot.hasError) {
+                return const Expanded(child: Center(child: Text('Lỗi tải danh sách bạn bè.')));
+              }
+              if (!snapshot.hasData || !snapshot.data!.exists) {
+                return const Expanded(child: Center(child: Text('Không tìm thấy dữ liệu người dùng.')));
+              }
 
-                final allFriends = snapshot.data ?? [];
-                final query = _searchController.text.toLowerCase();
-                final filteredFriends = allFriends
-                    .where((friend) => friend.name.toLowerCase().contains(query))
-                    .toList();
+              final currentUser = UserModel.fromFirestore(snapshot.data!);
+              final friendIds = currentUser.friends;
 
-                return Column(
+              final allFriends = friendIds
+                  .map((id) => listener.getUserById(id))
+                  .where((user) => user != null)
+                  .cast<UserModel>()
+                  .toList();
+                  
+              final query = _searchController.text.toLowerCase();
+              final filteredFriends = allFriends
+                  .where((friend) => friend.name.toLowerCase().contains(query))
+                  .toList();
+
+              return Expanded(
+                child: Column(
                   children: [
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -384,16 +382,16 @@ class _AllFriendsTabState extends State<_AllFriendsTab> {
                                   title: Text(friend.name, style: const TextStyle(fontWeight: FontWeight.bold)),
                                   trailing: IconButton(
                                     icon: const Icon(Icons.more_horiz),
-                                    onPressed: () {},
+                                    onPressed: () => _showFriendOptions(context, friend),
                                   ),
                                 );
                               },
                             ),
                     ),
                   ],
-                );
-              },
-            ),
+                ),
+              );
+            },
           ),
         ],
       ),
