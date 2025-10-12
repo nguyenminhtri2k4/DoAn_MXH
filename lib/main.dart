@@ -11,6 +11,8 @@ import 'package:mangxahoi/view/profile_view.dart';
 import 'package:mangxahoi/view/create_post_view.dart';
 import 'package:mangxahoi/view/search_view.dart'; 
 import 'package:mangxahoi/view/friends_view.dart';
+// THÊM IMPORT NÀY
+import 'package:mangxahoi/view/blocked_list_view.dart'; 
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -51,6 +53,8 @@ class MyApp extends StatelessWidget {
           },
           '/search': (context) => const SearchView(), 
           '/friends': (context) => const FriendsView(),
+          // THÊM ROUTE NÀY
+          '/blocked_list': (context) => const BlockedListView(), 
         },
       ),
     );

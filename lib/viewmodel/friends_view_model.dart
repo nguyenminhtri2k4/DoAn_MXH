@@ -1,4 +1,3 @@
-
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:mangxahoi/model/model_friend_request.dart';
@@ -20,7 +19,6 @@ class FriendsViewModel extends ChangeNotifier {
   bool _isLoading = true;
   String? _errorMessage;
 
-  // Getters
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
   String? get currentUserDocId => _currentUserDocId;
@@ -31,7 +29,7 @@ class FriendsViewModel extends ChangeNotifier {
 
   void _initialize() {
     _listener.addListener(_onDataUpdated);
-    _onDataUpdated(); // Tải dữ liệu lần đầu
+    _onDataUpdated();
   }
 
   void _onDataUpdated() {
@@ -44,15 +42,14 @@ class FriendsViewModel extends ChangeNotifier {
     }
 
     final newCurrentUser = _listener.getUserByAuthUid(firebaseUser.uid);
-    
+
     if (newCurrentUser != null && _currentUser?.id != newCurrentUser.id) {
       _currentUser = newCurrentUser;
       _currentUserDocId = _currentUser!.id;
 
-      // Khởi tạo stream chỉ một lần
       incomingRequestsStream ??= _requestManager.getIncomingRequests(_currentUserDocId!);
       sentRequestsStream ??= _requestManager.getSentRequests(_currentUserDocId!);
-      
+
       if (_isLoading) {
         _isLoading = false;
       }
@@ -63,7 +60,6 @@ class FriendsViewModel extends ChangeNotifier {
   Future<void> acceptRequest(FriendRequestModel request) async {
     try {
       await _requestManager.acceptRequest(request);
-      // FirestoreListener sẽ tự động cập nhật UI
     } catch (e) {
       _errorMessage = 'Lỗi chấp nhận lời mời: $e';
       notifyListeners();

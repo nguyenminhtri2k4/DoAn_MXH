@@ -7,6 +7,7 @@ import 'package:mangxahoi/model/model_post.dart';
 import 'package:mangxahoi/view/widgets/post_widget.dart';
 import 'package:mangxahoi/view/friends_view.dart';
 import 'package:mangxahoi/view/profile_view.dart';
+import 'package:mangxahoi/view/blocked_list_view.dart'; 
 
 // Placeholder for Video and Notification views with SafeArea
 class VideoView extends StatelessWidget {
@@ -217,6 +218,14 @@ class _HomeViewContentState extends State<_HomeViewContent> {
               onTap: () {
                 Navigator.pop(context);
                 _onTabTapped(4);
+              },
+            ),
+              ListTile(
+              leading: const Icon(Icons.block),
+              title: const Text('Danh sách chặn'),
+              onTap: () {
+                Navigator.pop(context); // Đóng Drawer trước
+                Navigator.pushNamed(context, '/blocked_list');
               },
             ),
             const Divider(),
