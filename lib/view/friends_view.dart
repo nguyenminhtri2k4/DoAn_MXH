@@ -9,8 +9,15 @@ import 'package:mangxahoi/model/model_user.dart';
 import 'package:mangxahoi/model/model_friend.dart';
 import 'package:mangxahoi/request/friend_request_manager.dart';
 
-class FriendsView extends StatelessWidget {
+class FriendsView extends StatefulWidget {
   const FriendsView({super.key});
+
+  @override
+  State<FriendsView> createState() => _FriendsViewState();
+}
+
+class _FriendsViewState extends State<FriendsView> {
+  int _selectedIndex = 0;
 
   @override
   Widget build(BuildContext context) {
@@ -21,37 +28,85 @@ class FriendsView extends StatelessWidget {
           create: (context) => FriendsViewModel(context.read<FirestoreListener>()),
         ),
       ],
-      child: DefaultTabController(
-        length: 2,
-        child: Scaffold(
-          appBar: AppBar(
-            title: const Text('Bạn bè', style: TextStyle(fontWeight: FontWeight.bold)),
-            backgroundColor: AppColors.background,
-            elevation: 1,
-            actions: [
-              IconButton(
-                icon: const Icon(Icons.search, color: AppColors.textPrimary),
-                onPressed: () => Navigator.pushNamed(context, '/search'),
+      child: Scaffold(
+        backgroundColor: AppColors.background,
+        appBar: AppBar(
+          title: const Text('Bạn bè', style: TextStyle(fontWeight: FontWeight.bold)),
+          backgroundColor: AppColors.background,
+          elevation: 0,
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.search, color: AppColors.textPrimary),
+              onPressed: () => Navigator.pushNamed(context, '/search'),
+            ),
+          ],
+        ),
+        body: SafeArea(
+          child: Column(
+            children: [
+              // Custom Chip-style Tab Bar
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                child: SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    children: [
+                      _buildTabChip(
+                        label: 'Gợi ý',
+                        isSelected: _selectedIndex == 0,
+                        onTap: () => setState(() => _selectedIndex = 0),
+                      ),
+                      const SizedBox(width: 10),
+                      _buildTabChip(
+                        label: 'Bạn bè',
+                        isSelected: _selectedIndex == 1,
+                        onTap: () => setState(() => _selectedIndex = 1),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              // Tab Content
+              Expanded(
+                child: IndexedStack(
+                  index: _selectedIndex,
+                  children: const [
+                    _SuggestionsTab(),
+                    _AllFriendsTab(),
+                  ],
+                ),
               ),
             ],
-            bottom: const TabBar(
-              labelColor: AppColors.primary,
-              unselectedLabelColor: AppColors.textSecondary,
-              indicatorColor: AppColors.primary,
-              indicatorWeight: 3.0,
-              tabs: [
-                Tab(text: 'Gợi ý'),
-                Tab(text: 'Tất cả bạn bè'),
-              ],
-            ),
           ),
-          body: const SafeArea(
-            child: TabBarView(
-              children: [
-                _SuggestionsTab(),
-                _AllFriendsTab(),
-              ],
-            ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTabChip({
+    required String label,
+    required bool isSelected,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
+        decoration: BoxDecoration(
+          color: isSelected ? AppColors.primary : Colors.grey[200],
+          borderRadius: BorderRadius.circular(25),
+          border: Border.all(
+            color: isSelected ? AppColors.primary : Colors.grey[300]!,
+            width: 1.5,
+          ),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            color: isSelected ? Colors.white : Colors.grey[700],
+            fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+            fontSize: 14,
           ),
         ),
       ),

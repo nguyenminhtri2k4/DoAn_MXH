@@ -268,12 +268,12 @@ class _HomeViewContentState extends State<_HomeViewContent> {
                   label: 'Bạn bè',
                 ),
                 BottomNavigationBarItem(
-                  icon: Icon(Icons.notifications),
-                  label: 'Thông báo',
-                ),
-                 BottomNavigationBarItem(
                   icon: Icon(Icons.ondemand_video),
                   label: 'Video',
+                ),
+                BottomNavigationBarItem(
+                  icon: Icon(Icons.notifications),
+                  label: 'Thông báo',
                 ),
                 BottomNavigationBarItem(
                   icon: Icon(Icons.person),
