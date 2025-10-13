@@ -28,6 +28,7 @@ class PostWidget extends StatelessWidget {
       key: ValueKey(post.id),
       create: (_) => PostInteractionViewModel(post.id),
       child: Card(
+        color: Colors.white,
         margin: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 0.0),
         elevation: 1,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
