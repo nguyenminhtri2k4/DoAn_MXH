@@ -46,6 +46,11 @@ class MyApp extends StatelessWidget {
         initialRoute: '/login',
         onGenerateRoute: (settings) {
           switch (settings.name) {
+            case '/profile':
+              final userId = settings.arguments as String?;
+              return MaterialPageRoute(
+                builder: (context) => ProfileView(userId: userId),
+              );
             case '/create_post':
               final user = settings.arguments as UserModel;
               return MaterialPageRoute(
@@ -75,7 +80,6 @@ class MyApp extends StatelessWidget {
           '/login': (context) => const LoginView(),
           '/register': (context) => const RegisterView(),
           '/home': (context) => const HomeView(),
-          '/profile': (context) => const ProfileView(),
           '/search': (context) => const SearchView(),
           '/friends': (context) => const FriendsView(),
           '/blocked_list': (context) => const BlockedListView(),

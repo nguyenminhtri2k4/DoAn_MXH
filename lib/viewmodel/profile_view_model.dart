@@ -1,3 +1,4 @@
+
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -14,18 +15,37 @@ class ProfileViewModel extends ChangeNotifier {
   UserModel? user;
   bool isLoading = true;
   Stream<List<PostModel>>? userPostsStream;
+  bool isCurrentUserProfile = false;
 
-  Future<void> loadProfile() async {
+  Future<void> loadProfile({String? userId}) async {
     try {
       isLoading = true;
       notifyListeners();
 
       final currentUser = _auth.currentUser;
-      if (currentUser == null) return;
+      String? targetUserId = userId;
 
-      final userData = await _userRequest.getUserByUid(currentUser.uid);
-      user = userData;
+      // Nếu không có userId, mặc định là xem trang cá nhân của người dùng đang đăng nhập
+      if (targetUserId == null && currentUser != null) {
+        final currentUserData = await _userRequest.getUserByUid(currentUser.uid);
+        if (currentUserData != null) {
+          targetUserId = currentUserData.id;
+        }
+      }
 
+      if (targetUserId != null) {
+        user = await _userRequest.getUserData(targetUserId);
+        // Xác định có phải trang cá nhân của người dùng hiện tại hay không bằng cách so sánh UID
+        if (currentUser != null && user != null) {
+          isCurrentUserProfile = user!.uid == currentUser.uid;
+        } else {
+          isCurrentUserProfile = false;
+        }
+      } else {
+        user = null;
+        isCurrentUserProfile = false;
+      }
+      
       if (user != null) {
         userPostsStream = _postRequest.getPostsByAuthorId(user!.id);
       }
@@ -77,7 +97,6 @@ class ProfileViewModel extends ChangeNotifier {
     );
   }
 
-  // HÀM MỚI CHỈ ĐỂ CẬP NHẬT AVATAR
   Future<void> updateAvatar(String newAvatarUrl) async {
     if (user == null || newAvatarUrl.trim().isEmpty) return;
 
@@ -94,7 +113,6 @@ class ProfileViewModel extends ChangeNotifier {
     }
   }
 
-  // HÀM NÀY ĐÃ BỎ `avatarUrl`
   Future<void> updateProfile({
     String? name,
     String? bio,

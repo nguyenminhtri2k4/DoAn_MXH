@@ -1,3 +1,4 @@
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:mangxahoi/viewmodel/profile_view_model.dart';
@@ -7,12 +8,13 @@ import 'package:mangxahoi/view/widgets/post_widget.dart';
 import 'package:intl/intl.dart';
 
 class ProfileView extends StatelessWidget {
-  const ProfileView({super.key});
+  final String? userId;
+  const ProfileView({super.key, this.userId});
 
   @override
   Widget build(BuildContext context) {
     return ChangeNotifierProvider(
-      create: (_) => ProfileViewModel()..loadProfile(),
+      create: (_) => ProfileViewModel()..loadProfile(userId: userId),
       child: const _ProfileContent(),
     );
   }
@@ -54,7 +56,6 @@ class _ProfileContent extends StatelessWidget {
   Widget _buildHeader(BuildContext context, ProfileViewModel vm) {
     return Stack(
       children: [
-        // Cover photo
         Container(
           height: 200,
           decoration: const BoxDecoration(
@@ -65,7 +66,6 @@ class _ProfileContent extends StatelessWidget {
             ),
           ),
         ),
-        // Avatar positioned below cover, centered horizontally
         Positioned(
           top: 140,
           left: 0,
@@ -86,7 +86,6 @@ class _ProfileContent extends StatelessWidget {
             ),
           ),
         ),
-        // Name and bio positioned below avatar, centered
         Positioned(
           top: 270,
           left: 0,
@@ -119,9 +118,10 @@ class _ProfileContent extends StatelessWidget {
     );
   }
 
-// ==================== CẬP NHẬT HÀM NÀY ====================
   Widget _buildInfoSection(BuildContext context, ProfileViewModel vm) {
     final user = vm.user!;
+    final isCurrentUser = vm.isCurrentUserProfile;
+
     return Card(
       color: Colors.white,
       margin: const EdgeInsets.all(8.0),
@@ -144,17 +144,20 @@ class _ProfileContent extends StatelessWidget {
             _buildInfoRow(Icons.home_work_outlined, 'Sống tại ${user.liveAt}', user.liveAt.isNotEmpty),
             _buildInfoRow(Icons.location_on_outlined, 'Đến từ ${user.comeFrom}', user.comeFrom.isNotEmpty),
             _buildInfoRow(Icons.favorite_outline, user.relationship, user.relationship.isNotEmpty),
-            _buildInfoRow(Icons.cake_outlined, 'Sinh nhật ${DateFormat('dd/MM/yyyy').format(user.dateOfBirth!)}', user.dateOfBirth != null),
+             _buildInfoRow(
+                Icons.cake_outlined,
+                'Sinh nhật ${user.dateOfBirth != null ? DateFormat('dd/MM/yyyy').format(user.dateOfBirth!) : 'Chưa cập nhật'}',
+                user.dateOfBirth != null),
             const SizedBox(height: 8),
+
             InkWell(
               onTap: () {
-                // Điều hướng đến trang About, truyền ViewModel và cờ isCurrentUser
                 Navigator.pushNamed(
                   context, 
                   '/about', 
                   arguments: {
                     'viewModel': vm,
-                    'isCurrentUser': true, // Vì đây là trang của chính người dùng
+                    'isCurrentUser': isCurrentUser,
                   },
                 );
               },
@@ -164,9 +167,9 @@ class _ProfileContent extends StatelessWidget {
                   children: [
                     Icon(Icons.more_horiz, color: AppColors.textSecondary, size: 24),
                     const SizedBox(width: 16),
-                    const Text(
-                      'Xem thông tin giới thiệu của bạn',
-                      style: TextStyle(fontSize: 16, color: AppColors.textSecondary),
+                    Text(
+                      isCurrentUser ? 'Xem thông tin giới thiệu của bạn' : 'Xem thông tin giới thiệu',
+                      style: const TextStyle(fontSize: 16, color: AppColors.textSecondary),
                     ),
                   ],
                 ),
@@ -193,8 +196,8 @@ class _ProfileContent extends StatelessWidget {
   }
   
   Widget _buildBodyWithPosts(BuildContext context, ProfileViewModel vm) {
-    //... (Hàm này giữ nguyên không thay đổi)
-        return Container(
+    final isCurrentUser = vm.isCurrentUserProfile;
+    return Container(
       color: AppColors.background,
       child: StreamBuilder<List<PostModel>>(
         stream: vm.userPostsStream,
@@ -207,30 +210,45 @@ class _ProfileContent extends StatelessWidget {
           }
 
           final posts = snapshot.data ?? [];
+          final int staticItemCount = isCurrentUser ? 3 : 2;
           
           return ListView.builder(
             padding: const EdgeInsets.all(8.0),
-            // +3 cho Info, Create Post, và Title
-            itemCount: posts.length + 3,
+            itemCount: posts.length + staticItemCount,
             itemBuilder: (context, index) {
               if (index == 0) return _buildInfoSection(context, vm);
-              if (index == 1) return _buildCreatePostSection(context, vm);
-              // Item 2: Tiêu đề "Bài viết"
-              if (index == 2) {
-                return const Padding(
-                  padding: EdgeInsets.fromLTRB(16, 16, 16, 8),
-                  child: Text(
-                    'Bài viết',
-                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                  ),
-                );
+
+              if (isCurrentUser) {
+                if (index == 1) return _buildCreatePostSection(context, vm);
+                if (index == 2) {
+                  return const Padding(
+                    padding: EdgeInsets.fromLTRB(16, 16, 16, 8),
+                    child: Text(
+                      'Bài viết',
+                      style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                    ),
+                  );
+                }
+                final postIndex = index - 3;
+                if (postIndex < posts.length) {
+                  return PostWidget(post: posts[postIndex], currentUserDocId: vm.user!.id);
+                }
+              } else {
+                if (index == 1) {
+                  return const Padding(
+                    padding: EdgeInsets.fromLTRB(16, 16, 16, 8),
+                    child: Text(
+                      'Bài viết',
+                      style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                    ),
+                  );
+                }
+                final postIndex = index - 2;
+                if (postIndex < posts.length) {
+                  return PostWidget(post: posts[postIndex], currentUserDocId: vm.user!.id);
+                }
               }
-              // Các item còn lại: Bài viết
-              final post = posts[index - 3];
-              return PostWidget(
-                post: post,
-                currentUserDocId: vm.user!.id,
-              );
+              return const SizedBox.shrink();
             },
           );
         },
@@ -239,8 +257,7 @@ class _ProfileContent extends StatelessWidget {
   }
 
   Widget _buildCreatePostSection(BuildContext context, ProfileViewModel vm) {
-    //... (Hàm này giữ nguyên không thay đổi)
-        return Card(
+    return Card(
       color: Colors.white,
       margin: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 8.0),
       elevation: 1,
@@ -287,8 +304,7 @@ class _ProfileContent extends StatelessWidget {
   }
 
   Widget _buildActionButton(IconData icon, String label, Color color, VoidCallback onPressed) {
-    //... (Hàm này giữ nguyên không thay đổi)
-        return TextButton.icon(
+    return TextButton.icon(
       onPressed: onPressed,
       icon: Icon(icon, color: color),
       label: Text(label, style: const TextStyle(color: AppColors.textSecondary)),

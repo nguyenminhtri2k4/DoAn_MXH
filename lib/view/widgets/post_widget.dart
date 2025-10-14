@@ -1,3 +1,4 @@
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -37,7 +38,7 @@ class PostWidget extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _buildPostHeader(author),
+              _buildPostHeader(context, author),
               const SizedBox(height: 12),
               if (post.content.isNotEmpty)
                 Padding(
@@ -58,27 +59,32 @@ class PostWidget extends StatelessWidget {
     );
   }
 
-  Widget _buildPostHeader(UserModel? author) {
+  Widget _buildPostHeader(BuildContext context, UserModel? author) {
      if (author == null) return const SizedBox.shrink();
-    return Row(
-      children: [
-        CircleAvatar(
-          radius: 20,
-          backgroundImage: (author.avatar.isNotEmpty) ? NetworkImage(author.avatar.first) : null,
-          child: (author.avatar.isEmpty) ? const Icon(Icons.person, size: 20) : null,
-        ),
-        const SizedBox(width: 10),
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(author.name, style: const TextStyle(fontWeight: FontWeight.bold)),
-            Text(
-              '${post.createdAt.hour.toString().padLeft(2, '0')}:${post.createdAt.minute.toString().padLeft(2, '0')} · ${post.createdAt.day}/${post.createdAt.month}/${post.createdAt.year}',
-              style: const TextStyle(color: Colors.grey, fontSize: 12),
-            ),
-          ],
-        ),
-      ],
+    return GestureDetector(
+      onTap: () {
+        Navigator.pushNamed(context, '/profile', arguments: author.id);
+      },
+      child: Row(
+        children: [
+          CircleAvatar(
+            radius: 20,
+            backgroundImage: (author.avatar.isNotEmpty) ? NetworkImage(author.avatar.first) : null,
+            child: (author.avatar.isEmpty) ? const Icon(Icons.person, size: 20) : null,
+          ),
+          const SizedBox(width: 10),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(author.name, style: const TextStyle(fontWeight: FontWeight.bold)),
+              Text(
+                '${post.createdAt.hour.toString().padLeft(2, '0')}:${post.createdAt.minute.toString().padLeft(2, '0')} · ${post.createdAt.day}/${post.createdAt.month}/${post.createdAt.year}',
+                style: const TextStyle(color: Colors.grey, fontSize: 12),
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 
