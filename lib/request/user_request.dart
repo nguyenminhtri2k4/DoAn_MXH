@@ -1,3 +1,4 @@
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:mangxahoi/model/model_user.dart';
 import 'package:mangxahoi/authanet/firestore_service.dart';
@@ -10,7 +11,21 @@ class UserRequest {
 
   final String? _currentAuthUid = FirebaseAuth.instance.currentUser?.uid; 
 
-  // ... (getUserByUid, updateUser, addUser, deleteUser giữ nguyên)
+  /// Lấy thông tin người dùng theo Document ID
+  Future<UserModel?> getUserData(String docId) async {
+    try {
+      final user = await _firestoreService.getUserData(docId);
+      if (user != null) {
+        print('✅ Đã lấy thông tin user: ${user.name}');
+      } else {
+        print('⚠️ Không tìm thấy user với Doc ID: $docId');
+      }
+      return user;
+    } catch (e) {
+      print('❌ Lỗi khi lấy user theo docId: $e');
+      return null;
+    }
+  }
 
   /// 📥 Lấy thông tin người dùng theo UID (Firebase Auth UID)
   Future<UserModel?> getUserByUid(String uid) async {
