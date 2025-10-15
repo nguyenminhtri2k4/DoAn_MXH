@@ -7,7 +7,7 @@ import 'package:mangxahoi/constant/app_colors.dart';
 import 'package:mangxahoi/model/model_post.dart';
 import 'package:mangxahoi/view/widgets/post_widget.dart';
 import 'package:mangxahoi/view/friends_view.dart';
-import 'package:mangxahoi/view/profile_view.dart';
+import 'package:mangxahoi/view/profile/profile_view.dart';
 import 'package:mangxahoi/view/blocked_list_view.dart'; 
 
 // Placeholder for Video and Notification views
