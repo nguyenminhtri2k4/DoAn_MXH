@@ -13,7 +13,6 @@ class EditProfileForm extends StatefulWidget {
 }
 
 class _EditProfileFormState extends State<EditProfileForm> {
-  // ĐÃ XÓA _avatarController
   late TextEditingController _nameController;
   late TextEditingController _bioController;
   late TextEditingController _phoneController;
@@ -66,7 +65,19 @@ class _EditProfileFormState extends State<EditProfileForm> {
     );
     Navigator.pop(context);
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('✅ Cập nhật hồ sơ thành công!')),
+      SnackBar(
+        content: const Row(
+          children: [
+            Icon(Icons.check_circle, color: Colors.white),
+            SizedBox(width: 12),
+            Text('Cập nhật hồ sơ thành công!'),
+          ],
+        ),
+        backgroundColor: Colors.green[600],
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        margin: const EdgeInsets.all(16),
+      ),
     );
   }
 
@@ -76,99 +87,94 @@ class _EditProfileFormState extends State<EditProfileForm> {
       children: [
         Expanded(
           child: SingleChildScrollView(
-            padding: const EdgeInsets.all(20),
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // ĐÃ XÓA TRƯỜNG NHẬP AVATAR
-                _buildTextField(_nameController, 'Họ tên', Icons.person),
-                const SizedBox(height: 16),
-                _buildTextField(_bioController, 'Tiểu sử', Icons.info, maxLines: 3),
-                const SizedBox(height: 16),
-                _buildTextField(_phoneController, 'Số điện thoại', Icons.phone),
-                const SizedBox(height: 16),
-                const Text('Ngày sinh', style: TextStyle(fontWeight: FontWeight.bold)),
-                const SizedBox(height: 8),
-                InkWell(
-                  onTap: () async {
-                    final date = await showDatePicker(
-                      context: context,
-                      initialDate: _selectedDate ?? DateTime.now(),
-                      firstDate: DateTime(1900),
-                      lastDate: DateTime.now(),
-                    );
-                    if (date != null) {
-                      setState(() => _selectedDate = date);
-                    }
-                  },
-                  child: InputDecorator(
-                    decoration: InputDecoration(
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                      prefixIcon: const Icon(Icons.cake),
-                    ),
-                    child: Text(_formatDate(_selectedDate)),
-                  ),
+                // Card cho thông tin cá nhân
+                _buildSectionCard(
+                  title: 'Thông tin cá nhân',
+                  icon: Icons.person_outline,
+                  children: [
+                    _buildTextField(_nameController, 'Họ tên', Icons.person),
+                    const SizedBox(height: 20),
+                    _buildTextField(_bioController, 'Tiểu sử', Icons.info_outline, maxLines: 3),
+                    const SizedBox(height: 20),
+                    _buildTextField(_phoneController, 'Số điện thoại', Icons.phone),
+                  ],
                 ),
-                const SizedBox(height: 16),
-                //... Các trường còn lại giữ nguyên
-                 const Text('Giới tính', style: TextStyle(fontWeight: FontWeight.bold)),
-                const SizedBox(height: 8),
-                DropdownButtonFormField<String>(
-                  value: _selectedGender.isEmpty ? null : _selectedGender,
-                  hint: const Text('Chọn giới tính'),
-                  decoration: InputDecoration(
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                    prefixIcon: const Icon(Icons.wc),
-                  ),
-                  items: ['Nam', 'Nữ', 'Khác'].map((gender) {
-                    return DropdownMenuItem(value: gender, child: Text(gender));
-                  }).toList(),
-                  onChanged: (value) {
-                    if (value != null) setState(() => _selectedGender = value);
-                  },
+                const SizedBox(height: 20),
+                
+                // Card cho ngày sinh và giới tính
+                _buildSectionCard(
+                  title: 'Thông tin cơ bản',
+                  icon: Icons.cake_outlined,
+                  children: [
+                    _buildDatePicker(),
+                    const SizedBox(height: 20),
+                    _buildGenderDropdown(),
+                  ],
                 ),
-                const SizedBox(height: 16),
-                const Text('Tình trạng', style: TextStyle(fontWeight: FontWeight.bold)),
-                const SizedBox(height: 8),
-                DropdownButtonFormField<String>(
-                  value: _selectedRelationship.isEmpty ? null : _selectedRelationship,
-                  hint: const Text('Chọn tình trạng quan hệ'),
-                  decoration: InputDecoration(
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                    prefixIcon: const Icon(Icons.favorite),
-                  ),
-                  items: ['Độc thân', 'Đang hẹn hò', 'Đã kết hôn', 'Phức tạp']
-                      .map((status) {
-                    return DropdownMenuItem(value: status, child: Text(status));
-                  }).toList(),
-                  onChanged: (value) {
-                    if (value != null) setState(() => _selectedRelationship = value);
-                  },
+                const SizedBox(height: 20),
+                
+                // Card cho tình trạng và địa chỉ
+                _buildSectionCard(
+                  title: 'Tình trạng & Địa chỉ',
+                  icon: Icons.favorite_outline,
+                  children: [
+                    _buildRelationshipDropdown(),
+                    const SizedBox(height: 20),
+                    _buildTextField(_liveAtController, 'Sống tại', Icons.location_on_outlined),
+                    const SizedBox(height: 20),
+                    _buildTextField(_comeFromController, 'Quê quán', Icons.home_outlined),
+                  ],
                 ),
-                const SizedBox(height: 16),
-                _buildTextField(_liveAtController, 'Sống tại', Icons.location_on),
-                const SizedBox(height: 16),
-                _buildTextField(_comeFromController, 'Quê quán', Icons.home),
+                const SizedBox(height: 80),
               ],
             ),
           ),
         ),
+        
+        // Nút lưu với shadow đẹp
         Container(
-          padding: const EdgeInsets.all(16),
-          width: double.infinity,
-          child: ElevatedButton(
-            onPressed: _handleSaveChanges,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primary,
-              foregroundColor: Colors.white,
-              minimumSize: const Size(double.infinity, 50),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.05),
+                blurRadius: 10,
+                offset: const Offset(0, -5),
               ),
-            ),
-            child: const Text(
-              'Lưu thay đổi',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            ],
+          ),
+          padding: const EdgeInsets.all(20),
+          child: SafeArea(
+            child: ElevatedButton(
+              onPressed: _handleSaveChanges,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                foregroundColor: Colors.white,
+                elevation: 0,
+                minimumSize: const Size(double.infinity, 56),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
+              ),
+              child: const Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.save_outlined, size: 22),
+                  SizedBox(width: 8),
+                  Text(
+                    'Lưu thay đổi',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ),
@@ -176,22 +182,254 @@ class _EditProfileFormState extends State<EditProfileForm> {
     );
   }
 
+  Widget _buildSectionCard({
+    required String title,
+    required IconData icon,
+    required List<Widget> children,
+  }) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(icon, color: AppColors.primary, size: 20),
+              ),
+              const SizedBox(width: 12),
+              Text(
+                title,
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFF2C3E50),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
+          ...children,
+        ],
+      ),
+    );
+  }
+
   Widget _buildTextField(
-    TextEditingController controller, String label, IconData icon,
-    {int maxLines = 1}
-  ) {
+    TextEditingController controller,
+    String label,
+    IconData icon, {
+    int maxLines = 1,
+  }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: const TextStyle(fontWeight: FontWeight.bold)),
+        Text(
+          label,
+          style: const TextStyle(
+            fontWeight: FontWeight.w500,
+            fontSize: 14,
+            color: Color(0xFF5D6D7E),
+          ),
+        ),
         const SizedBox(height: 8),
         TextField(
           controller: controller,
           maxLines: maxLines,
+          style: const TextStyle(fontSize: 15),
           decoration: InputDecoration(
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-            prefixIcon: Icon(icon),
+            filled: true,
+            fillColor: Colors.grey[50],
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: Colors.grey[300]!),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: Colors.grey[300]!),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: AppColors.primary, width: 2),
+            ),
+            prefixIcon: Icon(icon, color: AppColors.primary, size: 22),
+            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
           ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildDatePicker() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Ngày sinh',
+          style: TextStyle(
+            fontWeight: FontWeight.w500,
+            fontSize: 14,
+            color: Color(0xFF5D6D7E),
+          ),
+        ),
+        const SizedBox(height: 8),
+        InkWell(
+          onTap: () async {
+            final date = await showDatePicker(
+              context: context,
+              initialDate: _selectedDate ?? DateTime.now(),
+              firstDate: DateTime(1900),
+              lastDate: DateTime.now(),
+              builder: (context, child) {
+                return Theme(
+                  data: Theme.of(context).copyWith(
+                    colorScheme: ColorScheme.light(
+                      primary: AppColors.primary,
+                    ),
+                  ),
+                  child: child!,
+                );
+              },
+            );
+            if (date != null) {
+              setState(() => _selectedDate = date);
+            }
+          },
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            decoration: BoxDecoration(
+              color: Colors.grey[50],
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.grey[300]!),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.cake, color: AppColors.primary, size: 22),
+                const SizedBox(width: 12),
+                Text(
+                  _formatDate(_selectedDate),
+                  style: TextStyle(
+                    fontSize: 15,
+                    color: _selectedDate == null ? Colors.grey[600] : Colors.black87,
+                  ),
+                ),
+                const Spacer(),
+                Icon(Icons.calendar_today, color: Colors.grey[400], size: 18),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildGenderDropdown() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Giới tính',
+          style: TextStyle(
+            fontWeight: FontWeight.w500,
+            fontSize: 14,
+            color: Color(0xFF5D6D7E),
+          ),
+        ),
+        const SizedBox(height: 8),
+        DropdownButtonFormField<String>(
+          value: _selectedGender.isEmpty ? null : _selectedGender,
+          hint: const Text('Chọn giới tính'),
+          decoration: InputDecoration(
+            filled: true,
+            fillColor: Colors.grey[50],
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: Colors.grey[300]!),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: Colors.grey[300]!),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: AppColors.primary, width: 2),
+            ),
+            prefixIcon: Icon(Icons.wc, color: AppColors.primary, size: 22),
+            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          ),
+          items: ['Nam', 'Nữ', 'Khác'].map((gender) {
+            return DropdownMenuItem(
+              value: gender,
+              child: Text(gender, style: const TextStyle(fontSize: 15)),
+            );
+          }).toList(),
+          onChanged: (value) {
+            if (value != null) setState(() => _selectedGender = value);
+          },
+        ),
+      ],
+    );
+  }
+
+  Widget _buildRelationshipDropdown() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Tình trạng quan hệ',
+          style: TextStyle(
+            fontWeight: FontWeight.w500,
+            fontSize: 14,
+            color: Color(0xFF5D6D7E),
+          ),
+        ),
+        const SizedBox(height: 8),
+        DropdownButtonFormField<String>(
+          value: _selectedRelationship.isEmpty ? null : _selectedRelationship,
+          hint: const Text('Chọn tình trạng'),
+          decoration: InputDecoration(
+            filled: true,
+            fillColor: Colors.grey[50],
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: Colors.grey[300]!),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: Colors.grey[300]!),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: AppColors.primary, width: 2),
+            ),
+            prefixIcon: Icon(Icons.favorite, color: AppColors.primary, size: 22),
+            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          ),
+          items: ['Độc thân', 'Đang hẹn hò', 'Đã kết hôn', 'Phức tạp'].map((status) {
+            return DropdownMenuItem(
+              value: status,
+              child: Text(status, style: const TextStyle(fontSize: 15)),
+            );
+          }).toList(),
+          onChanged: (value) {
+            if (value != null) setState(() => _selectedRelationship = value);
+          },
         ),
       ],
     );
