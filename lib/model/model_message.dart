@@ -1,3 +1,6 @@
+// lib/model/model_message.dart
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 class MessageModel {
   final String id;
   final String content;

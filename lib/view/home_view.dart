@@ -213,6 +213,14 @@ class _HomeViewContentState extends State<_HomeViewContent> {
                 _onTabTapped(1);
               },
             ),
+             ListTile(
+              leading: const Icon(Icons.group),
+              title: const Text('Nhóm'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.pushNamed(context, '/groups');
+              },
+            ),
             ListTile(
               leading: const Icon(Icons.person),
               title: const Text('Trang cá nhân'),
