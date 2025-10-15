@@ -76,4 +76,15 @@ class ChatRequest {
     }
     return chatId;
   }
+
+   Stream<List<ChatModel>> getChatsForUser(String userId) {
+    return _firestore
+        .collection('Chat')
+        .where('members', arrayContains: userId)
+        .orderBy('updatedAt', descending: true)
+        .snapshots()
+        .map((snapshot) => snapshot.docs
+            .map((doc) => ChatModel.fromMap(doc.data(), doc.id))
+            .toList());
+  }
 }
