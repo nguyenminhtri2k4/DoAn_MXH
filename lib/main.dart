@@ -20,6 +20,7 @@ import 'package:mangxahoi/view/notification_settings_view.dart';
 import 'package:mangxahoi/view/profile/edit_profile_view.dart';
 import 'package:mangxahoi/view/profile/about_view.dart';
 import 'package:mangxahoi/viewmodel/profile_view_model.dart';
+import 'package:mangxahoi/view/messages_view.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -96,6 +97,7 @@ class MyApp extends StatelessWidget {
           '/create_group': (context) => const CreateGroupView(),
           '/blocked_list': (context) => const BlockedListView(),
           '/notification_settings': (context) => const NotificationSettingsView(),
+          '/messages': (context) => const MessagesView(),
         },
       ),
     );

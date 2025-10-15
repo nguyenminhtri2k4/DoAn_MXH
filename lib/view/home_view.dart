@@ -171,6 +171,12 @@ class _HomeViewContentState extends State<_HomeViewContent> {
                         Navigator.pushNamed(context, '/search');
                       },
                     ),
+                    IconButton(
+                    icon: const Icon(Icons.message_outlined, size: 25, color: AppColors.textPrimary),
+                    onPressed: () {
+                      Navigator.pushNamed(context, '/messages');
+                    },
+                  ),
                     const SizedBox(width: 8),
                   ],
                 ),
