@@ -1,4 +1,4 @@
-// lib/request/chat_request.dart
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:mangxahoi/model/model_message.dart';
 import 'package:mangxahoi/model/model_chat.dart';
@@ -51,5 +51,29 @@ class ChatRequest {
       await chatDoc.set(newChat.toMap());
     }
     return groupId;
+  }
+
+  // ==================== THÊM HÀM MỚI TẠI ĐÂY ====================
+  /// Lấy hoặc tạo phòng chat 1-1 giữa hai người dùng
+  Future<String> getOrCreatePrivateChat(String user1Id, String user2Id) async {
+    // Sắp xếp ID để đảm bảo ID phòng chat là duy nhất cho cặp người dùng này
+    final ids = [user1Id, user2Id]..sort();
+    final chatId = ids.join('_');
+
+    final chatDoc = _firestore.collection('Chat').doc(chatId);
+    final docSnapshot = await chatDoc.get();
+
+    if (!docSnapshot.exists) {
+      // Nếu phòng chat chưa tồn tại, tạo mới
+      final newChat = ChatModel(
+        id: chatId,
+        lastMessage: '',
+        members: [user1Id, user2Id],
+        type: 'private',
+        updatedAt: DateTime.now(),
+      );
+      await chatDoc.set(newChat.toMap());
+    }
+    return chatId;
   }
 }
