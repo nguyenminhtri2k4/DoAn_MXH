@@ -1,19 +1,21 @@
 
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:mangxahoi/constant/app_colors.dart';
 import 'package:mangxahoi/model/model_user.dart';
 import 'package:mangxahoi/viewmodel/post_view_model.dart';
 import 'package:mangxahoi/notification/notification_service.dart';
+import 'package:video_player/video_player.dart';
 
 class CreatePostView extends StatelessWidget {
   final UserModel currentUser;
-  final String? groupId; // Thêm tham số này
+  final String? groupId;
 
   const CreatePostView({
     super.key,
     required this.currentUser,
-    this.groupId, // Thêm vào constructor
+    this.groupId,
   });
 
   @override
@@ -65,7 +67,7 @@ class _CreatePostViewContentState extends State<_CreatePostViewContent> {
                       final success = await viewModel.createPost(
                         authorDocId: widget.currentUser.id,
                         visibility: _selectedVisibility,
-                        groupId: widget.groupId, // Truyền groupId vào hàm
+                        groupId: widget.groupId,
                       );
 
                       if (success && mounted) {
@@ -172,6 +174,8 @@ class _CreatePostViewContentState extends State<_CreatePostViewContent> {
                     ),
                     style: const TextStyle(fontSize: 24),
                   ),
+                  const SizedBox(height: 16),
+                  _buildMediaPreview(viewModel),
                 ],
               ),
             ),
@@ -187,11 +191,15 @@ class _CreatePostViewContentState extends State<_CreatePostViewContent> {
               children: [
                 _buildActionButton(
                   icon: Icons.photo_library,
-                  label: 'Ảnh/Video',
+                  label: 'Ảnh',
                   color: Colors.green,
-                  onPressed: () {
-                    NotificationService().showInfoDialog(context: context, title: 'Đang phát triển', message: 'Chức năng chọn ảnh/video sẽ sớm có mặt!');
-                  },
+                  onPressed: () => viewModel.pickImages(),
+                ),
+                _buildActionButton(
+                  icon: Icons.videocam,
+                  label: 'Video',
+                  color: Colors.red,
+                  onPressed: () => viewModel.pickVideo(),
                 ),
                 _buildActionButton(
                   icon: Icons.person_add,
@@ -201,19 +209,99 @@ class _CreatePostViewContentState extends State<_CreatePostViewContent> {
                     NotificationService().showInfoDialog(context: context, title: 'Đang phát triển', message: 'Chức năng gắn thẻ bạn bè sẽ sớm có mặt!');
                   },
                 ),
-                _buildActionButton(
-                  icon: Icons.tag_faces,
-                  label: 'Cảm xúc',
-                  color: Colors.orange,
-                  onPressed: () {
-                    NotificationService().showInfoDialog(context: context, title: 'Đang phát triển', message: 'Chức năng thêm cảm xúc sẽ sớm có mặt!');
-                  },
-                ),
               ],
             ),
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildMediaPreview(PostViewModel viewModel) {
+    if (viewModel.selectedImages.isNotEmpty) {
+      return _buildImagePreview(viewModel);
+    }
+    if (viewModel.selectedVideo != null) {
+      return _buildVideoPreview(viewModel);
+    }
+    return const SizedBox.shrink();
+  }
+
+  Widget _buildImagePreview(PostViewModel viewModel) {
+    return GridView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 3,
+        crossAxisSpacing: 8,
+        mainAxisSpacing: 8,
+      ),
+      itemCount: viewModel.selectedImages.length,
+      itemBuilder: (context, index) {
+        return Stack(
+          children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: Image.file(
+                viewModel.selectedImages[index],
+                width: double.infinity,
+                height: double.infinity,
+                fit: BoxFit.cover,
+              ),
+            ),
+            Positioned(
+              top: 4,
+              right: 4,
+              child: GestureDetector(
+                onTap: () => viewModel.removeImage(index),
+                child: Container(
+                  padding: const EdgeInsets.all(2),
+                  decoration: const BoxDecoration(
+                    color: Colors.black54,
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.close, color: Colors.white, size: 16),
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildVideoPreview(PostViewModel viewModel) {
+    return Stack(
+      alignment: Alignment.center,
+      children: [
+        AspectRatio(
+          aspectRatio: 16 / 9,
+          child: Container(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(12),
+              color: Colors.black,
+            ),
+            child: const Center(
+              child: Icon(Icons.play_circle_fill, color: Colors.white, size: 60),
+            ),
+          ),
+        ),
+        Positioned(
+          top: 8,
+          right: 8,
+          child: GestureDetector(
+            onTap: () => viewModel.removeVideo(),
+            child: Container(
+              padding: const EdgeInsets.all(4),
+              decoration: const BoxDecoration(
+                color: Colors.black54,
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.close, color: Colors.white, size: 20),
+            ),
+          ),
+        ),
+      ],
     );
   }
 

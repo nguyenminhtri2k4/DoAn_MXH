@@ -1,5 +1,3 @@
-
-
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -58,16 +56,32 @@ class MyApp extends StatelessWidget {
               return MaterialPageRoute(
                 builder: (context) => ProfileView(userId: userId),
               );
+            
+            // ==========================================================
+            // SỬA LỖI LOGIC ĐIỀU HƯỚNG TẠI ĐÂY
+            // ==========================================================
             case '/create_post':
-              final args = settings.arguments as Map<String, dynamic>;
-              final user = args['currentUser'] as UserModel;
-              final groupId = args['groupId'] as String?;
-              return MaterialPageRoute(
-                builder: (context) => CreatePostView(
-                  currentUser: user,
-                  groupId: groupId,
-                ),
-              );
+              // Kiểm tra xem tham số truyền vào là Map hay UserModel
+              if (settings.arguments is Map<String, dynamic>) {
+                // Trường hợp đăng bài trong nhóm
+                final args = settings.arguments as Map<String, dynamic>;
+                final user = args['currentUser'] as UserModel;
+                final groupId = args['groupId'] as String?;
+                return MaterialPageRoute(
+                  builder: (context) => CreatePostView(
+                    currentUser: user,
+                    groupId: groupId,
+                  ),
+                );
+              } else if (settings.arguments is UserModel) {
+                // Trường hợp đăng bài cá nhân từ trang chủ
+                final user = settings.arguments as UserModel;
+                return MaterialPageRoute(
+                  builder: (context) => CreatePostView(currentUser: user),
+                );
+              }
+              return null; // Trả về null nếu tham số không hợp lệ
+
             case '/edit_profile':
               final viewModel = settings.arguments as ProfileViewModel;
               return MaterialPageRoute(

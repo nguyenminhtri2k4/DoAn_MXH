@@ -100,34 +100,37 @@ class _HomeViewContentState extends State<_HomeViewContent> {
   Widget _buildHomePageBody(HomeViewModel vm) {
     return (vm.isLoading || vm.currentUserData == null)
         ? const Center(child: CircularProgressIndicator())
-        : ListView(
-            controller: _scrollController,
-            padding: EdgeInsets.only(top: kToolbarHeight + MediaQuery.of(context).padding.top, bottom: 40),
-            children: [
-              StreamBuilder<List<PostModel>>(
-                stream: vm.postsStream,
-                builder: (context, snapshot) {
-                  if (snapshot.connectionState == ConnectionState.waiting) {
-                    return const Center(child: CircularProgressIndicator());
-                  }
-                  if (snapshot.hasError) {
-                    return Center(child: Text('Lỗi tải bài đăng: ${snapshot.error}'));
-                  }
-                  if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                    return const Center(child: Text('Chưa có bài viết nào.'));
-                  }
-                  final posts = snapshot.data!;
-                  return Column(
-                    children: posts.map((post) => PostWidget(
-                      post: post,
-                      currentUserDocId: vm.currentUserData!.id,
-                    )).toList(),
+        : StreamBuilder<List<PostModel>>(
+            stream: vm.postsStream,
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Center(child: CircularProgressIndicator());
+              }
+              if (snapshot.hasError) {
+                return Center(child: Text('Lỗi tải bài đăng: ${snapshot.error}'));
+              }
+              if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                return const Center(child: Text('Chưa có bài viết nào.'));
+              }
+              final posts = snapshot.data!;
+              return ListView.builder(
+                controller: _scrollController,
+                // SỬA Ở ĐÂY: Bỏ padding ngang (left, right)
+                padding: EdgeInsets.only(
+                  top: kToolbarHeight + MediaQuery.of(context).padding.top,
+                  bottom: 40,
+                ),
+                itemCount: posts.length,
+                itemBuilder: (context, index) {
+                  return PostWidget(
+                    post: posts[index],
+                    currentUserDocId: vm.currentUserData!.id,
                   );
                 },
-              ),
-            ],
+              );
+            },
           );
-        }
+  }
 
   Widget _buildDrawerItem({
     required IconData icon,
@@ -358,7 +361,7 @@ class _HomeViewContentState extends State<_HomeViewContent> {
       ),
       bottomNavigationBar: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
-        height: showUI ? 85.0 : 0.0, // Tăng chiều cao để chứa thẻ
+        height: showUI ? 85.0 : 0.0,
         child: Wrap(
           children: [
             Container(
@@ -378,8 +381,8 @@ class _HomeViewContentState extends State<_HomeViewContent> {
                 borderRadius: BorderRadius.circular(20.0),
                 child: BottomNavigationBar(
                   type: BottomNavigationBarType.fixed,
-                  backgroundColor: Colors.transparent, // Nền trong suốt để màu của container hiển thị
-                  elevation: 0, // Bỏ đổ bóng mặc định
+                  backgroundColor: Colors.transparent,
+                  elevation: 0,
                   items: const <BottomNavigationBarItem>[
                     BottomNavigationBarItem(
                       icon: Icon(Icons.home),
