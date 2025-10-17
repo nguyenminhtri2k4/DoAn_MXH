@@ -33,7 +33,7 @@ class _LoginFormState extends State<LoginForm> {
   void initState() {
     super.initState();
     // Pre-fill with test credentials for development
-    _emailController.text = 'tien@gmail.com';
+    _emailController.text = 'minhtri@gmail.com';
     _passwordController.text = 'Susu@123';
   }
 

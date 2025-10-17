@@ -1,59 +1,33 @@
+// lib/viewmodel/home_view_model.dart
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:mangxahoi/model/model_user.dart';
 import 'package:mangxahoi/model/model_post.dart';
-import 'package:mangxahoi/request/user_request.dart';
 import 'package:mangxahoi/request/post_request.dart';
+import 'package:mangxahoi/services/user_service.dart';
 
 class HomeViewModel extends ChangeNotifier {
   final FirebaseAuth _auth = FirebaseAuth.instance;
-  final UserRequest _userRequest = UserRequest();
   final PostRequest _postRequest = PostRequest();
+  
+  // Không cần UserService ở đây nữa nếu chỉ dùng cho việc lấy dữ liệu 1 lần
+  // Dữ liệu người dùng sẽ được lấy từ Provider trong View
 
-  UserModel? currentUserData;
   Stream<List<PostModel>>? postsStream;
-  bool isLoading = true;
 
   HomeViewModel() {
-    loadCurrentUser();
-  }
-
-  Future<void> loadCurrentUser() async {
-    isLoading = true;
-    notifyListeners();
-
-    try {
-      final firebaseUser = _auth.currentUser;
-      if (firebaseUser == null) {
-        currentUserData = null;
-        isLoading = false;
-        notifyListeners();
-        return;
-      }
-
-      final user = await _userRequest.getUserByUid(firebaseUser.uid);
-      currentUserData = user;
-
-      if (currentUserData != null) {
-        _loadPosts();
-      }
-    } catch (e) {
-      print('❌ Lỗi khi tải thông tin người dùng: $e');
-    } finally {
-      isLoading = false;
-      notifyListeners();
-    }
+    _loadPosts();
   }
 
   void _loadPosts() {
     postsStream = _postRequest.getPosts();
+    notifyListeners(); // Thông báo để StreamBuilder cập nhật
   }
 
   Future<void> signOut(BuildContext context) async {
     try {
       await _auth.signOut();
       if (context.mounted) {
-        Navigator.pushReplacementNamed(context, '/login');
+        Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
       }
     } catch (e) {
       print('❌ Lỗi khi đăng xuất: $e');
