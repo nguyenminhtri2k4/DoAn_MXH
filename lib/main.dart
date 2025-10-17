@@ -1,3 +1,4 @@
+// lib/main.dart
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -22,6 +23,7 @@ import 'package:mangxahoi/viewmodel/profile_view_model.dart';
 import 'package:mangxahoi/view/messages_view.dart';
 import 'package:mangxahoi/view/group_chat/post_group_view.dart';
 import 'package:mangxahoi/model/model_group.dart';
+import 'package:mangxahoi/services/user_service.dart'; // Import UserService
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -40,6 +42,7 @@ class MyApp extends StatelessWidget {
     return MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => FirestoreListener()),
+        ChangeNotifierProvider(create: (_) => UserService()), // Thêm UserService vào providers
       ],
       child: MaterialApp(
         debugShowCheckedModeBanner: false,
@@ -48,7 +51,7 @@ class MyApp extends StatelessWidget {
           primarySwatch: Colors.blue,
           useMaterial3: true,
         ),
-        initialRoute: '/login',
+        initialRoute: '/login', // Hoặc kiểm tra trạng thái đăng nhập ở đây
         onGenerateRoute: (settings) {
           switch (settings.name) {
             case '/profile':
@@ -57,13 +60,8 @@ class MyApp extends StatelessWidget {
                 builder: (context) => ProfileView(userId: userId),
               );
             
-            // ==========================================================
-            // SỬA LỖI LOGIC ĐIỀU HƯỚNG TẠI ĐÂY
-            // ==========================================================
             case '/create_post':
-              // Kiểm tra xem tham số truyền vào là Map hay UserModel
               if (settings.arguments is Map<String, dynamic>) {
-                // Trường hợp đăng bài trong nhóm
                 final args = settings.arguments as Map<String, dynamic>;
                 final user = args['currentUser'] as UserModel;
                 final groupId = args['groupId'] as String?;
@@ -74,13 +72,12 @@ class MyApp extends StatelessWidget {
                   ),
                 );
               } else if (settings.arguments is UserModel) {
-                // Trường hợp đăng bài cá nhân từ trang chủ
                 final user = settings.arguments as UserModel;
                 return MaterialPageRoute(
                   builder: (context) => CreatePostView(currentUser: user),
                 );
               }
-              return null; // Trả về null nếu tham số không hợp lệ
+              return null;
 
             case '/edit_profile':
               final viewModel = settings.arguments as ProfileViewModel;
