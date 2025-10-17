@@ -1,4 +1,5 @@
 
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:mangxahoi/viewmodel/groups_viewmodel.dart';
@@ -62,21 +63,25 @@ class _GroupsViewContent extends StatelessWidget {
                   leading: CircleAvatar(
                     backgroundColor: AppColors.primary.withOpacity(0.2),
                     foregroundColor: AppColors.primary,
-                    child: Text(group.name.isNotEmpty ? group.name[0].toUpperCase() : 'G', style: const TextStyle(fontWeight: FontWeight.bold)),
+                    child: Icon(group.type == 'chat' ? Icons.chat_bubble : Icons.article),
                   ),
                   title: Text(group.name, style: const TextStyle(fontWeight: FontWeight.bold)),
                   subtitle: Text('${group.members.length} thành viên'),
                   trailing: const Icon(Icons.chevron_right, color: AppColors.textSecondary),
                   onTap: () async {
-                    final chatId = await ChatRequest().getOrCreateGroupChat(group.id, group.members);
-                    Navigator.pushNamed(
-                      context,
-                      '/chat',
-                      arguments: {
-                        'chatId': chatId,
-                        'chatName': group.name,
-                      },
-                    );
+                    if (group.type == 'chat') {
+                      final chatId = await ChatRequest().getOrCreateGroupChat(group.id, group.members);
+                      Navigator.pushNamed(
+                        context,
+                        '/chat',
+                        arguments: {
+                          'chatId': chatId,
+                          'chatName': group.name,
+                        },
+                      );
+                    } else {
+                      Navigator.pushNamed(context, '/post_group', arguments: group);
+                    }
                   },
                 ),
               );

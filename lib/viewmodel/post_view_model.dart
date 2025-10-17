@@ -1,3 +1,4 @@
+
 import 'package:flutter/material.dart';
 import 'package:mangxahoi/model/model_post.dart';
 import 'package:mangxahoi/request/post_request.dart';
@@ -19,8 +20,11 @@ class PostViewModel extends ChangeNotifier {
     super.dispose();
   }
 
-  // Hàm tạo bài viết đã được cập nhật
-  Future<bool> createPost({required String authorDocId, required String visibility}) async {
+  Future<bool> createPost({
+    required String authorDocId,
+    required String visibility,
+    String? groupId,
+  }) async {
     if (authorDocId.isEmpty) {
       _errorMessage = 'Không xác định được người dùng';
       notifyListeners();
@@ -40,10 +44,11 @@ class PostViewModel extends ChangeNotifier {
     try {
       final newPost = PostModel(
         id: '',
-        authorId: authorDocId, // Sử dụng Document ID
+        authorId: authorDocId,
         content: contentController.text.trim(),
         createdAt: DateTime.now(),
         visibility: visibility,
+        groupId: groupId,
       );
 
       final postId = await _postRequest.createPost(newPost);

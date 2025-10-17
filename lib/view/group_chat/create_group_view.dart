@@ -1,3 +1,4 @@
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:mangxahoi/viewmodel/create_group_viewmodel.dart';
@@ -21,7 +22,7 @@ class _CreateGroupViewContent extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final vm = context.watch<CreateGroupViewModel>();
-    final canCreate = vm.selectedFriends.length >= 1 && vm.groupNameController.text.isNotEmpty;
+    final canCreate = vm.selectedFriends.isNotEmpty && vm.groupNameController.text.isNotEmpty;
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -65,6 +66,36 @@ class _CreateGroupViewContent extends StatelessWidget {
                 ),
                 prefixIcon: const Icon(Icons.group_work),
               ),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Loại nhóm',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: AppColors.textSecondary),
+                ),
+                RadioListTile<String>(
+                  title: const Text('Nhóm đăng bài'),
+                  subtitle: const Text('Nơi mọi người có thể đăng bài và bình luận.'),
+                  value: 'post',
+                  groupValue: vm.groupType,
+                  onChanged: (value) {
+                    if (value != null) vm.setGroupType(value);
+                  },
+                ),
+                RadioListTile<String>(
+                  title: const Text('Nhóm chat'),
+                  subtitle: const Text('Nơi các thành viên có thể trò chuyện.'),
+                  value: 'chat',
+                  groupValue: vm.groupType,
+                  onChanged: (value) {
+                    if (value != null) vm.setGroupType(value);
+                  },
+                ),
+              ],
             ),
           ),
           Padding(
