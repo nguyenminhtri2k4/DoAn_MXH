@@ -1,3 +1,4 @@
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class GroupModel {
@@ -9,6 +10,7 @@ class GroupModel {
   final List<String> members;
   final String settings;
   final String status;
+  final String type;
   final DateTime? createdAt;
 
   GroupModel({
@@ -20,6 +22,7 @@ class GroupModel {
     required this.members,
     required this.settings,
     required this.status,
+    this.type = 'post',
     this.createdAt,
   });
 
@@ -34,6 +37,7 @@ class GroupModel {
       members: List<String>.from(map['members'] ?? []),
       settings: map['settings'] ?? '',
       status: map['status'] ?? 'activate',
+      type: map['type'] ?? 'post',
       createdAt: map['createdAt'] != null
           ? (map['createdAt'] as Timestamp).toDate()
           : null,
@@ -50,6 +54,7 @@ class GroupModel {
       'members': members,
       'settings': settings,
       'status': status,
+      'type': type,
       'createdAt': createdAt ?? FieldValue.serverTimestamp(),
     };
   }

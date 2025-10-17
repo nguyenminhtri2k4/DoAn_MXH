@@ -1,4 +1,5 @@
 
+
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -21,6 +22,8 @@ import 'package:mangxahoi/view/profile/edit_profile_view.dart';
 import 'package:mangxahoi/view/profile/about_view.dart';
 import 'package:mangxahoi/viewmodel/profile_view_model.dart';
 import 'package:mangxahoi/view/messages_view.dart';
+import 'package:mangxahoi/view/group_chat/post_group_view.dart';
+import 'package:mangxahoi/model/model_group.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -56,9 +59,14 @@ class MyApp extends StatelessWidget {
                 builder: (context) => ProfileView(userId: userId),
               );
             case '/create_post':
-              final user = settings.arguments as UserModel;
+              final args = settings.arguments as Map<String, dynamic>;
+              final user = args['currentUser'] as UserModel;
+              final groupId = args['groupId'] as String?;
               return MaterialPageRoute(
-                builder: (context) => CreatePostView(currentUser: user),
+                builder: (context) => CreatePostView(
+                  currentUser: user,
+                  groupId: groupId,
+                ),
               );
             case '/edit_profile':
               final viewModel = settings.arguments as ProfileViewModel;
@@ -82,6 +90,11 @@ class MyApp extends StatelessWidget {
                   chatId: args['chatId'],
                   chatName: args['chatName'],
                 ),
+              );
+            case '/post_group':
+              final group = settings.arguments as GroupModel;
+              return MaterialPageRoute(
+                builder: (context) => PostGroupView(group: group),
               );
             default:
               return null;

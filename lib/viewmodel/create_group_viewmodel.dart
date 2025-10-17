@@ -1,4 +1,4 @@
-// lib/viewmodel/create_group_viewmodel.dart
+
 import 'package:flutter/material.dart';
 import 'package:mangxahoi/model/model_user.dart';
 import 'package:mangxahoi/request/user_request.dart';
@@ -20,6 +20,8 @@ class CreateGroupViewModel extends ChangeNotifier {
   List<UserModel> get selectedFriends => _selectedFriends;
 
   final TextEditingController groupNameController = TextEditingController();
+  String _groupType = 'post';
+  String get groupType => _groupType;
 
   CreateGroupViewModel() {
     _fetchFriends();
@@ -57,13 +59,18 @@ class CreateGroupViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
+  void setGroupType(String type) {
+    _groupType = type;
+    notifyListeners();
+  }
+
   Future<bool> createGroup() async {
     final currentUser = _auth.currentUser;
     if (currentUser == null) return false;
     final user = await _userRequest.getUserByUid(currentUser.uid);
     if (user == null) return false;
 
-    if (groupNameController.text.isEmpty || _selectedFriends.length < 1) {
+    if (groupNameController.text.isEmpty || _selectedFriends.isEmpty) {
       return false;
     }
 
@@ -74,6 +81,7 @@ class CreateGroupViewModel extends ChangeNotifier {
         groupNameController.text,
         members,
         user.id,
+        _groupType,
       );
       return true;
     } catch (e) {

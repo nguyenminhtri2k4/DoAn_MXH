@@ -1,9 +1,11 @@
 
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:mangxahoi/model/model_post.dart';
 import 'package:mangxahoi/model/model_user.dart';
+import 'package:mangxahoi/model/model_group.dart';
 import 'package:mangxahoi/viewmodel/post_interaction_view_model.dart';
 import 'package:mangxahoi/constant/app_colors.dart';
 import 'package:mangxahoi/authanet/firestore_listener.dart';
@@ -21,10 +23,13 @@ class PostWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final author = context.select<FirestoreListener, UserModel?>(
-      (listener) => listener.getUserById(post.authorId),
-    );
- 
+    final listener = context.watch<FirestoreListener>();
+    final author = listener.getUserById(post.authorId);
+    // Lấy thông tin nhóm nếu bài viết có groupId
+    final group = post.groupId != null && post.groupId!.isNotEmpty
+        ? listener.getGroupById(post.groupId!)
+        : null;
+
     return ChangeNotifierProvider(
       key: ValueKey(post.id),
       create: (_) => PostInteractionViewModel(post.id),
@@ -38,13 +43,14 @@ class PostWidget extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _buildPostHeader(context, author),
+              _buildPostHeader(context, author, group), // Truyền group vào header
               const SizedBox(height: 12),
               if (post.content.isNotEmpty)
                 Padding(
                   padding: const EdgeInsets.only(bottom: 12.0),
                   child: Text(post.content, style: const TextStyle(fontSize: 16)),
                 ),
+              // Có thể thêm hiển thị ảnh/video ở đây nếu có
               _buildPostStats(),
               const Divider(),
               Builder(
@@ -59,12 +65,69 @@ class PostWidget extends StatelessWidget {
     );
   }
 
-  Widget _buildPostHeader(BuildContext context, UserModel? author) {
-     if (author == null) return const SizedBox.shrink();
+  Widget _buildPostHeader(BuildContext context, UserModel? author, GroupModel? group) {
+    if (author == null) return const SizedBox.shrink();
+
+    final String timestamp = '${post.createdAt.hour.toString().padLeft(2, '0')}:${post.createdAt.minute.toString().padLeft(2, '0')} · ${post.createdAt.day}/${post.createdAt.month}/${post.createdAt.year}';
+
+    // ==========================================================
+    // LOGIC MỚI: HIỂN THỊ TIÊU ĐỀ BÀI ĐĂNG NHÓM
+    // ==========================================================
+    if (group != null) {
+      return Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Avatar của nhóm, khi nhấn vào sẽ đến trang nhóm
+          GestureDetector(
+            onTap: () {
+              if (group.type == 'post') {
+                Navigator.pushNamed(context, '/post_group', arguments: group);
+              }
+            },
+            child: CircleAvatar(
+              radius: 20,
+              backgroundColor: Colors.grey[200],
+              child: const Icon(Icons.groups, size: 20, color: AppColors.textSecondary),
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Tên nhóm (chữ to, đậm), khi nhấn vào sẽ đến trang nhóm
+                GestureDetector(
+                  onTap: () {
+                    if (group.type == 'post') {
+                      Navigator.pushNamed(context, '/post_group', arguments: group);
+                    }
+                  },
+                  child: Text(group.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                ),
+                // Tên tác giả và thời gian (chữ nhỏ)
+                Row(
+                  children: [
+                    GestureDetector(
+                      onTap: () => Navigator.pushNamed(context, '/profile', arguments: author.id),
+                      child: Text(
+                        author.name,
+                        style: const TextStyle(color: Colors.grey, fontSize: 13, fontWeight: FontWeight.w500),
+                      ),
+                    ),
+                    const Text(' · ', style: TextStyle(color: Colors.grey, fontSize: 13)),
+                     Text(timestamp, style: const TextStyle(color: Colors.grey, fontSize: 13)),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
+      );
+    }
+
+    // Giao diện mặc định cho bài đăng cá nhân (như cũ)
     return GestureDetector(
-      onTap: () {
-        Navigator.pushNamed(context, '/profile', arguments: author.id);
-      },
+      onTap: () => Navigator.pushNamed(context, '/profile', arguments: author.id),
       child: Row(
         children: [
           CircleAvatar(
@@ -76,10 +139,10 @@ class PostWidget extends StatelessWidget {
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(author.name, style: const TextStyle(fontWeight: FontWeight.bold)),
+              Text(author.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
               Text(
-                '${post.createdAt.hour.toString().padLeft(2, '0')}:${post.createdAt.minute.toString().padLeft(2, '0')} · ${post.createdAt.day}/${post.createdAt.month}/${post.createdAt.year}',
-                style: const TextStyle(color: Colors.grey, fontSize: 12),
+                timestamp,
+                style: const TextStyle(color: Colors.grey, fontSize: 13),
               ),
             ],
           ),
@@ -97,12 +160,12 @@ class PostWidget extends StatelessWidget {
         final likes = postData?['likesCount'] ?? 0;
         final comments = postData?['commentsCount'] ?? 0;
         return Padding(
-          padding: const EdgeInsets.only(bottom: 8.0),
+          padding: const EdgeInsets.symmetric(vertical: 4.0, horizontal: 4.0),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text('$likes lượt thích'),
-              Text('$comments bình luận'),
+              Text(likes > 0 ? '$likes lượt thích' : '', style: const TextStyle(color: AppColors.textSecondary)),
+              Text(comments > 0 ? '$comments bình luận' : '', style: const TextStyle(color: AppColors.textSecondary)),
             ],
           ),
         );
@@ -111,7 +174,6 @@ class PostWidget extends StatelessWidget {
   }
 
   Widget _buildActionButtons(BuildContext context) {
-    // Lấy viewModel từ context của widget Builder
     final viewModel = Provider.of<PostInteractionViewModel>(context, listen: false);
 
     return StreamBuilder<DocumentSnapshot>(
