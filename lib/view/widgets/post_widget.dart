@@ -1,15 +1,18 @@
 
-
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:mangxahoi/model/model_post.dart';
 import 'package:mangxahoi/model/model_user.dart';
 import 'package:mangxahoi/model/model_group.dart';
+import 'package:mangxahoi/model/model_media.dart';
 import 'package:mangxahoi/viewmodel/post_interaction_view_model.dart';
 import 'package:mangxahoi/constant/app_colors.dart';
 import 'package:mangxahoi/authanet/firestore_listener.dart';
 import 'comment_sheet.dart';
+import 'package:cached_network_image/cached_network_image.dart';
+import 'package:video_player/video_player.dart';
+import 'package:visibility_detector/visibility_detector.dart';
 
 class PostWidget extends StatelessWidget {
   final PostModel post;
@@ -25,7 +28,6 @@ class PostWidget extends StatelessWidget {
   Widget build(BuildContext context) {
     final listener = context.watch<FirestoreListener>();
     final author = listener.getUserById(post.authorId);
-    // Lấy thông tin nhóm nếu bài viết có groupId
     final group = post.groupId != null && post.groupId!.isNotEmpty
         ? listener.getGroupById(post.groupId!)
         : null;
@@ -33,33 +35,47 @@ class PostWidget extends StatelessWidget {
     return ChangeNotifierProvider(
       key: ValueKey(post.id),
       create: (_) => PostInteractionViewModel(post.id),
-      child: Card(
-        color: Colors.white,
-        margin: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 0.0),
-        elevation: 1,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        child: Padding(
-          padding: const EdgeInsets.all(12.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _buildPostHeader(context, author, group), // Truyền group vào header
-              const SizedBox(height: 12),
-              if (post.content.isNotEmpty)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 12.0),
-                  child: Text(post.content, style: const TextStyle(fontSize: 16)),
-                ),
-              // Có thể thêm hiển thị ảnh/video ở đây nếu có
-              _buildPostStats(),
-              const Divider(),
-              Builder(
+      child: Container(
+        margin: const EdgeInsets.symmetric(vertical: 8.0),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12.0),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16.0, 12.0, 16.0, 0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildPostHeader(context, author, group),
+                  const SizedBox(height: 12),
+                  if (post.content.isNotEmpty)
+                    Text(post.content, style: const TextStyle(fontSize: 16)),
+                ],
+              ),
+            ),
+            
+            if (post.mediaIds.isNotEmpty)
+              _buildPostMedia(context),
+
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16.0),
+              child: _buildPostStats(),
+            ),
+            
+            const Divider(height: 1, indent: 16, endIndent: 16),
+            
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8.0),
+              child: Builder(
                 builder: (BuildContext innerContext) {
                   return _buildActionButtons(innerContext);
                 }
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
@@ -70,14 +86,10 @@ class PostWidget extends StatelessWidget {
 
     final String timestamp = '${post.createdAt.hour.toString().padLeft(2, '0')}:${post.createdAt.minute.toString().padLeft(2, '0')} · ${post.createdAt.day}/${post.createdAt.month}/${post.createdAt.year}';
 
-    // ==========================================================
-    // LOGIC MỚI: HIỂN THỊ TIÊU ĐỀ BÀI ĐĂNG NHÓM
-    // ==========================================================
     if (group != null) {
       return Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Avatar của nhóm, khi nhấn vào sẽ đến trang nhóm
           GestureDetector(
             onTap: () {
               if (group.type == 'post') {
@@ -95,7 +107,6 @@ class PostWidget extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Tên nhóm (chữ to, đậm), khi nhấn vào sẽ đến trang nhóm
                 GestureDetector(
                   onTap: () {
                     if (group.type == 'post') {
@@ -104,7 +115,6 @@ class PostWidget extends StatelessWidget {
                   },
                   child: Text(group.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
                 ),
-                // Tên tác giả và thời gian (chữ nhỏ)
                 Row(
                   children: [
                     GestureDetector(
@@ -125,7 +135,6 @@ class PostWidget extends StatelessWidget {
       );
     }
 
-    // Giao diện mặc định cho bài đăng cá nhân (như cũ)
     return GestureDetector(
       onTap: () => Navigator.pushNamed(context, '/profile', arguments: author.id),
       child: Row(
@@ -151,16 +160,64 @@ class PostWidget extends StatelessWidget {
     );
   }
 
+  Widget _buildPostMedia(BuildContext context) {
+    // Sử dụng context.read thay vì watch để tránh rebuild không cần thiết
+    final listener = context.read<FirestoreListener>();
+    final mediaId = post.mediaIds.first;
+    final media = listener.getMediaById(mediaId);
+
+    if (media == null) {
+      // Hiển thị placeholder trong khi listener đang tải dữ liệu
+      return Padding(
+        padding: const EdgeInsets.only(top: 12.0),
+        child: Container(
+          height: 250,
+          color: Colors.grey[200],
+          child: const Center(child: CircularProgressIndicator()),
+        ),
+      );
+    }
+
+    if (media.type == 'video') {
+      return Padding(
+        padding: const EdgeInsets.only(top: 12.0),
+        child: _VideoPlayerItem(videoUrl: media.url),
+      );
+    }
+
+    return Padding(
+      padding: const EdgeInsets.only(top: 12.0),
+      child: CachedNetworkImage(
+        imageUrl: media.url,
+        fit: BoxFit.cover,
+        width: double.infinity,
+        placeholder: (context, url) => Container(
+          height: 250,
+          color: Colors.grey[200],
+          child: const Center(child: CircularProgressIndicator()),
+        ),
+        errorWidget: (context, url, error) => Container(
+          height: 250,
+          color: Colors.grey[200],
+          child: const Center(child: Icon(Icons.error_outline, color: Colors.red)),
+        ),
+      ),
+    );
+  }
+
   Widget _buildPostStats() {
     return StreamBuilder<DocumentSnapshot>(
       stream: FirebaseFirestore.instance.collection('Post').doc(post.id).snapshots(),
       builder: (context, snapshot) {
-        if (!snapshot.hasData) return const SizedBox(height: 20);
+        if (!snapshot.hasData) return const SizedBox.shrink();
         final postData = snapshot.data!.data() as Map<String, dynamic>?;
         final likes = postData?['likesCount'] ?? 0;
         final comments = postData?['commentsCount'] ?? 0;
+        
+        if (likes == 0 && comments == 0) return const SizedBox(height: 8);
+
         return Padding(
-          padding: const EdgeInsets.symmetric(vertical: 4.0, horizontal: 4.0),
+          padding: const EdgeInsets.symmetric(vertical: 8.0),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -226,6 +283,95 @@ class PostWidget extends StatelessWidget {
           ],
         );
       },
+    );
+  }
+}
+
+class _VideoPlayerItem extends StatefulWidget {
+  final String videoUrl;
+  const _VideoPlayerItem({required this.videoUrl});
+
+  @override
+  State<_VideoPlayerItem> createState() => _VideoPlayerItemState();
+}
+
+class _VideoPlayerItemState extends State<_VideoPlayerItem> {
+  late VideoPlayerController _controller;
+  bool _isPlaying = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = VideoPlayerController.networkUrl(Uri.parse(widget.videoUrl))
+      ..initialize().then((_) {
+        setState(() {});
+      })
+      ..setLooping(true);
+
+    _controller.addListener(() {
+      if (!mounted) return;
+      if (_isPlaying != _controller.value.isPlaying) {
+        setState(() {
+          _isPlaying = _controller.value.isPlaying;
+        });
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return VisibilityDetector(
+      key: Key(widget.videoUrl),
+      onVisibilityChanged: (visibilityInfo) {
+        if (visibilityInfo.visibleFraction < 0.5 && _controller.value.isPlaying) {
+          _controller.pause();
+        }
+      },
+      child: _controller.value.isInitialized
+          ? AspectRatio(
+              aspectRatio: _controller.value.aspectRatio,
+              child: GestureDetector(
+                onTap: () {
+                  setState(() {
+                    _controller.value.isPlaying
+                        ? _controller.pause()
+                        : _controller.play();
+                  });
+                },
+                child: Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    VideoPlayer(_controller),
+                    AnimatedOpacity(
+                      opacity: _isPlaying ? 0.0 : 1.0,
+                      duration: const Duration(milliseconds: 300),
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: Colors.black.withOpacity(0.4),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.play_arrow,
+                          color: Colors.white,
+                          size: 60.0,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            )
+          : Container(
+              height: 250,
+              color: Colors.black,
+              child: const Center(child: CircularProgressIndicator(color: Colors.white)),
+            ),
     );
   }
 }
