@@ -1,41 +1,16 @@
-// lib/view/home_view.dart
 
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:provider/provider.dart';
 import 'package:mangxahoi/viewmodel/home_view_model.dart';
 import 'package:mangxahoi/constant/app_colors.dart';
-import 'package:mangxahoi/model/model_post.dart';
 import 'package:mangxahoi/view/widgets/post_widget.dart';
 import 'package:mangxahoi/view/friends_view.dart';
 import 'package:mangxahoi/view/profile/profile_view.dart';
 import 'package:mangxahoi/view/blocked_list_view.dart';
 import 'package:mangxahoi/services/user_service.dart';
-
-// Placeholder views...
-class VideoView extends StatelessWidget {
-  const VideoView({super.key});
-  @override
-  Widget build(BuildContext context) {
-    return const Scaffold(
-      body: SafeArea(
-        child: Center(child: Text('Trang Video')),
-      ),
-    );
-  }
-}
-
-class NotificationView extends StatelessWidget {
-  const NotificationView({super.key});
-  @override
-  Widget build(BuildContext context) {
-    return const Scaffold(
-      body: SafeArea(
-        child: Center(child: Text('Trang Thông Báo')),
-      ),
-    );
-  }
-}
+import 'package:mangxahoi/view/video_view.dart';
+import 'package:mangxahoi/view/notification_view.dart';
 
 class HomeView extends StatelessWidget {
   const HomeView({super.key});
@@ -43,7 +18,7 @@ class HomeView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ChangeNotifierProvider(
-      create: (_) => HomeViewModel(),
+      create: (context) => HomeViewModel(), // Truyền context vào đây
       child: const _HomeViewContent(),
     );
   }
@@ -64,9 +39,23 @@ class _HomeViewContentState extends State<_HomeViewContent> {
   @override
   void initState() {
     super.initState();
+
+    // Di chuyển lời gọi hàm vào đây
+    // Dùng addPostFrameCallback để đảm bảo widget đã được build xong
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<HomeViewModel>().fetchInitialPosts(context);
+    });
+    
     _scrollController.addListener(_handleScroll);
+    
+    _scrollController.addListener(() {
+      if (_scrollController.position.pixels >= _scrollController.position.maxScrollExtent - 300) {
+        context.read<HomeViewModel>().fetchMorePosts(context);
+      }
+    });
   }
 
+  // ... (phần còn lại của file giữ nguyên không thay đổi)
   @override
   void dispose() {
     _scrollController.removeListener(_handleScroll);
@@ -112,33 +101,33 @@ class _HomeViewContentState extends State<_HomeViewContent> {
     }
     
     final currentUserId = userService.currentUser!.id;
+    final posts = homeViewModel.posts;
 
-    return StreamBuilder<List<PostModel>>(
-      stream: homeViewModel.postsStream,
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
+    if (homeViewModel.isLoading && posts.isEmpty) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    
+    if (posts.isEmpty) {
+      return const Center(child: Text('Chưa có bài viết nào.'));
+    }
+
+    return ListView.builder(
+      controller: _scrollController,
+      padding: EdgeInsets.only(
+        top: kToolbarHeight + MediaQuery.of(context).padding.top + 10,
+        bottom: 85,
+      ),
+      itemCount: posts.length + (homeViewModel.hasMore ? 1 : 0),
+      itemBuilder: (context, index) {
+        if (index == posts.length) {
+          return const Padding(
+            padding: EdgeInsets.all(16.0),
+            child: Center(child: CircularProgressIndicator()),
+          );
         }
-        if (snapshot.hasError) {
-          return Center(child: Text('Lỗi tải bài đăng: ${snapshot.error}'));
-        }
-        if (!snapshot.hasData || snapshot.data!.isEmpty) {
-          return const Center(child: Text('Chưa có bài viết nào.'));
-        }
-        final posts = snapshot.data!;
-        return ListView.builder(
-          controller: _scrollController,
-          padding: EdgeInsets.only(
-            top: kToolbarHeight + MediaQuery.of(context).padding.top + 10,
-            bottom: 85,
-          ),
-          itemCount: posts.length,
-          itemBuilder: (context, index) {
-            return PostWidget(
-              post: posts[index],
-              currentUserDocId: currentUserId,
-            );
-          },
+        return PostWidget(
+          post: posts[index],
+          currentUserDocId: currentUserId,
         );
       },
     );

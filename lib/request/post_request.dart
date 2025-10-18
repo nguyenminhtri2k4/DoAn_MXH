@@ -29,6 +29,23 @@ class PostRequest {
     });
   }
 
+  // === MỚI: Lấy bài viết theo từng trang (Pagination) ===
+  Future<List<PostModel>> getPostsPaginated(
+      {int limit = 10, DocumentSnapshot? startAfter}) async {
+    Query query = _firestore
+        .collection(_collectionName)
+        .orderBy('createdAt', descending: true)
+        .limit(limit);
+
+    if (startAfter != null) {
+      query = query.startAfterDocument(startAfter);
+    }
+
+    final snapshot = await query.get();
+    return snapshot.docs.map((doc) => PostModel.fromMap(doc.id, doc.data() as Map<String, dynamic>)).toList();
+  }
+  // =======================================================
+
   Stream<List<PostModel>> getPostsByAuthorId(String authorId) {
     return _firestore
         .collection(_collectionName)

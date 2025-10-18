@@ -1,4 +1,3 @@
-
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -13,6 +12,7 @@ import 'comment_sheet.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:video_player/video_player.dart';
 import 'package:visibility_detector/visibility_detector.dart';
+import 'package:mangxahoi/services/video_cache_manager.dart';
 
 class PostWidget extends StatelessWidget {
   final PostModel post;
@@ -161,13 +161,11 @@ class PostWidget extends StatelessWidget {
   }
 
   Widget _buildPostMedia(BuildContext context) {
-    // Sử dụng context.read thay vì watch để tránh rebuild không cần thiết
     final listener = context.read<FirestoreListener>();
     final mediaId = post.mediaIds.first;
     final media = listener.getMediaById(mediaId);
 
     if (media == null) {
-      // Hiển thị placeholder trong khi listener đang tải dữ liệu
       return Padding(
         padding: const EdgeInsets.only(top: 12.0),
         child: Container(
@@ -296,82 +294,210 @@ class _VideoPlayerItem extends StatefulWidget {
 }
 
 class _VideoPlayerItemState extends State<_VideoPlayerItem> {
-  late VideoPlayerController _controller;
-  bool _isPlaying = false;
+  late Future<VideoPlayerController> _controllerFuture;
+  bool _isMuted = true;
+  bool _isScrubbing = false;
+  Duration _scrubbingPosition = Duration.zero;
 
   @override
   void initState() {
     super.initState();
-    _controller = VideoPlayerController.networkUrl(Uri.parse(widget.videoUrl))
-      ..initialize().then((_) {
-        setState(() {});
-      })
-      ..setLooping(true);
-
-    _controller.addListener(() {
-      if (!mounted) return;
-      if (_isPlaying != _controller.value.isPlaying) {
-        setState(() {
-          _isPlaying = _controller.value.isPlaying;
-        });
+    _controllerFuture = context
+        .read<VideoCacheManager>()
+        .getControllerForUrl(widget.videoUrl)
+        .then((controller) {
+      if (mounted) {
+        controller.setVolume(_isMuted ? 0 : 1);
       }
+      return controller;
     });
   }
 
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
+  String _formatDuration(Duration duration) {
+    final minutes = duration.inMinutes.remainder(60).toString().padLeft(2, '0');
+    final seconds = duration.inSeconds.remainder(60).toString().padLeft(2, '0');
+    return '$minutes:$seconds';
   }
 
   @override
   Widget build(BuildContext context) {
-    return VisibilityDetector(
-      key: Key(widget.videoUrl),
-      onVisibilityChanged: (visibilityInfo) {
-        if (visibilityInfo.visibleFraction < 0.5 && _controller.value.isPlaying) {
-          _controller.pause();
+    return FutureBuilder<VideoPlayerController>(
+      future: _controllerFuture,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.done && snapshot.hasData) {
+          final controller = snapshot.data!;
+          return VisibilityDetector(
+            key: Key(widget.videoUrl),
+            onVisibilityChanged: (visibilityInfo) {
+              final visibleFraction = visibilityInfo.visibleFraction;
+              if (mounted) {
+                if (visibleFraction > 0.8) {
+                  controller.play();
+                  controller.setLooping(true);
+                } else {
+                  if (controller.value.isPlaying) {
+                    controller.pause();
+                  }
+                }
+              }
+            },
+            child: AspectRatio(
+              aspectRatio: controller.value.aspectRatio,
+              child: Stack(
+                alignment: Alignment.bottomCenter,
+                children: [
+                  GestureDetector(
+                    onTap: () {
+                      setState(() {
+                        controller.value.isPlaying
+                            ? controller.pause()
+                            : controller.play();
+                      });
+                    },
+                    child: VideoPlayer(controller),
+                  ),
+                  _buildControlsOverlay(controller),
+                ],
+              ),
+            ),
+          );
         }
+        return Container(
+          height: 250,
+          color: Colors.black,
+          child: const Center(
+              child: CircularProgressIndicator(color: Colors.white)),
+        );
       },
-      child: _controller.value.isInitialized
-          ? AspectRatio(
-              aspectRatio: _controller.value.aspectRatio,
-              child: GestureDetector(
-                onTap: () {
-                  setState(() {
-                    _controller.value.isPlaying
-                        ? _controller.pause()
-                        : _controller.play();
-                  });
-                },
-                child: Stack(
-                  alignment: Alignment.center,
-                  children: [
-                    VideoPlayer(_controller),
-                    AnimatedOpacity(
-                      opacity: _isPlaying ? 0.0 : 1.0,
-                      duration: const Duration(milliseconds: 300),
-                      child: Container(
-                        decoration: BoxDecoration(
-                          color: Colors.black.withOpacity(0.4),
-                          shape: BoxShape.circle,
-                        ),
-                        child: const Icon(
-                          Icons.play_arrow,
-                          color: Colors.white,
-                          size: 60.0,
-                        ),
-                      ),
+    );
+  }
+
+  Widget _buildControlsOverlay(VideoPlayerController controller) {
+    return Stack(
+      children: [
+        // Nút Play/Pause
+        ValueListenableBuilder(
+          valueListenable: controller,
+          builder: (context, VideoPlayerValue value, child) {
+            return AnimatedOpacity(
+              opacity: value.isPlaying ? 0.0 : 1.0,
+              duration: const Duration(milliseconds: 300),
+              child: Center(
+                child: GestureDetector(
+                  onTap: () {
+                    setState(() {
+                      controller.play();
+                    });
+                  },
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: Colors.black.withOpacity(0.4),
+                      shape: BoxShape.circle,
                     ),
-                  ],
+                    child: const Icon(Icons.play_arrow, color: Colors.white, size: 60.0),
+                  ),
                 ),
               ),
-            )
-          : Container(
-              height: 250,
-              color: Colors.black,
-              child: const Center(child: CircularProgressIndicator(color: Colors.white)),
+            );
+          },
+        ),
+
+        // === SỬA ĐỔI: HIỂN THỊ THỜI GIAN KHI TUA ===
+        AnimatedOpacity(
+          duration: const Duration(milliseconds: 200),
+          opacity: _isScrubbing ? 1.0 : 0.0,
+          child: Center(
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: Colors.black.withOpacity(0.6),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Text(
+                '${_formatDuration(_scrubbingPosition)} / ${_formatDuration(controller.value.duration)}',
+                style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+              ),
             ),
+          ),
+        ),
+        // ===========================================
+
+        // Thanh tiến trình và nút âm lượng
+        Positioned(
+          bottom: 0,
+          left: 0,
+          right: 0,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.bottomCenter,
+                end: Alignment.topCenter,
+                colors: [Colors.black.withOpacity(0.6), Colors.transparent],
+              ),
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: LayoutBuilder(
+                    builder: (context, constraints) {
+                      return GestureDetector(
+                        behavior: HitTestBehavior.opaque,
+                        onHorizontalDragStart: (details) {
+                          if (!controller.value.isInitialized) return;
+                          setState(() { _isScrubbing = true; });
+                        },
+                        onHorizontalDragUpdate: (details) {
+                          if (!controller.value.isInitialized) return;
+                          final newPosition = details.localPosition.dx / constraints.maxWidth;
+                          final duration = controller.value.duration;
+                          setState(() {
+                            _scrubbingPosition = duration * newPosition.clamp(0.0, 1.0);
+                          });
+                        },
+                        onHorizontalDragEnd: (details) {
+                          if (!controller.value.isInitialized) return;
+                          controller.seekTo(_scrubbingPosition);
+                          // Đặt isScrubbing về false sau một khoảng trễ nhỏ để người dùng thấy vị trí cuối cùng
+                          Future.delayed(const Duration(milliseconds: 200), () {
+                            if (mounted) {
+                               setState(() { _isScrubbing = false; });
+                            }
+                          });
+                        },
+                        child: VideoProgressIndicator(
+                          controller,
+                          allowScrubbing: true,
+                          padding: const EdgeInsets.symmetric(vertical: 8.0),
+                          colors: const VideoProgressColors(
+                            playedColor: Colors.white,
+                            bufferedColor: Colors.white54,
+                            backgroundColor: Colors.white24,
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+                const SizedBox(width: 8),
+                GestureDetector(
+                  onTap: () {
+                    setState(() {
+                      _isMuted = !_isMuted;
+                      controller.setVolume(_isMuted ? 0 : 1);
+                    });
+                  },
+                  child: Icon(
+                    _isMuted ? Icons.volume_off : Icons.volume_up,
+                    color: Colors.white,
+                    size: 20,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

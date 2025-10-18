@@ -1,4 +1,4 @@
-// lib/main.dart
+
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -23,7 +23,8 @@ import 'package:mangxahoi/viewmodel/profile_view_model.dart';
 import 'package:mangxahoi/view/messages_view.dart';
 import 'package:mangxahoi/view/group_chat/post_group_view.dart';
 import 'package:mangxahoi/model/model_group.dart';
-import 'package:mangxahoi/services/user_service.dart'; // Import UserService
+import 'package:mangxahoi/services/user_service.dart';
+import 'package:mangxahoi/services/video_cache_manager.dart'; // Import mới
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -42,7 +43,8 @@ class MyApp extends StatelessWidget {
     return MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => FirestoreListener()),
-        ChangeNotifierProvider(create: (_) => UserService()), // Thêm UserService vào providers
+        ChangeNotifierProvider(create: (_) => UserService()),
+        ChangeNotifierProvider(create: (_) => VideoCacheManager()), // Thêm provider mới
       ],
       child: MaterialApp(
         debugShowCheckedModeBanner: false,
@@ -51,7 +53,8 @@ class MyApp extends StatelessWidget {
           primarySwatch: Colors.blue,
           useMaterial3: true,
         ),
-        initialRoute: '/login', // Hoặc kiểm tra trạng thái đăng nhập ở đây
+        initialRoute: '/login',
+        // ... (phần còn lại của file giữ nguyên)
         onGenerateRoute: (settings) {
           switch (settings.name) {
             case '/profile':
