@@ -1,4 +1,3 @@
-
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:provider/provider.dart';
@@ -18,7 +17,7 @@ class HomeView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ChangeNotifierProvider(
-      create: (context) => HomeViewModel(), // Truyền context vào đây
+      create: (context) => HomeViewModel(),
       child: const _HomeViewContent(),
     );
   }
@@ -39,9 +38,6 @@ class _HomeViewContentState extends State<_HomeViewContent> {
   @override
   void initState() {
     super.initState();
-
-    // Di chuyển lời gọi hàm vào đây
-    // Dùng addPostFrameCallback để đảm bảo widget đã được build xong
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<HomeViewModel>().fetchInitialPosts(context);
     });
@@ -55,7 +51,6 @@ class _HomeViewContentState extends State<_HomeViewContent> {
     });
   }
 
-  // ... (phần còn lại của file giữ nguyên không thay đổi)
   @override
   void dispose() {
     _scrollController.removeListener(_handleScroll);
@@ -111,29 +106,33 @@ class _HomeViewContentState extends State<_HomeViewContent> {
       return const Center(child: Text('Chưa có bài viết nào.'));
     }
 
-    return ListView.builder(
-      controller: _scrollController,
-      padding: EdgeInsets.only(
-        top: kToolbarHeight + MediaQuery.of(context).padding.top + 10,
-        bottom: 85,
-      ),
-      itemCount: posts.length + (homeViewModel.hasMore ? 1 : 0),
-      itemBuilder: (context, index) {
-        if (index == posts.length) {
-          return const Padding(
-            padding: EdgeInsets.all(16.0),
-            child: Center(child: CircularProgressIndicator()),
+    // === BỌC LISTVIEW BẰNG REFRESHINDICATOR ===
+    return RefreshIndicator(
+      onRefresh: () => context.read<HomeViewModel>().refreshPosts(context),
+      child: ListView.builder(
+        controller: _scrollController,
+        padding: EdgeInsets.only(
+          top: kToolbarHeight + MediaQuery.of(context).padding.top + 10,
+          bottom: 85,
+        ),
+        itemCount: posts.length + (homeViewModel.hasMore ? 1 : 0),
+        itemBuilder: (context, index) {
+          if (index == posts.length) {
+            return const Padding(
+              padding: EdgeInsets.all(16.0),
+              child: Center(child: CircularProgressIndicator()),
+            );
+          }
+          return PostWidget(
+            post: posts[index],
+            currentUserDocId: currentUserId,
           );
-        }
-        return PostWidget(
-          post: posts[index],
-          currentUserDocId: currentUserId,
-        );
-      },
+        },
+      ),
     );
   }
 
-   Widget _buildDrawerItem({
+    Widget _buildDrawerItem({
     required IconData icon,
     required String text,
     required VoidCallback onTap,
@@ -167,7 +166,7 @@ class _HomeViewContentState extends State<_HomeViewContent> {
       const FriendsView(),
       const VideoView(),
       const NotificationView(),
-      const ProfileView(), // Trang cá nhân của người dùng hiện tại
+      const ProfileView(),
     ];
 
     return Scaffold(
@@ -310,7 +309,7 @@ class _HomeViewContentState extends State<_HomeViewContent> {
                   ),
                   child: Column(
                     children: [
-                       _buildDrawerItem(
+                        _buildDrawerItem(
                         icon: Icons.block,
                         text: 'Danh sách chặn',
                         onTap: () {
@@ -350,9 +349,15 @@ class _HomeViewContentState extends State<_HomeViewContent> {
                 duration: const Duration(milliseconds: 200),
                 scale: showUI ? 1.0 : 0.0,
                 child: FloatingActionButton(
-                  onPressed: () {
+                  // === THÊM LOGIC TỰ ĐỘNG LÀM MỚI SAU KHI ĐĂNG BÀI ===
+                  onPressed: () async {
                     if (userService.currentUser != null) {
-                      Navigator.pushNamed(context, '/create_post', arguments: userService.currentUser);
+                      // Đợi màn hình create_post đóng lại
+                      await Navigator.pushNamed(context, '/create_post', arguments: userService.currentUser);
+                      // Sau khi đóng, gọi hàm làm mới
+                      if (mounted) {
+                        context.read<HomeViewModel>().refreshPosts(context);
+                      }
                     }
                   },
                   backgroundColor: AppColors.primary,
@@ -391,26 +396,11 @@ class _HomeViewContentState extends State<_HomeViewContent> {
                   backgroundColor: Colors.transparent,
                   elevation: 0,
                   items: const <BottomNavigationBarItem>[
-                    BottomNavigationBarItem(
-                      icon: Icon(Icons.home),
-                      label: 'Trang chủ',
-                    ),
-                    BottomNavigationBarItem(
-                      icon: Icon(Icons.people),
-                      label: 'Bạn bè',
-                    ),
-                    BottomNavigationBarItem(
-                      icon: Icon(Icons.ondemand_video),
-                      label: 'Video',
-                    ),
-                    BottomNavigationBarItem(
-                      icon: Icon(Icons.notifications),
-                      label: 'Thông báo',
-                    ),
-                    BottomNavigationBarItem(
-                      icon: Icon(Icons.person),
-                      label: 'Cá nhân',
-                    ),
+                    BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Trang chủ'),
+                    BottomNavigationBarItem(icon: Icon(Icons.people), label: 'Bạn bè'),
+                    BottomNavigationBarItem(icon: Icon(Icons.ondemand_video), label: 'Video'),
+                    BottomNavigationBarItem(icon: Icon(Icons.notifications), label: 'Thông báo'),
+                    BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Cá nhân'),
                   ],
                   currentIndex: _selectedIndex,
                   selectedItemColor: AppColors.primary,

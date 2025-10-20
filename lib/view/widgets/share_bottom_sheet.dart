@@ -1,4 +1,4 @@
-// lib/view/widgets/share_bottom_sheet.dart
+
 import 'package:flutter/material.dart';
 import 'package:mangxahoi/model/model_post.dart';
 import 'package:mangxahoi/model/model_user.dart';
@@ -16,7 +16,6 @@ class ShareBottomSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Lấy thông tin người dùng hiện tại từ UserService
     final currentUser = context.read<UserService>().currentUser;
 
     return Container(
@@ -26,21 +25,17 @@ class ShareBottomSheet extends StatelessWidget {
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       child: Wrap(
-        spacing: 8.0,
-        runSpacing: 8.0,
         children: <Widget>[
-          const Text(
-            'Chia sẻ bài viết',
-            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+          const ListTile(
+            title: Text('Chia sẻ bài viết', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
           ),
           const Divider(),
           ListTile(
             leading: const Icon(Icons.dynamic_feed, color: Colors.blue),
             title: const Text('Chia sẻ lên Bảng feed'),
             onTap: () {
-              Navigator.pop(context); // Đóng bottom sheet
+              Navigator.pop(context); 
               if (currentUser != null) {
-                // Điều hướng đến màn hình SharePostView mới
                 Navigator.pushNamed(
                   context,
                   '/share_post',
@@ -57,10 +52,10 @@ class ShareBottomSheet extends StatelessWidget {
             title: const Text('Gửi trong Messenger'),
             onTap: () {
               Navigator.pop(context);
-              NotificationService().showInfoDialog(
-                context: context,
-                title: 'Tính năng đang phát triển',
-                message: 'Chức năng gửi cho bạn bè sẽ sớm được cập nhật!',
+              Navigator.pushNamed(
+                context,
+                '/share_to_messenger',
+                arguments: post,
               );
             },
           ),

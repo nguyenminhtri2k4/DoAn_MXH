@@ -1,4 +1,3 @@
-
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -23,10 +22,12 @@ import 'package:mangxahoi/viewmodel/profile_view_model.dart';
 import 'package:mangxahoi/view/messages_view.dart';
 import 'package:mangxahoi/view/group_chat/post_group_view.dart';
 import 'package:mangxahoi/model/model_group.dart';
-import 'package:mangxahoi/model/model_post.dart'; // THÊM IMPORT
+import 'package:mangxahoi/model/model_post.dart';
 import 'package:mangxahoi/services/user_service.dart';
 import 'package:mangxahoi/services/video_cache_manager.dart';
-import 'package:mangxahoi/view/post/share_post_view.dart'; // THÊM IMPORT
+import 'package:mangxahoi/view/post/share_post_view.dart';
+import 'package:mangxahoi/view/share_to_messenger_view.dart';
+import 'package:mangxahoi/view/post/post_detail_view.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -60,12 +61,19 @@ class MyApp extends StatelessWidget {
           switch (settings.name) {
             case '/profile':
               final userId = settings.arguments as String?;
-              return MaterialPageRoute(
-                builder: (context) => ProfileView(userId: userId),
-              );
+              return MaterialPageRoute(builder: (context) => ProfileView(userId: userId));
             
+            // === SỬA LỖI LOGIC ĐIỀU HƯỚNG TẠI ĐÂY ===
             case '/create_post':
-              if (settings.arguments is Map<String, dynamic>) {
+              // Xử lý trường hợp từ trang chủ (chỉ có UserModel)
+              if (settings.arguments is UserModel) {
+                final user = settings.arguments as UserModel;
+                return MaterialPageRoute(
+                  builder: (context) => CreatePostView(currentUser: user),
+                );
+              } 
+              // Xử lý trường hợp từ group (có cả UserModel và groupId)
+              else if (settings.arguments is Map<String, dynamic>) {
                 final args = settings.arguments as Map<String, dynamic>;
                 final user = args['currentUser'] as UserModel;
                 final groupId = args['groupId'] as String?;
@@ -75,53 +83,41 @@ class MyApp extends StatelessWidget {
                     groupId: groupId,
                   ),
                 );
-              } else if (settings.arguments is UserModel) {
-                final user = settings.arguments as UserModel;
-                return MaterialPageRoute(
-                  builder: (context) => CreatePostView(currentUser: user),
-                );
               }
               return null;
+            // ==========================================
 
             case '/edit_profile':
               final viewModel = settings.arguments as ProfileViewModel;
-              return MaterialPageRoute(
-                builder: (context) => EditProfileView(viewModel: viewModel),
-              );
+              return MaterialPageRoute(builder: (context) => EditProfileView(viewModel: viewModel));
+              
             case '/about':
               final args = settings.arguments as Map<String, dynamic>;
               final viewModel = args['viewModel'] as ProfileViewModel;
               final isCurrentUser = args['isCurrentUser'] as bool;
-              return MaterialPageRoute(
-                builder: (context) => AboutView(
-                  viewModel: viewModel,
-                  isCurrentUser: isCurrentUser,
-                ),
-              );
+              return MaterialPageRoute(builder: (context) => AboutView(viewModel: viewModel, isCurrentUser: isCurrentUser));
+              
             case '/chat':
               final args = settings.arguments as Map<String, dynamic>;
-              return MaterialPageRoute(
-                builder: (context) => ChatView(
-                  chatId: args['chatId'],
-                  chatName: args['chatName'],
-                ),
-              );
+              return MaterialPageRoute(builder: (context) => ChatView(chatId: args['chatId'], chatName: args['chatName']));
+              
             case '/post_group':
               final group = settings.arguments as GroupModel;
-              return MaterialPageRoute(
-                builder: (context) => PostGroupView(group: group),
-              );
+              return MaterialPageRoute(builder: (context) => PostGroupView(group: group));
             
-            case '/share_post': // <<< THÊM CASE MỚI
+            case '/share_post':
               final args = settings.arguments as Map<String, dynamic>;
               final originalPost = args['originalPost'] as PostModel;
               final currentUser = args['currentUser'] as UserModel;
-              return MaterialPageRoute(
-                builder: (context) => SharePostView(
-                  originalPost: originalPost,
-                  currentUser: currentUser,
-                ),
-              );
+              return MaterialPageRoute(builder: (context) => SharePostView(originalPost: originalPost, currentUser: currentUser));
+
+            case '/share_to_messenger':
+              final post = settings.arguments as PostModel;
+              return MaterialPageRoute(builder: (context) => ShareToMessengerView(postToShare: post));
+
+            case '/post_detail':
+              final postId = settings.arguments as String;
+              return MaterialPageRoute(builder: (context) => PostDetailView(postId: postId));
 
             default:
               return null;
