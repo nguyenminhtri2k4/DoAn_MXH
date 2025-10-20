@@ -182,7 +182,7 @@ class _SearchViewContent extends StatelessWidget {
         child: (user.avatar.isEmpty) ? const Icon(Icons.person, size: 24) : null,
       ),
       title: Text(user.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-      subtitle: Text(user.email.isNotEmpty ? user.email : (user.phone.isNotEmpty ? user.phone : 'Không có thông tin liên hệ')),
+      //subtitle: Text(user.email.isNotEmpty ? user.email : (user.phone.isNotEmpty ? user.phone : 'Không có thông tin liên hệ')),
       trailing: actionButton,
       onTap: () {
         Navigator.pushNamed(context, '/profile', arguments: user.id);

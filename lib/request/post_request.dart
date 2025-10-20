@@ -15,6 +15,24 @@ class PostRequest {
       rethrow;
     }
   }
+  
+  Future<void> updatePost(PostModel post) async {
+    try {
+      await _firestore.collection(_collectionName).doc(post.id).update(post.toMap());
+    } catch (e) {
+      print('❌ Lỗi khi cập nhật bài viết: $e');
+      rethrow;
+    }
+  }
+
+  Future<void> deletePostSoft(String postId) async {
+    try {
+      await _firestore.collection(_collectionName).doc(postId).update({'status': 'deleted'});
+    } catch (e) {
+      print('❌ Lỗi khi xóa bài viết: $e');
+      rethrow;
+    }
+  }
 
   Stream<List<PostModel>> getPosts() {
     return _firestore
@@ -32,6 +50,7 @@ class PostRequest {
       {int limit = 10, DocumentSnapshot? startAfter}) async {
     Query query = _firestore
         .collection(_collectionName)
+        .where('status', isEqualTo: 'active')
         .orderBy('createdAt', descending: true)
         .limit(limit);
 
@@ -47,6 +66,7 @@ class PostRequest {
     return _firestore
         .collection(_collectionName)
         .where('authorId', isEqualTo: authorId)
+        .where('status', isEqualTo: 'active')
         .orderBy('createdAt', descending: true)
         .snapshots()
         .map((snapshot) =>
@@ -57,32 +77,41 @@ class PostRequest {
     return _firestore
         .collection(_collectionName)
         .where('groupId', isEqualTo: groupId)
+        .where('status', isEqualTo: 'active')
         .orderBy('createdAt', descending: true)
         .snapshots()
         .map((snapshot) =>
             snapshot.docs.map((doc) => PostModel.fromMap(doc.id, doc.data())).toList());
   }
 
-  // === CẬP NHẬT HÀM CHIA SẺ BÀI VIẾT ===
   Future<void> sharePost({
     required PostModel originalPost,
     required String sharerId,
     String? content,
-    required String visibility, // Thêm tham số visibility
+    required String visibility,
   }) async {
     try {
-      final sharedPost = PostModel(
-        id: '',
-        authorId: sharerId,
-        content: content ?? '',
-        createdAt: DateTime.now(),
-        visibility: visibility, // Sử dụng visibility được truyền vào
-        originalPostId: originalPost.id,
-        originalAuthorId: originalPost.authorId,
-      );
-
+      final now = DateTime.now();
       final batch = _firestore.batch();
       final newPostRef = _firestore.collection(_collectionName).doc();
+
+      // ĐÃ SỬA: Bổ sung đầy đủ các tham số bắt buộc
+      final sharedPost = PostModel(
+        id: newPostRef.id,
+        authorId: sharerId,
+        content: content ?? '',
+        createdAt: now,
+        updatedAt: now, // SỬA Ở ĐÂY
+        visibility: visibility,
+        originalPostId: originalPost.id,
+        originalAuthorId: originalPost.authorId,
+        mediaIds: [], // SỬA Ở ĐÂY
+        commentsCount: 0, // SỬA Ở ĐÂY
+        likesCount: 0, // SỬA Ở ĐÂY
+        shareCount: 0, // SỬA Ở ĐÂY
+        status: 'active', // SỬA Ở ĐÂY
+      );
+
       batch.set(newPostRef, sharedPost.toMap());
 
       final originalPostRef = _firestore.collection(_collectionName).doc(originalPost.id);

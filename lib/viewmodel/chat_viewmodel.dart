@@ -1,4 +1,4 @@
-// lib/viewmodel/chat_viewmodel.dart
+
 import 'package:flutter/material.dart';
 import 'package:mangxahoi/model/model_message.dart';
 import 'package:mangxahoi/request/chat_request.dart';
@@ -32,5 +32,17 @@ class ChatViewModel extends ChangeNotifier {
 
     await _chatRequest.sendMessage(chatId, message);
     messageController.clear();
+  }
+
+  Future<void> recallMessage(String messageId) async {
+    await _chatRequest.recallMessage(chatId, messageId);
+  }
+
+  Future<void> deleteMessage(String messageId) async {
+    await _chatRequest.deleteMessage(chatId, messageId);
+  }
+
+  void markAsSeen(String messageId) {
+    _chatRequest.updateMessageStatus(chatId, messageId, 'seen');
   }
 }

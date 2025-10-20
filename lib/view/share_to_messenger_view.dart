@@ -1,4 +1,4 @@
-// lib/view/share_to_messenger_view.dart
+
 import 'package:flutter/material.dart';
 import 'package:mangxahoi/constant/app_colors.dart';
 import 'package:mangxahoi/model/model_post.dart';
@@ -21,14 +21,17 @@ class ShareToMessengerView extends StatefulWidget {
 
 class _ShareToMessengerViewState extends State<ShareToMessengerView> {
   List<UserModel> _friends = [];
+  List<UserModel> _filteredFriends = [];
   final List<UserModel> _selectedFriends = [];
   bool _isLoading = true;
   bool _isSending = false;
+  final _searchController = TextEditingController();
 
   @override
   void initState() {
     super.initState();
     _loadFriends();
+    _searchController.addListener(_filterFriends);
   }
 
   Future<void> _loadFriends() async {
@@ -45,6 +48,7 @@ class _ShareToMessengerViewState extends State<ShareToMessengerView> {
           .toList();
       setState(() {
         _friends = friendsList;
+        _filteredFriends = friendsList;
         _isLoading = false;
       });
     } else {
@@ -52,6 +56,15 @@ class _ShareToMessengerViewState extends State<ShareToMessengerView> {
         _isLoading = false;
       });
     }
+  }
+
+  void _filterFriends() {
+    final query = _searchController.text.toLowerCase();
+    setState(() {
+      _filteredFriends = _friends.where((friend) {
+        return friend.name.toLowerCase().contains(query);
+      }).toList();
+    });
   }
 
   Future<void> _handleSend() async {
@@ -111,6 +124,12 @@ class _ShareToMessengerViewState extends State<ShareToMessengerView> {
           );
       }
   }
+  
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -122,6 +141,10 @@ class _ShareToMessengerViewState extends State<ShareToMessengerView> {
             padding: const EdgeInsets.only(right: 8.0),
             child: ElevatedButton(
               onPressed: (_selectedFriends.isEmpty || _isSending) ? null : _handleSend,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                foregroundColor: Colors.white,
+              ),
               child: _isSending 
                   ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)) 
                   : const Text('Gửi'),
@@ -129,34 +152,99 @@ class _ShareToMessengerViewState extends State<ShareToMessengerView> {
           ),
         ],
       ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : _friends.isEmpty
-              ? const Center(child: Text('Bạn chưa có bạn bè nào.'))
-              : ListView.builder(
-                  itemCount: _friends.length,
-                  itemBuilder: (context, index) {
-                    final friend = _friends[index];
-                    final isSelected = _selectedFriends.contains(friend);
-                    return CheckboxListTile(
-                      secondary: CircleAvatar(
-                        backgroundImage: friend.avatar.isNotEmpty ? NetworkImage(friend.avatar.first) : null,
-                        child: friend.avatar.isEmpty ? const Icon(Icons.person) : null,
-                      ),
-                      title: Text(friend.name),
-                      value: isSelected,
-                      onChanged: (bool? value) {
-                        setState(() {
-                          if (value == true) {
-                            _selectedFriends.add(friend);
-                          } else {
-                            _selectedFriends.remove(friend);
-                          }
-                        });
-                      },
-                    );
-                  },
+      body: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Container(
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(14),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.04),
+                    blurRadius: 10,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: TextField(
+                controller: _searchController,
+                decoration: InputDecoration(
+                  hintText: 'Tìm kiếm bạn bè...',
+                  hintStyle: TextStyle(color: Colors.grey[400]),
+                  prefixIcon: Icon(Icons.search_rounded, color: Colors.grey[400], size: 24),
+                  suffixIcon: _searchController.text.isNotEmpty
+                      ? IconButton(
+                          icon: Icon(Icons.clear, color: Colors.grey[400], size: 20),
+                          onPressed: () {
+                            _searchController.clear();
+                          },
+                        )
+                      : null,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(14),
+                    borderSide: BorderSide.none,
+                  ),
+                  filled: true,
+                  fillColor: Colors.white,
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                 ),
+              ),
+            ),
+          ),
+          Expanded(
+            child: _isLoading
+                ? const Center(child: CircularProgressIndicator())
+                : _filteredFriends.isEmpty
+                    ? Center(child: Text(_friends.isEmpty ? 'Bạn chưa có bạn bè nào.' : 'Không tìm thấy bạn bè.'))
+                    : ListView.builder(
+                        padding: const EdgeInsets.symmetric(horizontal: 12.0),
+                        itemCount: _filteredFriends.length,
+                        itemBuilder: (context, index) {
+                          final friend = _filteredFriends[index];
+                          final isSelected = _selectedFriends.contains(friend);
+                          final avatarImage = friend.avatar.isNotEmpty ? NetworkImage(friend.avatar.first) : null;
+                          return Card(
+                            elevation: 0,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            margin: const EdgeInsets.symmetric(vertical: 4.0),
+                            child: ListTile(
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                              leading: CircleAvatar(
+                                backgroundImage: avatarImage,
+                                child: avatarImage == null ? const Icon(Icons.person) : null,
+                              ),
+                              title: Text(friend.name, style: const TextStyle(fontWeight: FontWeight.w600)),
+                              trailing: Checkbox(
+                                value: isSelected,
+                                onChanged: (bool? value) {
+                                  setState(() {
+                                    if (value == true) {
+                                      _selectedFriends.add(friend);
+                                    } else {
+                                      _selectedFriends.remove(friend);
+                                    }
+                                  });
+                                },
+                                activeColor: AppColors.primary,
+                              ),
+                              onTap: () {
+                                 setState(() {
+                                    if (isSelected) {
+                                      _selectedFriends.remove(friend);
+                                    } else {
+                                      _selectedFriends.add(friend);
+                                    }
+                                  });
+                              },
+                            ),
+                          );
+                        },
+                      ),
+          ),
+        ],
+      ),
     );
   }
 }

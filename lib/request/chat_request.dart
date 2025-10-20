@@ -87,4 +87,34 @@ class ChatRequest {
             .map((doc) => ChatModel.fromMap(doc.data(), doc.id))
             .toList());
   }
+
+  /// Thu hồi một tin nhắn
+  Future<void> recallMessage(String chatId, String messageId) async {
+    await _firestore
+        .collection('Chat')
+        .doc(chatId)
+        .collection('messages')
+        .doc(messageId)
+        .update({'status': 'recalled'});
+  }
+
+  /// Xóa một tin nhắn (xóa mềm)
+  Future<void> deleteMessage(String chatId, String messageId) async {
+    await _firestore
+        .collection('Chat')
+        .doc(chatId)
+        .collection('messages')
+        .doc(messageId)
+        .update({'status': 'deleted'});
+  }
+
+  /// Cập nhật trạng thái của tin nhắn (ví dụ: 'seen')
+  Future<void> updateMessageStatus(String chatId, String messageId, String status) async {
+    await _firestore
+        .collection('Chat')
+        .doc(chatId)
+        .collection('messages')
+        .doc(messageId)
+        .update({'status': status});
+  }
 }

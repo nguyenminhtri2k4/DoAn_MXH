@@ -1,96 +1,114 @@
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class PostModel {
   final String id;
   final String authorId;
   final String content;
-  final String? groupId;
   final List<String> mediaIds;
+  final String? groupId; // Có thể null nếu là bài viết cá nhân
   final int commentsCount;
   final int likesCount;
   final int shareCount;
   final String status;
-  final String visibility;
+  final String visibility; // public, friends, private
   final DateTime createdAt;
-  final DateTime? updatedAt;
-  
-  // --- THÊM CÁC TRƯỜ...ng MỚI ---
-  final String? originalPostId;
-  final String? originalAuthorId;
-  // --------------------------
+  final DateTime updatedAt;
+  final String? originalPostId; // Dùng cho bài viết được chia sẻ
+  final String? originalAuthorId; // Dùng cho bài viết được chia sẻ
 
-  PostModel({
+  const PostModel({
     required this.id,
     required this.authorId,
     required this.content,
+    required this.mediaIds,
     this.groupId,
-    this.mediaIds = const [],
-    this.commentsCount = 0,
-    this.likesCount = 0,
-    this.shareCount = 0,
-    this.status = 'active',
-    this.visibility = 'public',
+    required this.commentsCount,
+    required this.likesCount,
+    required this.shareCount,
+    required this.status,
+    required this.visibility,
     required this.createdAt,
-    this.updatedAt,
-    // --- THÊM VÀO CONSTRUCTOR ---
+    required this.updatedAt,
     this.originalPostId,
     this.originalAuthorId,
   });
 
-  static int _parseCount(dynamic v) {
-    if (v == null) return 0;
-    if (v is int) return v;
-    if (v is double) return v.toInt();
-    if (v is String) return int.tryParse(v) ?? 0;
-    if (v is List) return v.length;
-    return 0;
-  }
-
-  static List<String> _parseListString(dynamic v) {
-    if (v == null) return [];
-    if (v is List) return v.map((e) => e.toString()).toList();
-    if (v is String && v.isNotEmpty) return [v];
-    return [];
-  }
-
+  /// Factory constructor để tạo một đối tượng PostModel từ một DocumentSnapshot của Firestore.
   factory PostModel.fromMap(String id, Map<String, dynamic> map) {
     return PostModel(
       id: id,
       authorId: map['authorId'] ?? '',
       content: map['content'] ?? '',
+      mediaIds: List<String>.from(map['mediaIds'] ?? []),
       groupId: map['groupId'],
-      mediaIds: _parseListString(map['mediaIds'] ?? map['mediaId']),
-      commentsCount: _parseCount(map['commentsCount']),
-      likesCount: _parseCount(map['likesCount']),
-      shareCount: _parseCount(map['shareCount']),
+      commentsCount: map['commentsCount'] ?? 0,
+      likesCount: map['likesCount'] ?? 0,
+      shareCount: map['shareCount'] ?? 0,
       status: map['status'] ?? 'active',
       visibility: map['visibility'] ?? 'public',
-      createdAt: (map['createdAt'] as Timestamp).toDate(),
-      updatedAt: map['updatedAt'] != null
-          ? (map['updatedAt'] as Timestamp).toDate()
-          : null,
-      // --- ĐỌC DỮ LIỆU TỪ FIRESTORE ---
+      // createdAt: (map['createdAt'] as Timestamp).toDate(),
+      // updatedAt: (map['updatedAt'] as Timestamp).toDate(),
+      // Thêm ? để cho phép giá trị null, và cung cấp giá trị mặc định nếu nó null
+      createdAt: (map['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      updatedAt: (map['updatedAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
       originalPostId: map['originalPostId'],
       originalAuthorId: map['originalAuthorId'],
     );
   }
 
+  /// Chuyển đổi một đối tượng PostModel thành một Map để lưu trữ trên Firestore.
   Map<String, dynamic> toMap() {
     return {
       'authorId': authorId,
       'content': content,
-      if (groupId != null) 'groupId': groupId,
       'mediaIds': mediaIds,
+      'groupId': groupId,
       'commentsCount': commentsCount,
       'likesCount': likesCount,
       'shareCount': shareCount,
       'status': status,
       'visibility': visibility,
       'createdAt': Timestamp.fromDate(createdAt),
-      if (updatedAt != null) 'updatedAt': Timestamp.fromDate(updatedAt!),
-      // --- GHI DỮ LIỆU VÀO FIRESTORE ---
-      if (originalPostId != null) 'originalPostId': originalPostId,
-      if (originalAuthorId != null) 'originalAuthorId': originalAuthorId,
+      'updatedAt': Timestamp.fromDate(updatedAt),
+      'originalPostId': originalPostId,
+      'originalAuthorId': originalAuthorId,
     };
+  }
+
+  /// Tạo một bản sao của đối tượng PostModel nhưng với một vài trường được cập nhật.
+  /// Rất hữu ích cho việc quản lý state.
+  PostModel copyWith({
+    String? id,
+    String? authorId,
+    String? content,
+    List<String>? mediaIds,
+    String? groupId,
+    int? commentsCount,
+    int? likesCount,
+    int? shareCount,
+    String? status,
+    String? visibility,
+    DateTime? createdAt,
+    DateTime? updatedAt,
+    String? originalPostId,
+    String? originalAuthorId,
+  }) {
+    return PostModel(
+      id: id ?? this.id,
+      authorId: authorId ?? this.authorId,
+      content: content ?? this.content,
+      mediaIds: mediaIds ?? this.mediaIds,
+      groupId: groupId ?? this.groupId,
+      commentsCount: commentsCount ?? this.commentsCount,
+      likesCount: likesCount ?? this.likesCount,
+      shareCount: shareCount ?? this.shareCount,
+      status: status ?? this.status,
+      visibility: visibility ?? this.visibility,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+      originalPostId: originalPostId ?? this.originalPostId,
+      originalAuthorId: originalAuthorId ?? this.originalAuthorId,
+    );
   }
 }
