@@ -7,7 +7,7 @@ class MessageModel {
   final DateTime createdAt;
   final List<String> mediaIds;
   final String senderId;
-  final String status;
+  final String status; // 'sent', 'delivered', 'seen', 'recalled', 'deleted'
   final String type; // 'text' hoặc 'share_post'
   final String? sharedPostId; // ID của bài viết được chia sẻ
 

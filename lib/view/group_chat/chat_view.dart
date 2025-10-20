@@ -10,6 +10,7 @@ import 'package:mangxahoi/constant/app_colors.dart';
 import 'package:intl/intl.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:visibility_detector/visibility_detector.dart';
 
 class ChatView extends StatelessWidget {
   final String chatId;
@@ -51,7 +52,14 @@ class _ChatViewContent extends StatelessWidget {
                 if (!snapshot.hasData) {
                   return const Center(child: CircularProgressIndicator());
                 }
-                final messages = snapshot.data!;
+                var messages = snapshot.data!;
+                // Lọc ra các tin nhắn đã bị xóa
+                messages = messages.where((m) => m.status != 'deleted').toList();
+
+                if (messages.isEmpty) {
+                  return const Center(child: Text('Bắt đầu cuộc trò chuyện.'));
+                }
+
                 return ListView.builder(
                   reverse: true,
                   padding: const EdgeInsets.all(10.0),
@@ -60,10 +68,26 @@ class _ChatViewContent extends StatelessWidget {
                     final message = messages[index];
                     final sender = firestoreListener.getUserByAuthUid(message.senderId);
                     final isMe = message.senderId == vm.currentUserId;
-                    return _MessageBubble(
-                      message: message,
-                      sender: sender,
-                      isMe: isMe,
+
+                    return VisibilityDetector(
+                      key: Key(message.id),
+                      onVisibilityChanged: (visibilityInfo) {
+                        if (visibilityInfo.visibleFraction == 1.0 && !isMe && message.status != 'seen') {
+                          vm.markAsSeen(message.id);
+                        }
+                      },
+                      child: GestureDetector(
+                        onLongPress: () {
+                          if (isMe) {
+                            _showMessageOptions(context, vm, message);
+                          }
+                        },
+                        child: _MessageBubble(
+                          message: message,
+                          sender: sender,
+                          isMe: isMe,
+                        ),
+                      ),
                     );
                   },
                 );
@@ -73,6 +97,34 @@ class _ChatViewContent extends StatelessWidget {
           _buildMessageComposer(context, vm),
         ],
       ),
+    );
+  }
+  
+  void _showMessageOptions(BuildContext context, ChatViewModel vm, MessageModel message) {
+    showModalBottomSheet(
+      context: context,
+      builder: (context) {
+        return Wrap(
+          children: <Widget>[
+            ListTile(
+              leading: const Icon(Icons.undo),
+              title: const Text('Thu hồi'),
+              onTap: () {
+                Navigator.pop(context);
+                vm.recallMessage(message.id);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.delete),
+              title: const Text('Xóa'),
+              onTap: () {
+                Navigator.pop(context);
+                vm.deleteMessage(message.id);
+              },
+            ),
+          ],
+        );
+      },
     );
   }
 
@@ -129,10 +181,33 @@ class _MessageBubble extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (message.status == 'recalled') {
+      return _buildRecalledMessageBubble();
+    }
     if (message.type == 'share_post' && message.sharedPostId != null) {
       return _buildSharedPostBubble(context);
     }
     return _buildTextBubble(context);
+  }
+  
+  Widget _buildRecalledMessageBubble() {
+    return Row(
+      mainAxisAlignment: isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
+      children: [
+        Container(
+          margin: const EdgeInsets.symmetric(vertical: 6.0),
+          padding: const EdgeInsets.symmetric(horizontal: 15.0, vertical: 10.0),
+          decoration: BoxDecoration(
+            color: Colors.grey[200],
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: const Text(
+            'Tin nhắn đã bị thu hồi',
+            style: TextStyle(color: Colors.black54, fontStyle: FontStyle.italic),
+          ),
+        ),
+      ],
+    );
   }
 
   Widget _buildSharedPostBubble(BuildContext context) {
@@ -177,7 +252,16 @@ class _MessageBubble extends StatelessWidget {
           ),
           Padding(
             padding: EdgeInsets.only(top: 4, left: isMe ? 0 : 52, right: isMe ? 8 : 0),
-            child: Text(DateFormat('HH:mm').format(message.createdAt), style: const TextStyle(fontSize: 10.0, color: Colors.grey)),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(DateFormat('HH:mm').format(message.createdAt), style: const TextStyle(fontSize: 10.0, color: Colors.grey)),
+                if (isMe) ...[
+                  const SizedBox(width: 4),
+                  _buildStatusIcon(message.status),
+                ]
+              ],
+            ),
           ),
         ],
       ),
@@ -233,11 +317,39 @@ class _MessageBubble extends StatelessWidget {
           ),
           Padding(
             padding: EdgeInsets.only(top: 4, left: isMe ? 0 : 52, right: isMe ? 8 : 0),
-            child: Text(DateFormat('HH:mm').format(message.createdAt), style: const TextStyle(fontSize: 10.0, color: Colors.grey)),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(DateFormat('HH:mm').format(message.createdAt), style: const TextStyle(fontSize: 10.0, color: Colors.grey)),
+                if (isMe) ...[
+                  const SizedBox(width: 4),
+                  _buildStatusIcon(message.status),
+                ]
+              ],
+            ),
           ),
         ],
       ),
     );
+  }
+  
+  Widget _buildStatusIcon(String status) {
+    IconData iconData;
+    Color color = Colors.grey;
+    switch (status) {
+      case 'seen':
+        iconData = Icons.done_all;
+        color = Colors.blue;
+        break;
+      case 'delivered':
+        iconData = Icons.done_all;
+        break;
+      case 'sent':
+      default:
+        iconData = Icons.check;
+        break;
+    }
+    return Icon(iconData, size: 14, color: color);
   }
 }
 

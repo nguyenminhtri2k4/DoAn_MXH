@@ -1,4 +1,3 @@
-
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
@@ -137,15 +136,22 @@ class PostViewModel extends ChangeNotifier {
           }
         }
       }
-
+      
+      final now = DateTime.now();
+      // ĐÃ SỬA: Bổ sung đầy đủ các tham số bắt buộc
       final newPost = PostModel(
-        id: '',
+        id: '', // Firestore sẽ tự tạo ID khi dùng .add()
         authorId: authorDocId,
         content: contentController.text.trim(),
         mediaIds: mediaIds,
         groupId: groupId,
         visibility: visibility,
-        createdAt: DateTime.now(),
+        createdAt: now,
+        updatedAt: now, // SỬA Ở ĐÂY
+        commentsCount: 0, // SỬA Ở ĐÂY
+        likesCount: 0, // SỬA Ở ĐÂY
+        shareCount: 0, // SỬA Ở ĐÂY
+        status: 'active', // SỬA Ở ĐÂY
       );
 
       await PostRequest().createPost(newPost);
