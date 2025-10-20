@@ -1,4 +1,4 @@
-import 'package:cloud_firestore/cloud_firestore.dart'; // SỬA LỖI IMPORT
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class MediaModel {
   final String id;
