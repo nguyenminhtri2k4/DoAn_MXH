@@ -1,3 +1,4 @@
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -17,7 +18,6 @@ import 'package:mangxahoi/services/video_cache_manager.dart';
 import 'package:mangxahoi/view/widgets/share_bottom_sheet.dart';
 import 'package:mangxahoi/view/post/edit_post_view.dart';
 
-// Bước 1: Chuyển thành StatefulWidget
 class PostWidget extends StatefulWidget {
   final PostModel post;
   final String currentUserDocId;
@@ -33,7 +33,6 @@ class PostWidget extends StatefulWidget {
 }
 
 class _PostWidgetState extends State<PostWidget> {
-  // Biến state để lưu trữ và cập nhật thông tin post
   late PostModel _currentPost;
 
   @override
@@ -42,7 +41,6 @@ class _PostWidgetState extends State<PostWidget> {
     _currentPost = widget.post;
   }
 
-  // Cập nhật state nếu widget cha build lại với post mới
   @override
   void didUpdateWidget(covariant PostWidget oldWidget) {
     super.didUpdateWidget(oldWidget);
@@ -53,7 +51,23 @@ class _PostWidgetState extends State<PostWidget> {
     }
   }
 
-  // Helper functions for privacy button
+  // ==================== START: HÀM FORMAT THỜI GIAN MỚI ====================
+  String _formatTimestamp(DateTime postTime) {
+    final now = DateTime.now();
+    final difference = now.difference(postTime);
+
+    if (difference.inDays > 0) {
+      return '${difference.inDays} ngày trước';
+    } else if (difference.inHours > 0) {
+      return '${difference.inHours} giờ trước';
+    } else if (difference.inMinutes > 0) {
+      return '${difference.inMinutes} phút trước';
+    } else {
+      return 'Vừa xong';
+    }
+  }
+  // ==================== END: HÀM FORMAT THỜI GIAN MỚI ====================
+
   IconData _getVisibilityIcon(String visibility) {
     switch (visibility) {
       case 'private':
@@ -80,7 +94,7 @@ class _PostWidgetState extends State<PostWidget> {
   Widget build(BuildContext context) {
     final listener = context.watch<FirestoreListener>();
     final author = listener.getUserById(_currentPost.authorId);
-
+    
     final isSharedPost = _currentPost.originalPostId != null &&
         _currentPost.originalPostId!.isNotEmpty;
 
@@ -136,6 +150,106 @@ class _PostWidgetState extends State<PostWidget> {
     );
   }
 
+  // ==================== START: VIẾT LẠI HOÀN TOÀN HÀM NÀY ====================
+  Widget _buildPostHeader(BuildContext context, UserModel? author) {
+    if (author == null) return const SizedBox.shrink();
+
+    final listener = context.read<FirestoreListener>();
+    final group = _currentPost.groupId != null && _currentPost.groupId!.isNotEmpty
+        ? listener.getGroupById(_currentPost.groupId!)
+        : null;
+    final isGroupPost = group != null;
+    final isOwner = widget.currentUserDocId == _currentPost.authorId;
+    
+    // Sử dụng hàm format mới
+    final String timestamp = _formatTimestamp(_currentPost.createdAt);
+
+    // Khai báo các widget sẽ được sử dụng
+    Widget avatarWidget;
+    Widget titleWidget;
+    Widget subtitleWidget;
+
+    if (isGroupPost) {
+      // Bố cục cho bài đăng nhóm
+      avatarWidget = GestureDetector(
+        onTap: () => Navigator.pushNamed(context, '/post_group', arguments: group),
+        child: CircleAvatar(
+          radius: 20,
+          backgroundColor: AppColors.backgroundDark,
+          child: Text(
+            group.name.isNotEmpty ? group.name[0].toUpperCase() : 'G',
+            style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold),
+          ),
+        ),
+      );
+
+      titleWidget = GestureDetector(
+        onTap: () => Navigator.pushNamed(context, '/post_group', arguments: group),
+        child: Text(group.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+      );
+
+      subtitleWidget = RichText(
+        text: TextSpan(
+          style: const TextStyle(color: AppColors.textSecondary, fontSize: 13),
+          children: [
+            TextSpan(
+              text: author.name,
+              style: const TextStyle(fontWeight: FontWeight.w600),
+              recognizer: TapGestureRecognizer()
+                ..onTap = () => Navigator.pushNamed(context, '/profile', arguments: author.id),
+            ),
+            TextSpan(text: ' • $timestamp'),
+          ],
+        ),
+      );
+    } else {
+      // Bố cục cho bài đăng cá nhân (như cũ)
+      avatarWidget = GestureDetector(
+        onTap: () => Navigator.pushNamed(context, '/profile', arguments: author.id),
+        child: CircleAvatar(
+          radius: 20,
+          backgroundImage: (author.avatar.isNotEmpty) ? NetworkImage(author.avatar.first) : null,
+          child: (author.avatar.isEmpty) ? const Icon(Icons.person, size: 20) : null,
+        ),
+      );
+
+      titleWidget = GestureDetector(
+        onTap: () => Navigator.pushNamed(context, '/profile', arguments: author.id),
+        child: Text(author.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+      );
+
+      subtitleWidget = Text(timestamp, style: const TextStyle(color: Colors.grey, fontSize: 13));
+    }
+
+    // Dựng giao diện chung từ các widget đã định nghĩa
+    return Row(
+      children: [
+        avatarWidget,
+        const SizedBox(width: 10),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              titleWidget,
+              const SizedBox(height: 2),
+              subtitleWidget,
+            ],
+          ),
+        ),
+        if (isOwner) ...[
+          _buildPrivacyButton(context),
+          IconButton(
+            icon: const Icon(Icons.more_horiz),
+            onPressed: () => _showPostOptions(context),
+          ),
+        ]
+      ],
+    );
+  }
+  // ==================== END: VIẾT LẠI HOÀN TOÀN HÀM NÀY ====================
+
+  // ... (Các hàm còn lại giữ nguyên, không cần thay đổi)
+  
   void _showPostOptions(BuildContext context) {
     showModalBottomSheet(
       context: context,
@@ -216,7 +330,6 @@ class _PostWidgetState extends State<PostWidget> {
     );
   }
 
-  // Bước 2: Sửa hàm _showPrivacyPicker
   void _showPrivacyPicker(BuildContext context) {
     showModalBottomSheet(
       context: context,
@@ -225,7 +338,6 @@ class _PostWidgetState extends State<PostWidget> {
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (context) {
-        // Không cần StatefulBuilder nữa vì bottom sheet sẽ đóng ngay
         Widget buildPrivacyOption({
           required String value,
           required IconData icon,
@@ -234,7 +346,7 @@ class _PostWidgetState extends State<PostWidget> {
         }) {
           final bool isSelected = _currentPost.visibility == value;
           return ListTile(
-            onTap: () => _updatePrivacy(context, value), // Chỉ cần gọi hàm update
+            onTap: () => _updatePrivacy(context, value),
             leading: Icon(icon, color: Colors.grey[700]),
             title: Text(title,
                 style: const TextStyle(fontWeight: FontWeight.w600)),
@@ -284,17 +396,13 @@ class _PostWidgetState extends State<PostWidget> {
     );
   }
 
-  // Bước 3: Sửa hàm _updatePrivacy
   void _updatePrivacy(BuildContext context, String newVisibility) {
-    // 1. Cập nhật giao diện ngay lập tức
     setState(() {
       _currentPost = _currentPost.copyWith(visibility: newVisibility, updatedAt: DateTime.now());
     });
 
-    // 2. Gửi yêu cầu cập nhật lên server
     PostRequest().updatePost(_currentPost);
 
-    // 3. Đóng bottom sheet
     Navigator.pop(context);
   }
 
@@ -326,59 +434,12 @@ class _PostWidgetState extends State<PostWidget> {
     );
   }
 
-  Widget _buildPostHeader(BuildContext context, UserModel? author) {
-    if (author == null) return const SizedBox.shrink();
-
-    final String timestamp =
-        '${_currentPost.createdAt.hour.toString().padLeft(2, '0')}:${_currentPost.createdAt.minute.toString().padLeft(2, '0')} · ${_currentPost.createdAt.day}/${_currentPost.createdAt.month}/${_currentPost.createdAt.year}';
-    final isOwner = widget.currentUserDocId == _currentPost.authorId;
-
-    return Row(
-      children: [
-        GestureDetector(
-          onTap: () =>
-              Navigator.pushNamed(context, '/profile', arguments: author.id),
-          child: CircleAvatar(
-            radius: 20,
-            backgroundImage:
-                (author.avatar.isNotEmpty) ? NetworkImage(author.avatar.first) : null,
-            child:
-                (author.avatar.isEmpty) ? const Icon(Icons.person, size: 20) : null,
-          ),
-        ),
-        const SizedBox(width: 10),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(author.name,
-                  style: const TextStyle(
-                      fontWeight: FontWeight.bold, fontSize: 15)),
-              Text(
-                timestamp,
-                style: const TextStyle(color: Colors.grey, fontSize: 13),
-              ),
-            ],
-          ),
-        ),
-        if (isOwner) ...[
-          _buildPrivacyButton(context),
-          IconButton(
-            icon: const Icon(Icons.more_horiz),
-            onPressed: () => _showPostOptions(context),
-          ),
-        ]
-      ],
-    );
-  }
-
   Widget _buildSharedPostHeader(BuildContext context, UserModel? sharer) {
     if (sharer == null) return const SizedBox.shrink();
 
-    final timestamp =
-        '${_currentPost.createdAt.hour.toString().padLeft(2, '0')}:${_currentPost.createdAt.minute.toString().padLeft(2, '0')} · ${_currentPost.createdAt.day}/${_currentPost.createdAt.month}/${_currentPost.createdAt.year}';
+    final timestamp = _formatTimestamp(_currentPost.createdAt);
     final isOwner = widget.currentUserDocId == _currentPost.authorId;
-
+    
     return Row(
       children: [
         CircleAvatar(
@@ -648,7 +709,6 @@ class _PostWidgetState extends State<PostWidget> {
   }
 }
 
-// ... _VideoPlayerItem không thay đổi ...
 class _VideoPlayerItem extends StatefulWidget {
   final String videoUrl;
   const _VideoPlayerItem({required this.videoUrl});
