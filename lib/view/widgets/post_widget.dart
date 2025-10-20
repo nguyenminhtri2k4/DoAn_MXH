@@ -13,6 +13,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:video_player/video_player.dart';
 import 'package:visibility_detector/visibility_detector.dart';
 import 'package:mangxahoi/services/video_cache_manager.dart';
+import 'package:mangxahoi/view/widgets/share_bottom_sheet.dart';
 
 class PostWidget extends StatelessWidget {
   final PostModel post;
@@ -28,9 +29,9 @@ class PostWidget extends StatelessWidget {
   Widget build(BuildContext context) {
     final listener = context.watch<FirestoreListener>();
     final author = listener.getUserById(post.authorId);
-    final group = post.groupId != null && post.groupId!.isNotEmpty
-        ? listener.getGroupById(post.groupId!)
-        : null;
+    
+    // KIỂM TRA XEM CÓ PHẢI LÀ BÀI VIẾT CHIA SẺ KHÔNG
+    final isSharedPost = post.originalPostId != null && post.originalPostId!.isNotEmpty;
 
     return ChangeNotifierProvider(
       key: ValueKey(post.id),
@@ -49,7 +50,9 @@ class PostWidget extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _buildPostHeader(context, author, group),
+                  isSharedPost
+                      ? _buildSharedPostHeader(context, author)
+                      : _buildPostHeader(context, author, null), // Giả sử group sẽ được xử lý riêng
                   const SizedBox(height: 12),
                   if (post.content.isNotEmpty)
                     Text(post.content, style: const TextStyle(fontSize: 16)),
@@ -57,7 +60,10 @@ class PostWidget extends StatelessWidget {
               ),
             ),
             
-            if (post.mediaIds.isNotEmpty)
+            if (isSharedPost)
+              _buildOriginalPostContent(context),
+
+            if (!isSharedPost && post.mediaIds.isNotEmpty)
               _buildPostMedia(context),
 
             Padding(
@@ -78,6 +84,120 @@ class PostWidget extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildSharedPostHeader(BuildContext context, UserModel? sharer) {
+    if (sharer == null) return const SizedBox.shrink();
+    
+    final timestamp = '${post.createdAt.hour.toString().padLeft(2, '0')}:${post.createdAt.minute.toString().padLeft(2, '0')} · ${post.createdAt.day}/${post.createdAt.month}/${post.createdAt.year}';
+
+    return Row(
+      children: [
+        CircleAvatar(
+          radius: 20,
+          backgroundImage: (sharer.avatar.isNotEmpty) ? NetworkImage(sharer.avatar.first) : null,
+          child: (sharer.avatar.isEmpty) ? const Icon(Icons.person, size: 20) : null,
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              RichText(
+                text: TextSpan(
+                  style: const TextStyle(color: Colors.black, fontSize: 15),
+                  children: [
+                    TextSpan(
+                      text: sharer.name,
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    const TextSpan(text: ' đã chia sẻ một bài viết.'),
+                  ],
+                ),
+              ),
+              Text(
+                timestamp,
+                style: const TextStyle(color: Colors.grey, fontSize: 13),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildOriginalPostContent(BuildContext context) {
+    return StreamBuilder<DocumentSnapshot>(
+      stream: FirebaseFirestore.instance.collection('Post').doc(post.originalPostId!).snapshots(),
+      builder: (context, snapshot) {
+        if (!snapshot.hasData) {
+          return const Padding(
+            padding: EdgeInsets.all(16.0),
+            child: Center(child: CircularProgressIndicator()),
+          );
+        }
+        
+        final originalPostData = snapshot.data!.data() as Map<String, dynamic>;
+        final originalPost = PostModel.fromMap(snapshot.data!.id, originalPostData);
+        final listener = context.read<FirestoreListener>();
+        final originalAuthor = listener.getUserById(originalPost.authorId);
+        final group = originalPost.groupId != null && originalPost.groupId!.isNotEmpty
+            ? listener.getGroupById(originalPost.groupId!)
+            : null;
+            
+        return Container(
+          margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          decoration: BoxDecoration(
+            border: Border.all(color: Colors.grey.shade300),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Padding(
+                padding: const EdgeInsets.all(12.0),
+                child: _buildPostHeader(context, originalAuthor, group),
+              ),
+              if (originalPost.content.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(12.0, 0, 12.0, 12.0),
+                  child: Text(originalPost.content, style: const TextStyle(fontSize: 16)),
+                ),
+              if (originalPost.mediaIds.isNotEmpty)
+                _buildOriginalPostMedia(context, originalPost),
+            ],
+          ),
+        );
+      },
+    );
+  }
+  
+  Widget _buildOriginalPostMedia(BuildContext context, PostModel originalPost) {
+    final listener = context.read<FirestoreListener>();
+    final mediaId = originalPost.mediaIds.first;
+    final media = listener.getMediaById(mediaId);
+
+    if (media == null) return const SizedBox.shrink();
+
+    if (media.type == 'video') {
+      return _VideoPlayerItem(videoUrl: media.url);
+    }
+
+    return CachedNetworkImage(
+      imageUrl: media.url,
+      fit: BoxFit.cover,
+      width: double.infinity,
+       placeholder: (context, url) => Container(
+          height: 250,
+          color: Colors.grey[200],
+          child: const Center(child: CircularProgressIndicator()),
+        ),
+        errorWidget: (context, url, error) => Container(
+          height: 250,
+          color: Colors.grey[200],
+          child: const Center(child: Icon(Icons.error_outline, color: Colors.red)),
+        ),
     );
   }
 
@@ -273,7 +393,16 @@ class PostWidget extends StatelessWidget {
             ),
             Expanded(
               child: TextButton.icon(
-                onPressed: () {},
+                onPressed: () {
+                  showModalBottomSheet(
+                    context: context,
+                    isScrollControlled: true,
+                    backgroundColor: Colors.transparent,
+                    builder: (_) => ShareBottomSheet(
+                      post: post,
+                    ),
+                  );
+                },
                 icon: const Icon(Icons.share_outlined, color: AppColors.textSecondary),
                 label: const Text('Chia sẻ', style: TextStyle(color: AppColors.textSecondary)),
               ),
@@ -375,7 +504,6 @@ class _VideoPlayerItemState extends State<_VideoPlayerItem> {
   Widget _buildControlsOverlay(VideoPlayerController controller) {
     return Stack(
       children: [
-        // Nút Play/Pause
         ValueListenableBuilder(
           valueListenable: controller,
           builder: (context, VideoPlayerValue value, child) {
@@ -402,7 +530,6 @@ class _VideoPlayerItemState extends State<_VideoPlayerItem> {
           },
         ),
 
-        // === SỬA ĐỔI: HIỂN THỊ THỜI GIAN KHI TUA ===
         AnimatedOpacity(
           duration: const Duration(milliseconds: 200),
           opacity: _isScrubbing ? 1.0 : 0.0,
@@ -420,9 +547,7 @@ class _VideoPlayerItemState extends State<_VideoPlayerItem> {
             ),
           ),
         ),
-        // ===========================================
 
-        // Thanh tiến trình và nút âm lượng
         Positioned(
           bottom: 0,
           left: 0,
@@ -458,7 +583,6 @@ class _VideoPlayerItemState extends State<_VideoPlayerItem> {
                         onHorizontalDragEnd: (details) {
                           if (!controller.value.isInitialized) return;
                           controller.seekTo(_scrubbingPosition);
-                          // Đặt isScrubbing về false sau một khoảng trễ nhỏ để người dùng thấy vị trí cuối cùng
                           Future.delayed(const Duration(milliseconds: 200), () {
                             if (mounted) {
                                setState(() { _isScrubbing = false; });

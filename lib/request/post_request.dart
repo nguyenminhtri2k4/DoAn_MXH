@@ -1,4 +1,3 @@
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:mangxahoi/model/model_post.dart';
 
@@ -29,7 +28,6 @@ class PostRequest {
     });
   }
 
-  // === MỚI: Lấy bài viết theo từng trang (Pagination) ===
   Future<List<PostModel>> getPostsPaginated(
       {int limit = 10, DocumentSnapshot? startAfter}) async {
     Query query = _firestore
@@ -44,7 +42,6 @@ class PostRequest {
     final snapshot = await query.get();
     return snapshot.docs.map((doc) => PostModel.fromMap(doc.id, doc.data() as Map<String, dynamic>)).toList();
   }
-  // =======================================================
 
   Stream<List<PostModel>> getPostsByAuthorId(String authorId) {
     return _firestore
@@ -64,5 +61,40 @@ class PostRequest {
         .snapshots()
         .map((snapshot) =>
             snapshot.docs.map((doc) => PostModel.fromMap(doc.id, doc.data())).toList());
+  }
+
+  // === CẬP NHẬT HÀM CHIA SẺ BÀI VIẾT ===
+  Future<void> sharePost({
+    required PostModel originalPost,
+    required String sharerId,
+    String? content,
+    required String visibility, // Thêm tham số visibility
+  }) async {
+    try {
+      final sharedPost = PostModel(
+        id: '',
+        authorId: sharerId,
+        content: content ?? '',
+        createdAt: DateTime.now(),
+        visibility: visibility, // Sử dụng visibility được truyền vào
+        originalPostId: originalPost.id,
+        originalAuthorId: originalPost.authorId,
+      );
+
+      final batch = _firestore.batch();
+      final newPostRef = _firestore.collection(_collectionName).doc();
+      batch.set(newPostRef, sharedPost.toMap());
+
+      final originalPostRef = _firestore.collection(_collectionName).doc(originalPost.id);
+      batch.update(originalPostRef, {
+        'shareCount': FieldValue.increment(1),
+      });
+
+      await batch.commit();
+      print('✅ Chia sẻ bài viết thành công!');
+    } catch (e) {
+      print('❌ Lỗi khi chia sẻ bài viết: $e');
+      rethrow;
+    }
   }
 }

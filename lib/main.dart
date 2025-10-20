@@ -23,8 +23,10 @@ import 'package:mangxahoi/viewmodel/profile_view_model.dart';
 import 'package:mangxahoi/view/messages_view.dart';
 import 'package:mangxahoi/view/group_chat/post_group_view.dart';
 import 'package:mangxahoi/model/model_group.dart';
+import 'package:mangxahoi/model/model_post.dart'; // THÊM IMPORT
 import 'package:mangxahoi/services/user_service.dart';
-import 'package:mangxahoi/services/video_cache_manager.dart'; // Import mới
+import 'package:mangxahoi/services/video_cache_manager.dart';
+import 'package:mangxahoi/view/post/share_post_view.dart'; // THÊM IMPORT
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -44,7 +46,7 @@ class MyApp extends StatelessWidget {
       providers: [
         ChangeNotifierProvider(create: (_) => FirestoreListener()),
         ChangeNotifierProvider(create: (_) => UserService()),
-        ChangeNotifierProvider(create: (_) => VideoCacheManager()), // Thêm provider mới
+        ChangeNotifierProvider(create: (_) => VideoCacheManager()),
       ],
       child: MaterialApp(
         debugShowCheckedModeBanner: false,
@@ -54,7 +56,6 @@ class MyApp extends StatelessWidget {
           useMaterial3: true,
         ),
         initialRoute: '/login',
-        // ... (phần còn lại của file giữ nguyên)
         onGenerateRoute: (settings) {
           switch (settings.name) {
             case '/profile':
@@ -110,6 +111,18 @@ class MyApp extends StatelessWidget {
               return MaterialPageRoute(
                 builder: (context) => PostGroupView(group: group),
               );
+            
+            case '/share_post': // <<< THÊM CASE MỚI
+              final args = settings.arguments as Map<String, dynamic>;
+              final originalPost = args['originalPost'] as PostModel;
+              final currentUser = args['currentUser'] as UserModel;
+              return MaterialPageRoute(
+                builder: (context) => SharePostView(
+                  originalPost: originalPost,
+                  currentUser: currentUser,
+                ),
+              );
+
             default:
               return null;
           }
