@@ -424,7 +424,9 @@ class _VideoPlayerItem extends StatefulWidget {
 
 class _VideoPlayerItemState extends State<_VideoPlayerItem> {
   late Future<VideoPlayerController> _controllerFuture;
-  bool _isMuted = true;
+  // === THAY ĐỔI Ở ĐÂY: Mặc định có tiếng ===
+  bool _isMuted = false;
+  // =======================================
   bool _isScrubbing = false;
   Duration _scrubbingPosition = Duration.zero;
 

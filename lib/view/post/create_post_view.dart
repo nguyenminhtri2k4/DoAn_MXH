@@ -1,4 +1,3 @@
-
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -6,7 +5,7 @@ import 'package:mangxahoi/constant/app_colors.dart';
 import 'package:mangxahoi/model/model_user.dart';
 import 'package:mangxahoi/viewmodel/post_view_model.dart';
 import 'package:mangxahoi/notification/notification_service.dart';
-import 'package:video_player/video_player.dart';
+import 'package:image_picker/image_picker.dart';
 
 class CreatePostView extends StatelessWidget {
   final UserModel currentUser;
@@ -49,6 +48,7 @@ class _CreatePostViewContentState extends State<_CreatePostViewContent> {
   @override
   Widget build(BuildContext context) {
     final viewModel = context.watch<PostViewModel>();
+    final isPostButtonEnabled = viewModel.canPost && !viewModel.isLoading && !viewModel.isCheckingVideo;
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -61,9 +61,8 @@ class _CreatePostViewContentState extends State<_CreatePostViewContent> {
           Padding(
             padding: const EdgeInsets.only(right: 8.0),
             child: ElevatedButton(
-              onPressed: viewModel.isLoading
-                  ? null
-                  : () async {
+              onPressed: isPostButtonEnabled
+                  ? () async {
                       final success = await viewModel.createPost(
                         authorDocId: widget.currentUser.id,
                         visibility: _selectedVisibility,
@@ -72,11 +71,7 @@ class _CreatePostViewContentState extends State<_CreatePostViewContent> {
 
                       if (success && mounted) {
                         Navigator.pop(context);
-                        NotificationService().showSuccessDialog(
-                          context: context,
-                          title: 'Thành công',
-                          message: 'Bài viết của bạn đã được đăng!',
-                        );
+                        NotificationService().showSuccessSnackBar(context, 'Bài viết của bạn đã được đăng!');
                       } else if (viewModel.errorMessage != null && mounted) {
                         NotificationService().showErrorDialog(
                           context: context,
@@ -84,22 +79,19 @@ class _CreatePostViewContentState extends State<_CreatePostViewContent> {
                           message: viewModel.errorMessage!,
                         );
                       }
-                    },
+                    }
+                  : null,
               style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primary,
+                backgroundColor: isPostButtonEnabled ? AppColors.primary : Colors.grey[400],
                 foregroundColor: AppColors.textWhite,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 padding: const EdgeInsets.symmetric(horizontal: 20),
               ),
               child: viewModel.isLoading
                   ? const SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(
-                          color: Colors.white, strokeWidth: 2))
-                  : const Text('Đăng',
-                      style:
-                          TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                      width: 20, height: 20,
+                      child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                  : const Text('Đăng', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
             ),
           ),
         ],
@@ -111,56 +103,7 @@ class _CreatePostViewContentState extends State<_CreatePostViewContent> {
               padding: const EdgeInsets.all(16.0),
               child: Column(
                 children: [
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      CircleAvatar(
-                        radius: 25,
-                        backgroundImage: widget.currentUser.avatar.isNotEmpty
-                            ? NetworkImage(widget.currentUser.avatar.first)
-                            : null,
-                        child: widget.currentUser.avatar.isEmpty
-                            ? const Icon(Icons.person)
-                            : null,
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              widget.currentUser.name,
-                              style: const TextStyle(
-                                  fontSize: 16, fontWeight: FontWeight.bold),
-                            ),
-                            const SizedBox(height: 4),
-                            InkWell(
-                              onTap: _showVisibilityPicker,
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                                decoration: BoxDecoration(
-                                  color: AppColors.backgroundDark,
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Icon(_getVisibilityIcon(_selectedVisibility), size: 14, color: AppColors.textSecondary),
-                                    const SizedBox(width: 6),
-                                    Text(
-                                      _getVisibilityText(_selectedVisibility),
-                                      style: const TextStyle(fontWeight: FontWeight.w500),
-                                    ),
-                                    const Icon(Icons.arrow_drop_down, size: 20),
-                                  ],
-                                ),
-                              ),
-                            )
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
+                  _buildUserInfo(),
                   const SizedBox(height: 16),
                   TextFormField(
                     controller: viewModel.contentController,
@@ -176,41 +119,113 @@ class _CreatePostViewContentState extends State<_CreatePostViewContent> {
                   ),
                   const SizedBox(height: 16),
                   _buildMediaPreview(viewModel),
+                   if (viewModel.isCheckingVideo)
+                    const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 20.0),
+                      child: Column(
+                        children: [
+                          CircularProgressIndicator(),
+                          SizedBox(height: 8),
+                          Text('Đang kiểm tra video...'),
+                        ],
+                      ),
+                    ),
                 ],
               ),
             ),
           ),
-          Container(
-            decoration: const BoxDecoration(
-              color: AppColors.backgroundLight,
-              border: Border(top: BorderSide(color: AppColors.divider)),
-            ),
-            padding: const EdgeInsets.symmetric(vertical: 8.0),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [
-                _buildActionButton(
-                  icon: Icons.photo_library,
-                  label: 'Ảnh',
-                  color: Colors.green,
-                  onPressed: () => viewModel.pickImages(),
+          _buildActionBar(context, viewModel),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildUserInfo() {
+     return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        CircleAvatar(
+          radius: 25,
+          backgroundImage: widget.currentUser.avatar.isNotEmpty
+              ? NetworkImage(widget.currentUser.avatar.first)
+              : null,
+          child: widget.currentUser.avatar.isEmpty
+              ? const Icon(Icons.person)
+              : null,
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                widget.currentUser.name,
+                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 4),
+              InkWell(
+                onTap: _showVisibilityPicker,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: AppColors.backgroundDark,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(_getVisibilityIcon(_selectedVisibility), size: 14, color: AppColors.textSecondary),
+                      const SizedBox(width: 6),
+                      Text(
+                        _getVisibilityText(_selectedVisibility),
+                        style: const TextStyle(fontWeight: FontWeight.w500),
+                      ),
+                      const Icon(Icons.arrow_drop_down, size: 20),
+                    ],
+                  ),
                 ),
-                _buildActionButton(
-                  icon: Icons.videocam,
-                  label: 'Video',
-                  color: Colors.red,
-                  onPressed: () => viewModel.pickVideo(),
-                ),
-                _buildActionButton(
-                  icon: Icons.person_add,
-                  label: 'Gắn thẻ',
-                  color: Colors.blue,
-                  onPressed: () {
-                    NotificationService().showInfoDialog(context: context, title: 'Đang phát triển', message: 'Chức năng gắn thẻ bạn bè sẽ sớm có mặt!');
-                  },
-                ),
-              ],
-            ),
+              )
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildActionBar(BuildContext context, PostViewModel viewModel) {
+    // Vô hiệu hóa nút chọn ảnh nếu đã đạt giới hạn 6 hoặc đã chọn video
+    final bool canPickImage = viewModel.mediaFiles.length < 6 && !viewModel.hasVideo;
+    // Vô hiệu hóa nút chọn video nếu đã có media
+    final bool canPickVideo = viewModel.mediaFiles.isEmpty;
+
+    return Container(
+      decoration: const BoxDecoration(
+        color: AppColors.backgroundLight,
+        border: Border(top: BorderSide(color: AppColors.divider)),
+      ),
+      padding: const EdgeInsets.symmetric(vertical: 8.0),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        children: [
+          _buildActionButton(
+            icon: Icons.photo_library,
+            label: 'Ảnh',
+            color: canPickImage ? Colors.green : Colors.grey,
+            onPressed: canPickImage ? () => viewModel.pickImages(context) : (){},
+          ),
+          _buildActionButton(
+            icon: Icons.videocam,
+            label: 'Video',
+            color: canPickVideo ? Colors.red : Colors.grey,
+            onPressed: canPickVideo ? () => viewModel.pickVideo(context) : (){},
+          ),
+          _buildActionButton(
+            icon: Icons.person_add,
+            label: 'Gắn thẻ',
+            color: Colors.blue,
+            onPressed: () {
+              NotificationService().showInfoDialog(context: context, title: 'Đang phát triển', message: 'Chức năng gắn thẻ bạn bè sẽ sớm có mặt!');
+            },
           ),
         ],
       ),
@@ -218,13 +233,12 @@ class _CreatePostViewContentState extends State<_CreatePostViewContent> {
   }
 
   Widget _buildMediaPreview(PostViewModel viewModel) {
-    if (viewModel.selectedImages.isNotEmpty) {
-      return _buildImagePreview(viewModel);
+    if (viewModel.mediaFiles.isEmpty) {
+      return const SizedBox.shrink();
     }
-    if (viewModel.selectedVideo != null) {
-      return _buildVideoPreview(viewModel);
-    }
-    return const SizedBox.shrink();
+    return viewModel.hasVideo
+        ? _buildVideoPreview(viewModel)
+        : _buildImagePreview(viewModel);
   }
 
   Widget _buildImagePreview(PostViewModel viewModel) {
@@ -236,14 +250,14 @@ class _CreatePostViewContentState extends State<_CreatePostViewContent> {
         crossAxisSpacing: 8,
         mainAxisSpacing: 8,
       ),
-      itemCount: viewModel.selectedImages.length,
+      itemCount: viewModel.mediaFiles.length,
       itemBuilder: (context, index) {
         return Stack(
           children: [
             ClipRRect(
               borderRadius: BorderRadius.circular(8),
               child: Image.file(
-                viewModel.selectedImages[index],
+                File(viewModel.mediaFiles[index].path),
                 width: double.infinity,
                 height: double.infinity,
                 fit: BoxFit.cover,
@@ -253,7 +267,7 @@ class _CreatePostViewContentState extends State<_CreatePostViewContent> {
               top: 4,
               right: 4,
               child: GestureDetector(
-                onTap: () => viewModel.removeImage(index),
+                onTap: () => viewModel.removeMedia(index),
                 child: Container(
                   padding: const EdgeInsets.all(2),
                   decoration: const BoxDecoration(
@@ -290,7 +304,7 @@ class _CreatePostViewContentState extends State<_CreatePostViewContent> {
           top: 8,
           right: 8,
           child: GestureDetector(
-            onTap: () => viewModel.removeVideo(),
+            onTap: () => viewModel.removeMedia(0),
             child: Container(
               padding: const EdgeInsets.all(4),
               decoration: const BoxDecoration(
@@ -346,25 +360,17 @@ class _CreatePostViewContentState extends State<_CreatePostViewContent> {
 
   IconData _getVisibilityIcon(String visibility) {
     switch (visibility) {
-      case 'private':
-        return Icons.lock;
-      case 'friends':
-        return Icons.group;
-      case 'public':
-      default:
-        return Icons.public;
+      case 'private': return Icons.lock;
+      case 'friends': return Icons.group;
+      default: return Icons.public;
     }
   }
 
   String _getVisibilityText(String visibility) {
     switch (visibility) {
-      case 'private':
-        return 'Chỉ mình tôi';
-      case 'friends':
-        return 'Bạn bè';
-      case 'public':
-      default:
-        return 'Công khai';
+      case 'private': return 'Chỉ mình tôi';
+      case 'friends': return 'Bạn bè';
+      default: return 'Công khai';
     }
   }
 

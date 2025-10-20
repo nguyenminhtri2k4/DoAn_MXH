@@ -1,4 +1,3 @@
-
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:mangxahoi/model/model_post.dart';
@@ -18,11 +17,9 @@ class HomeViewModel extends ChangeNotifier {
   bool hasMore = true;
   DocumentSnapshot? _lastDocument;
 
-  // Xóa lời gọi hàm fetchInitialPosts() khỏi constructor
   HomeViewModel();
 
   void _preloadVideosForPosts(BuildContext context, List<PostModel> newPosts) {
-    // Sử dụng try-catch để an toàn hơn khi truy cập Provider
     try {
       final videoCacheManager = context.read<VideoCacheManager>();
       final firestoreListener = context.read<FirestoreListener>();
@@ -30,8 +27,8 @@ class HomeViewModel extends ChangeNotifier {
       final videoUrls = newPosts
           .where((post) => post.mediaIds.isNotEmpty)
           .map((post) {
-              final media = firestoreListener.getMediaById(post.mediaIds.first);
-              return (media != null && media.type == 'video') ? media.url : null;
+            final media = firestoreListener.getMediaById(post.mediaIds.first);
+            return (media != null && media.type == 'video') ? media.url : null;
           })
           .where((url) => url != null)
           .cast<String>()
@@ -43,6 +40,16 @@ class HomeViewModel extends ChangeNotifier {
     } catch (e) {
       print("Lỗi khi truy cập provider để preload video: $e");
     }
+  }
+
+  // === HÀM MỚI ĐỂ LÀM MỚI DANH SÁCH ===
+  Future<void> refreshPosts(BuildContext context) async {
+    // Đặt lại các biến trạng thái để bắt đầu tải lại từ đầu
+    _lastDocument = null;
+    hasMore = true;
+    posts.clear();
+    // Gọi lại hàm tải dữ liệu ban đầu
+    await fetchInitialPosts(context);
   }
 
   Future<void> fetchInitialPosts(BuildContext context) async {
@@ -72,7 +79,6 @@ class HomeViewModel extends ChangeNotifier {
   Future<void> fetchMorePosts(BuildContext context) async {
     if (_isFetchingMore || !hasMore) return;
     _isFetchingMore = true;
-    // Không cần notifyListeners() ở đây để tránh giao diện nhảy lên khi đang tải ở cuối
     
     try {
       final newPosts = await _postRequest.getPostsPaginated(limit: 10, startAfter: _lastDocument);

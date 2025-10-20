@@ -1,4 +1,4 @@
-// lib/model/model_message.dart
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class MessageModel {
@@ -8,6 +8,8 @@ class MessageModel {
   final List<String> mediaIds;
   final String senderId;
   final String status;
+  final String type; // 'text' hoặc 'share_post'
+  final String? sharedPostId; // ID của bài viết được chia sẻ
 
   MessageModel({
     required this.id,
@@ -16,6 +18,8 @@ class MessageModel {
     required this.mediaIds,
     required this.senderId,
     required this.status,
+    this.type = 'text', // Mặc định là tin nhắn văn bản
+    this.sharedPostId,
   });
 
   factory MessageModel.fromMap(Map<String, dynamic> map, String id) {
@@ -26,6 +30,8 @@ class MessageModel {
       mediaIds: List<String>.from(map['mediaIds'] ?? []),
       senderId: map['senderId'] ?? '',
       status: map['status'] ?? 'sent',
+      type: map['type'] ?? 'text',
+      sharedPostId: map['sharedPostId'],
     );
   }
 
@@ -36,6 +42,8 @@ class MessageModel {
       'mediaIds': mediaIds,
       'senderId': senderId,
       'status': status,
+      'type': type,
+      if (sharedPostId != null) 'sharedPostId': sharedPostId,
     };
   }
 }

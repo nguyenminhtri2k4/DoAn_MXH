@@ -22,38 +22,65 @@ class StorageRequest {
     return null;
   }
 
-  /// Tải file lên Storage, tạo document trong collection Media, và trả về danh sách Media ID
+  /// Tải một file duy nhất lên Storage và tạo media document
+  Future<MediaModel?> uploadFile({
+    required File file,
+    required String type,
+    required String uploaderId,
+  }) async {
+    try {
+      final fileName = '${uploaderId}_${DateTime.now().millisecondsSinceEpoch}_${file.path.split('/').last}';
+      final ref = _storage.ref().child('post_media/$fileName');
+      final uploadTask = ref.putFile(file);
+      final snapshot = await uploadTask.whenComplete(() => {});
+      final downloadUrl = await snapshot.ref.getDownloadURL();
+
+      final newMedia = MediaModel(
+        id: '',
+        url: downloadUrl,
+        type: type,
+        uploaderId: uploaderId,
+        createdAt: DateTime.now(),
+      );
+
+      final mediaId = await _mediaRequest.createMedia(newMedia);
+
+      // Trả về đối tượng MediaModel hoàn chỉnh với ID
+      return MediaModel(
+        id: mediaId,
+        url: newMedia.url,
+        type: newMedia.type,
+        uploaderId: newMedia.uploaderId,
+        createdAt: newMedia.createdAt
+      );
+    } catch (e) {
+      print('Lỗi khi tải file: $e');
+      return null;
+    }
+  }
+
+  /// Tải nhiều files lên Storage, tạo document trong collection Media, và trả về danh sách Media ID
   Future<List<String>> uploadFilesAndCreateMedia(List<File> files, String userId) async {
     List<String> mediaIds = [];
     try {
       for (var file in files) {
-        // Bước 1: Tải file lên Storage để lấy URL
-        final fileName = '${userId}_${DateTime.now().millisecondsSinceEpoch}_${file.path.split('/').last}';
-        final ref = _storage.ref().child('post_media/$fileName');
-        final uploadTask = ref.putFile(file);
-        final snapshot = await uploadTask.whenComplete(() => {});
-        final downloadUrl = await snapshot.ref.getDownloadURL();
-
         // Xác định loại media dựa trên đuôi file
         final fileExtension = file.path.split('.').last.toLowerCase();
         final String mediaType = ['mp4', 'mov', 'avi', 'mkv'].contains(fileExtension) ? 'video' : 'image';
         
-        // Tạo đối tượng MediaModel
-        final newMedia = MediaModel(
-          id: '', // ID sẽ được Firestore tự tạo
-          url: downloadUrl,
+        final media = await uploadFile(
+          file: file,
           type: mediaType,
           uploaderId: userId,
-          createdAt: DateTime.now(),
         );
 
-        // Bước 2: Lưu vào collection Media và lấy về ID
-        final mediaId = await _mediaRequest.createMedia(newMedia);
-        mediaIds.add(mediaId);
+        if (media != null) {
+          mediaIds.add(media.id);
+        }
       }
       return mediaIds;
     } catch (e) {
-      print('Lỗi trong quá trình tải file và tạo media: $e');
+      print('Lỗi trong quá trình tải nhiều file và tạo media: $e');
       rethrow;
     }
   }
