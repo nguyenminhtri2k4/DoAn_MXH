@@ -1,4 +1,4 @@
-// lib/view/locket/locket_viewer_view.dart
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:mangxahoi/constant/app_colors.dart';
@@ -38,7 +38,8 @@ class LocketViewerViewModel extends ChangeNotifier {
   Future<void> _loadHistory() async {
     _isLoading = true;
     try {
-      final history = await _locketRequest.getUserActiveLocketHistory(targetUserId);
+      // SỬA LỖI: Đổi tên hàm
+      final history = await _locketRequest.getMyLocketHistory(targetUserId); 
       if (history.isEmpty) {
         _isLoading = false;
         notifyListeners();

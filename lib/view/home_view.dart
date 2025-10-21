@@ -209,7 +209,7 @@ class _HomeViewContentState extends State<_HomeViewContent> {
                     title: AppColors.logosybau.isNotEmpty
                         ? Image.asset(
                             AppColors.logosybau,
-                            height: 200,
+                            height: 300,
                             fit: BoxFit.contain,
                           )
                         : const Text('Mạng Xã Hội'),
@@ -332,12 +332,22 @@ class _HomeViewContentState extends State<_HomeViewContent> {
                     children: [
                         _buildDrawerItem(
                           icon: Icons.delete_outline,
-                          text: 'Thùng rác',
+                          text: 'Thùng rác (Bài viết)',
                           onTap: () {
                             Navigator.pop(context);
                             Navigator.pushNamed(context, '/trash');
                           },
                         ),
+                        // === THÊM MỤC NÀY ===
+                        _buildDrawerItem(
+                          icon: Icons.delete_sweep_outlined, // Icon khác
+                          text: 'Thùng rác Locket',
+                          onTap: () {
+                            Navigator.pop(context);
+                            Navigator.pushNamed(context, '/locket_trash');
+                          },
+                        ),
+                        // ======================
                         _buildDrawerItem(
                           icon: Icons.block,
                           text: 'Danh sách chặn',
