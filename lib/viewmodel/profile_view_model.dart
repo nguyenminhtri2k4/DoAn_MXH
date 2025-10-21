@@ -1,3 +1,4 @@
+
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -6,6 +7,7 @@ import 'package:mangxahoi/model/model_post.dart';
 import 'package:mangxahoi/request/user_request.dart';
 import 'package:mangxahoi/request/post_request.dart';
 import 'package:mangxahoi/request/friend_request_manager.dart'; 
+import 'package:mangxahoi/request/post_request.dart';
 
 class ProfileViewModel extends ChangeNotifier {
   final _auth = FirebaseAuth.instance;
@@ -29,13 +31,10 @@ class ProfileViewModel extends ChangeNotifier {
       final currentUserAuth = _auth.currentUser;
       String? targetUserId = userId;
 
-      // Lấy thông tin người dùng đang đăng nhập
       if (currentUserAuth != null) {
-        // SỬA: Cập nhật biến currentUserData
         currentUserData = await _userRequest.getUserByUid(currentUserAuth.uid);
       }
 
-      // Nếu không có userId, mặc định là xem trang của người dùng hiện tại
       if (targetUserId == null && currentUserData != null) {
         targetUserId = currentUserData!.id;
       }
@@ -46,7 +45,6 @@ class ProfileViewModel extends ChangeNotifier {
         if (currentUserData != null && user != null) {
           isCurrentUserProfile = user!.uid == currentUserData!.uid;
           if (!isCurrentUserProfile) {
-            // Lấy trạng thái bạn bè nếu không phải trang của mình
             friendshipStatus = await _friendManager.getFriendshipStatus(currentUserData!.id, user!.id);
           } else {
             friendshipStatus = 'self';
@@ -62,7 +60,12 @@ class ProfileViewModel extends ChangeNotifier {
       }
       
       if (user != null) {
-        userPostsStream = _postRequest.getPostsByAuthorId(user!.id);
+        // Cập nhật logic lấy bài viết
+        userPostsStream = _postRequest.getPostsByAuthorId(
+          user!.id,
+          currentUserId: currentUserData?.id,
+          friendIds: currentUserData?.friends ?? [],
+        );
       }
 
     } catch (e) {
@@ -74,11 +77,10 @@ class ProfileViewModel extends ChangeNotifier {
     }
   }
 
-  // ==================== THÊM CÁC HÀM HÀNH ĐỘNG ====================
   Future<void> sendFriendRequest() async {
     if (currentUserData == null || user == null) return;
     await _friendManager.sendRequest(currentUserData!.id, user!.id);
-    await loadProfile(userId: user!.id); // Tải lại để cập nhật trạng thái
+    await loadProfile(userId: user!.id);
   }
 
   Future<void> unfriend() async {
@@ -92,7 +94,6 @@ class ProfileViewModel extends ChangeNotifier {
     await _friendManager.blockUser(currentUserData!.id, user!.id);
     await loadProfile(userId: user!.id);
   }
-  // =================================================================
 
   UserModel _copyUserWith({
     String? name,

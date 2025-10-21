@@ -1,3 +1,4 @@
+
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:provider/provider.dart';
@@ -10,6 +11,7 @@ import 'package:mangxahoi/view/blocked_list_view.dart';
 import 'package:mangxahoi/services/user_service.dart';
 import 'package:mangxahoi/view/video_view.dart';
 import 'package:mangxahoi/view/notification_view.dart';
+import 'package:mangxahoi/services/video_cache_manager.dart'; // THÊM MỚI
 
 class HomeView extends StatelessWidget {
   const HomeView({super.key});
@@ -106,7 +108,6 @@ class _HomeViewContentState extends State<_HomeViewContent> {
       return const Center(child: Text('Chưa có bài viết nào.'));
     }
 
-    // === BỌC LISTVIEW BẰNG REFRESHINDICATOR ===
     return RefreshIndicator(
       onRefresh: () => context.read<HomeViewModel>().refreshPosts(context),
       child: ListView.builder(
@@ -310,21 +311,29 @@ class _HomeViewContentState extends State<_HomeViewContent> {
                   child: Column(
                     children: [
                         _buildDrawerItem(
-                        icon: Icons.block,
-                        text: 'Danh sách chặn',
-                        onTap: () {
-                          Navigator.pop(context);
-                          Navigator.pushNamed(context, '/blocked_list');
-                        },
-                      ),
-                      _buildDrawerItem(
-                        icon: Icons.notifications_active_outlined,
-                        text: 'Cài đặt thông báo',
-                        onTap: () {
-                          Navigator.pop(context);
-                          Navigator.pushNamed(context, '/notification_settings');
-                        },
-                      ),
+                          icon: Icons.delete_outline,
+                          text: 'Thùng rác',
+                          onTap: () {
+                            Navigator.pop(context);
+                            Navigator.pushNamed(context, '/trash');
+                          },
+                        ),
+                        _buildDrawerItem(
+                          icon: Icons.block,
+                          text: 'Danh sách chặn',
+                          onTap: () {
+                            Navigator.pop(context);
+                            Navigator.pushNamed(context, '/blocked_list');
+                          },
+                        ),
+                        _buildDrawerItem(
+                          icon: Icons.notifications_active_outlined,
+                          text: 'Cài đặt thông báo',
+                          onTap: () {
+                            Navigator.pop(context);
+                            Navigator.pushNamed(context, '/notification_settings');
+                          },
+                        ),
                     ],
                   ),
                 ),
@@ -332,12 +341,19 @@ class _HomeViewContentState extends State<_HomeViewContent> {
               const SizedBox(height: 10),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                // ==================== SỬA LỖI TẠI ĐÂY ====================
                 child: _buildDrawerItem(
                   icon: Icons.logout,
                   text: 'Đăng xuất',
-                  onTap: () => homeViewModel.signOut(context),
+                  onTap: () {
+                    // Dừng video ngay lập tức khi nhấn nút
+                    context.read<VideoCacheManager>().pauseAllVideos();
+                    // Sau đó mới thực hiện các hành động đăng xuất
+                    homeViewModel.signOut(context);
+                  },
                   color: Colors.red,
                 ),
+                // ==========================================================
               ),
             ],
           ),
@@ -349,12 +365,9 @@ class _HomeViewContentState extends State<_HomeViewContent> {
                 duration: const Duration(milliseconds: 200),
                 scale: showUI ? 1.0 : 0.0,
                 child: FloatingActionButton(
-                  // === THÊM LOGIC TỰ ĐỘNG LÀM MỚI SAU KHI ĐĂNG BÀI ===
                   onPressed: () async {
                     if (userService.currentUser != null) {
-                      // Đợi màn hình create_post đóng lại
                       await Navigator.pushNamed(context, '/create_post', arguments: userService.currentUser);
-                      // Sau khi đóng, gọi hàm làm mới
                       if (mounted) {
                         context.read<HomeViewModel>().refreshPosts(context);
                       }

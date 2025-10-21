@@ -1,3 +1,4 @@
+
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -28,6 +29,7 @@ import 'package:mangxahoi/services/video_cache_manager.dart';
 import 'package:mangxahoi/view/post/share_post_view.dart';
 import 'package:mangxahoi/view/share_to_messenger_view.dart';
 import 'package:mangxahoi/view/post/post_detail_view.dart';
+import 'package:mangxahoi/view/trash_view.dart'; // THÊM MỚI
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -63,16 +65,13 @@ class MyApp extends StatelessWidget {
               final userId = settings.arguments as String?;
               return MaterialPageRoute(builder: (context) => ProfileView(userId: userId));
             
-            // === SỬA LỖI LOGIC ĐIỀU HƯỚNG TẠI ĐÂY ===
             case '/create_post':
-              // Xử lý trường hợp từ trang chủ (chỉ có UserModel)
               if (settings.arguments is UserModel) {
                 final user = settings.arguments as UserModel;
                 return MaterialPageRoute(
                   builder: (context) => CreatePostView(currentUser: user),
                 );
               } 
-              // Xử lý trường hợp từ group (có cả UserModel và groupId)
               else if (settings.arguments is Map<String, dynamic>) {
                 final args = settings.arguments as Map<String, dynamic>;
                 final user = args['currentUser'] as UserModel;
@@ -85,7 +84,6 @@ class MyApp extends StatelessWidget {
                 );
               }
               return null;
-            // ==========================================
 
             case '/edit_profile':
               final viewModel = settings.arguments as ProfileViewModel;
@@ -134,6 +132,7 @@ class MyApp extends StatelessWidget {
           '/blocked_list': (context) => const BlockedListView(),
           '/notification_settings': (context) => const NotificationSettingsView(),
           '/messages': (context) => const MessagesView(),
+          '/trash': (context) => const TrashView(), // THÊM MỚI
         },
       ),
     );
