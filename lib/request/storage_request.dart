@@ -1,3 +1,4 @@
+
 import 'dart:io';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:image_picker/image_picker.dart';
@@ -81,7 +82,7 @@ class StorageRequest {
     }
   }
 
-  // <--- HÀM MỚI CHO LOCKET --->
+  // <--- HÀM CHO LOCKET --->
   Future<String> uploadLocketImage(XFile image, String userId) async {
     try {
       String fileName = 'locket_${userId}_${DateTime.now().millisecondsSinceEpoch}';
@@ -95,6 +96,25 @@ class StorageRequest {
     } catch (e) {
       print("Error uploading locket image: $e");
       throw Exception("Failed to upload locket image");
+    }
+  }
+  
+  // <--- HÀM XÓA ẢNH LOCKET (CHO THÙNG RÁC) --->
+  Future<void> deleteImage(String imageUrl) async {
+    try {
+      Reference ref = _storage.refFromURL(imageUrl);
+      await ref.delete();
+      print("StorageRequest: Đã xóa file $imageUrl thành công.");
+    } on FirebaseException catch (e) {
+      print("Error deleting file from storage: $e");
+      if (e.code == 'object-not-found') {
+        print("File không tồn tại, có thể đã bị xóa trước đó.");
+      } else {
+        rethrow; 
+      }
+    } catch (e) {
+      print("Error converting URL to storage reference: $e");
+      rethrow;
     }
   }
 }

@@ -1,3 +1,4 @@
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:mangxahoi/model/model_locket_photo.dart';
@@ -40,6 +41,9 @@ class LocketRequest {
         userId: userId,
         imageUrl: imageUrl,
         timestamp: Timestamp.now(),
+        // Đảm bảo model_locket_photo.dart của bạn có 2 trường này
+        status: 'active', 
+        deletedAt: null,
       );
       await _firestore.collection(_locketCollection).add(newPhoto.toMap());
     } catch (e) {
@@ -47,41 +51,25 @@ class LocketRequest {
     }
   }
 
-  // *** HÀM ĐÃ ĐƯỢC TỐI ƯU (load song song) ***
   Future<List<UserModel>> getLocketFriendsDetails(String currentUserId) async {
     try {
       DocumentSnapshot userDoc = await _firestore.collection(_userCollection).doc(currentUserId).get();
-      if (!userDoc.exists) {
-        print("LocketRequest: Không tìm thấy user $currentUserId");
-        return [];
-      }
+      if (!userDoc.exists) return [];
 
       UserModel currentUser = UserModel.fromFirestore(userDoc);
       List<String> friendIds = currentUser.locketFriends;
+      if (friendIds.isEmpty) return [];
 
-      if (friendIds.isEmpty) {
-        print("LocketRequest: Không có locket friends.");
-        return [];
-      }
-
-      // Tạo danh sách các Future để gọi song song
-      List<Future<UserModel?>> futures = friendIds.map((id) {
-        // Giả sử UserRequest có hàm getUserData(docId)
-        return _userRequest.getUserData(id); 
-      }).toList();
-
+      List<Future<UserModel?>> futures = friendIds.map((id) => _userRequest.getUserData(id)).toList();
       final List<UserModel?> results = await Future.wait(futures);
-      final List<UserModel> friendsDetails = results.whereType<UserModel>().toList();
-      print("LocketRequest: Tải xong chi tiết ${friendsDetails.length} locket friends.");
-      return friendsDetails;
-
+      
+      return results.whereType<UserModel>().toList();
     } catch (e) {
-      print("Error getting locket friends details (optimized): $e");
+      print("Error getting locket friends details: $e");
       return [];
     }
   }
 
-  // *** HÀM ĐÃ ĐƯỢC TỐI ƯU (load song song) ***
   Future<Map<String, LocketPhoto>> getLatestLocketPhotos(List<String> friendIds) async {
     if (friendIds.isEmpty) return {};
 
@@ -91,6 +79,7 @@ class LocketRequest {
           QuerySnapshot photoSnap = await _firestore
               .collection(_locketCollection)
               .where('userId', isEqualTo: id)
+              .where('status', isEqualTo: 'active') // CHỈ LẤY ẢNH ACTIVE
               .orderBy('timestamp', descending: true)
               .limit(1)
               .get();
@@ -106,36 +95,92 @@ class LocketRequest {
       }).toList();
 
       final List<MapEntry<String, LocketPhoto>?> results = await Future.wait(futures);
-      final Map<String, LocketPhoto> latestPhotos = Map.fromEntries(
-        results.whereType<MapEntry<String, LocketPhoto>>()
-      );
-      
-      print("LocketRequest: Tải xong ${latestPhotos.length} ảnh mới nhất.");
-      return latestPhotos;
-
+      return Map.fromEntries(results.whereType<MapEntry<String, LocketPhoto>>());
     } catch (e) {
-      print("Error getting latest locket photos (optimized): $e");
+      print("Error getting latest locket photos: $e");
       return {};
     }
   }
 
-  // HÀM LẤY LỊCH SỬ LOCKET CỦA BẢN THÂN
+  // HÀM LẤY LỊCH SỬ LOCKET (dùng cho cả MyLocketHistoryView và LocketViewerView)
   Future<List<LocketPhoto>> getMyLocketHistory(String userId) async {
     try {
       QuerySnapshot photoSnap = await _firestore
           .collection(_locketCollection)
           .where('userId', isEqualTo: userId)
+          .where('status', isEqualTo: 'active') // CHỈ LẤY ẢNH ACTIVE
           .orderBy('timestamp', descending: true)
           .get();
 
-      if (photoSnap.docs.isEmpty) {
-        return [];
-      }
+      if (photoSnap.docs.isEmpty) return [];
       
       return photoSnap.docs.map((doc) => LocketPhoto.fromFirestore(doc)).toList();
     } catch (e) {
       print("Error getting my locket history: $e");
       return [];
+    }
+  }
+
+  // === CÁC HÀM XÓA VÀ THÙNG RÁC (ĐÃ THÊM LẠI) ===
+
+  // 1. Xóa mềm (dùng ở HistoryView và ViewerView)
+  Future<void> deleteLocketPhotoSoft(String photoId) async {
+    try {
+      await _firestore.collection(_locketCollection).doc(photoId).update({
+        'status': 'deleted',
+        'deletedAt': Timestamp.now(),
+      });
+    } catch (e) {
+      print("Error soft deleting locket photo: $e");
+      rethrow;
+    }
+  }
+
+  // 2. Lấy ảnh đã xóa (dùng ở TrashView)
+  Stream<List<LocketPhoto>> getDeletedLocketPhotos(String userId) {
+    try {
+      return _firestore
+          .collection(_locketCollection)
+          .where('userId', isEqualTo: userId)
+          .where('status', isEqualTo: 'deleted')
+          .orderBy('deletedAt', descending: true)
+          .snapshots()
+          .map((snapshot) {
+            if (snapshot.docs.isEmpty) {
+              return [];
+            }
+            return snapshot.docs.map((doc) => LocketPhoto.fromFirestore(doc)).toList();
+          });
+    } catch (e) {
+      print("Error getting deleted locket photos stream: $e");
+      return Stream.value([]);
+    }
+  }
+
+  // 3. Khôi phục (dùng ở TrashView)
+  Future<void> restoreLocketPhoto(String photoId) async {
+    try {
+      await _firestore.collection(_locketCollection).doc(photoId).update({
+        'status': 'active',
+        'deletedAt': null, // Xóa dấu thời gian đã xóa
+      });
+    } catch (e) {
+      print("Error restoring locket photo: $e");
+      rethrow;
+    }
+  }
+
+  // 4. Xóa vĩnh viễn (dùng ở TrashView)
+  Future<void> deleteLocketPhotoPermanently(String photoId, String imageUrl) async {
+    try {
+      // 1. Xóa ảnh khỏi Storage
+      await _storageRequest.deleteImage(imageUrl);
+      
+      // 2. Xóa tài liệu khỏi Firestore
+      await _firestore.collection(_locketCollection).doc(photoId).delete();
+    } catch (e) {
+      print("Error permanently deleting locket photo: $e");
+      rethrow;
     }
   }
 }
