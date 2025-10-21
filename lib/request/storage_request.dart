@@ -22,7 +22,6 @@ class StorageRequest {
     return null;
   }
 
-  /// Tải một file duy nhất lên Storage và tạo media document
   Future<MediaModel?> uploadFile({
     required File file,
     required String type,
@@ -45,7 +44,6 @@ class StorageRequest {
 
       final mediaId = await _mediaRequest.createMedia(newMedia);
 
-      // Trả về đối tượng MediaModel hoàn chỉnh với ID
       return MediaModel(
         id: mediaId,
         url: newMedia.url,
@@ -59,12 +57,10 @@ class StorageRequest {
     }
   }
 
-  /// Tải nhiều files lên Storage, tạo document trong collection Media, và trả về danh sách Media ID
   Future<List<String>> uploadFilesAndCreateMedia(List<File> files, String userId) async {
     List<String> mediaIds = [];
     try {
       for (var file in files) {
-        // Xác định loại media dựa trên đuôi file
         final fileExtension = file.path.split('.').last.toLowerCase();
         final String mediaType = ['mp4', 'mov', 'avi', 'mkv'].contains(fileExtension) ? 'video' : 'image';
         
@@ -82,6 +78,23 @@ class StorageRequest {
     } catch (e) {
       print('Lỗi trong quá trình tải nhiều file và tạo media: $e');
       rethrow;
+    }
+  }
+
+  // <--- HÀM MỚI CHO LOCKET --->
+  Future<String> uploadLocketImage(XFile image, String userId) async {
+    try {
+      String fileName = 'locket_${userId}_${DateTime.now().millisecondsSinceEpoch}';
+      Reference ref = _storage.ref().child('locket_photos/$fileName');
+      
+      UploadTask uploadTask = ref.putFile(File(image.path));
+      TaskSnapshot snapshot = await uploadTask;
+      String downloadUrl = await snapshot.ref.getDownloadURL();
+      
+      return downloadUrl;
+    } catch (e) {
+      print("Error uploading locket image: $e");
+      throw Exception("Failed to upload locket image");
     }
   }
 }

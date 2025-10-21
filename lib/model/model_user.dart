@@ -17,6 +17,7 @@ class UserModel {
 
   final List<String> avatar;
   final List<String> friends;
+  final List<String> locketFriends; // <--- THÊM
   final List<String> groups;
   final List<String> posterList;
   final int followerCount;
@@ -52,17 +53,16 @@ class UserModel {
     this.dateOfBirth,
     this.lastActive,
     required this.notificationSettings,
-  });
+    List<String>? locketFriends, // <--- THÊM
+  }) : locketFriends = locketFriends ?? []; // <--- THÊM
 
   factory UserModel.fromFirestore(DocumentSnapshot doc) {
     final data = doc.data() as Map<String, dynamic>;
 
-    // Parse count - xử lý cả array và number
     int parseCount(dynamic value) {
       if (value is int) return value;
       if (value is String) return int.tryParse(value) ?? 0;
       if (value is List && value.isNotEmpty) {
-        // Lấy phần tử cuối cùng trong array
         final lastElement = value.last;
         if (lastElement is int) return lastElement;
         if (lastElement is String) return int.tryParse(lastElement) ?? 0;
@@ -70,7 +70,6 @@ class UserModel {
       return 0;
     }
 
-    // Parse string list
     List<String> parseStringList(dynamic value) {
       if (value is List) {
         return value.map((e) => e.toString()).toList();
@@ -91,10 +90,10 @@ class UserModel {
       comeFrom: data['comeFrom'] ?? '',
       role: data['role'] ?? 'user',
       relationship: data['relationship'] ?? '',
-      // Xử lý cả 2 trường hợp: statusAccount và statusAccont (typo)
       statusAccount: data['statusAccount'] ?? data['statusAccont'] ?? 'active',
       avatar: parseStringList(data['avatar']),
       friends: parseStringList(data['friends']),
+      locketFriends: parseStringList(data['locketFriends']), // <--- THÊM
       groups: parseStringList(data['groups']),
       posterList: parseStringList(data['posterList']),
       followerCount: parseCount(data['followerCount']),
@@ -124,13 +123,14 @@ class UserModel {
       'comeFrom': comeFrom,
       'role': role,
       'relationship': relationship,
-      'statusAccount': statusAccount, // Sử dụng tên đúng
+      'statusAccount': statusAccount,
       'avatar': avatar,
       'friends': friends,
+      'locketFriends': locketFriends, // <--- THÊM
       'groups': groups,
       'posterList': posterList,
-      'followerCount': followerCount, // Lưu dạng số
-      'followingCount': followingCount, // Lưu dạng số
+      'followerCount': followerCount,
+      'followingCount': followingCount,
       'createAt': Timestamp.fromDate(createAt),
       'dateOfBirth':
           dateOfBirth != null ? Timestamp.fromDate(dateOfBirth!) : null,
@@ -140,49 +140,50 @@ class UserModel {
     };
   }
 
-  // Copy with method để cập nhật một số field
-      UserModel copyWith({
-        String? id,
-        String? name,
-        String? bio,
-        String? phone,
-        String? gender,
-        String? liveAt,
-        String? comeFrom,
-        String? relationship,
-        List<String>? avatar,
-        List<String>? friends,
-        List<String>? groups,
-        List<String>? posterList,
-        int? followerCount,
-        int? followingCount,
-        DateTime? dateOfBirth,
-        DateTime? lastActive,
-      }) {
-        return UserModel(
-          id: id ?? this.id, // Cho phép đổi ID
-          uid: uid,
-          name: name ?? this.name,
-          email: email,
-          password: password,
-          phone: phone ?? this.phone,
-          bio: bio ?? this.bio,
-          gender: gender ?? this.gender,
-          liveAt: liveAt ?? this.liveAt,
-          comeFrom: comeFrom ?? this.comeFrom,
-          role: role,
-          relationship: relationship ?? this.relationship,
-          statusAccount: statusAccount,
-          avatar: avatar ?? this.avatar,
-          friends: friends ?? this.friends,
-          groups: groups ?? this.groups,
-          posterList: posterList ?? this.posterList,
-          followerCount: followerCount ?? this.followerCount,
-          followingCount: followingCount ?? this.followingCount,
-          createAt: createAt,
-          dateOfBirth: dateOfBirth ?? this.dateOfBirth,
-          lastActive: lastActive ?? this.lastActive,
-          notificationSettings: notificationSettings,
-        );
-      }
+  UserModel copyWith({
+    String? id,
+    String? name,
+    String? bio,
+    String? phone,
+    String? gender,
+    String? liveAt,
+    String? comeFrom,
+    String? relationship,
+    List<String>? avatar,
+    List<String>? friends,
+    List<String>? locketFriends, // <--- THÊM
+    List<String>? groups,
+    List<String>? posterList,
+    int? followerCount,
+    int? followingCount,
+    DateTime? dateOfBirth,
+    DateTime? lastActive,
+  }) {
+    return UserModel(
+      id: id ?? this.id,
+      uid: uid,
+      name: name ?? this.name,
+      email: email,
+      password: password,
+      phone: phone ?? this.phone,
+      bio: bio ?? this.bio,
+      gender: gender ?? this.gender,
+      liveAt: liveAt ?? this.liveAt,
+      comeFrom: comeFrom ?? this.comeFrom,
+      role: role,
+      relationship: relationship ?? this.relationship,
+      statusAccount: statusAccount,
+      avatar: avatar ?? this.avatar,
+      friends: friends ?? this.friends,
+      locketFriends: locketFriends ?? this.locketFriends, // <--- THÊM
+      groups: groups ?? this.groups,
+      posterList: posterList ?? this.posterList,
+      followerCount: followerCount ?? this.followerCount,
+      followingCount: followingCount ?? this.followingCount,
+      createAt: createAt,
+      dateOfBirth: dateOfBirth ?? this.dateOfBirth,
+      lastActive: lastActive ?? this.lastActive,
+      notificationSettings: notificationSettings,
+    );
+  }
 }
