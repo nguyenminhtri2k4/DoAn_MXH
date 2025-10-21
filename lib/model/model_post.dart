@@ -14,6 +14,7 @@ class PostModel {
   final String visibility; // public, friends, private
   final DateTime createdAt;
   final DateTime updatedAt;
+  final DateTime? deletedAt; // THÊM MỚI: Theo dõi thời gian xóa
   final String? originalPostId; // Dùng cho bài viết được chia sẻ
   final String? originalAuthorId; // Dùng cho bài viết được chia sẻ
 
@@ -30,6 +31,7 @@ class PostModel {
     required this.visibility,
     required this.createdAt,
     required this.updatedAt,
+    this.deletedAt,
     this.originalPostId,
     this.originalAuthorId,
   });
@@ -47,11 +49,9 @@ class PostModel {
       shareCount: map['shareCount'] ?? 0,
       status: map['status'] ?? 'active',
       visibility: map['visibility'] ?? 'public',
-      // createdAt: (map['createdAt'] as Timestamp).toDate(),
-      // updatedAt: (map['updatedAt'] as Timestamp).toDate(),
-      // Thêm ? để cho phép giá trị null, và cung cấp giá trị mặc định nếu nó null
       createdAt: (map['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
       updatedAt: (map['updatedAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      deletedAt: (map['deletedAt'] as Timestamp?)?.toDate(), // THÊM MỚI
       originalPostId: map['originalPostId'],
       originalAuthorId: map['originalAuthorId'],
     );
@@ -71,13 +71,13 @@ class PostModel {
       'visibility': visibility,
       'createdAt': Timestamp.fromDate(createdAt),
       'updatedAt': Timestamp.fromDate(updatedAt),
+      'deletedAt': deletedAt != null ? Timestamp.fromDate(deletedAt!) : null, // THÊM MỚI
       'originalPostId': originalPostId,
       'originalAuthorId': originalAuthorId,
     };
   }
 
   /// Tạo một bản sao của đối tượng PostModel nhưng với một vài trường được cập nhật.
-  /// Rất hữu ích cho việc quản lý state.
   PostModel copyWith({
     String? id,
     String? authorId,
@@ -91,6 +91,7 @@ class PostModel {
     String? visibility,
     DateTime? createdAt,
     DateTime? updatedAt,
+    DateTime? deletedAt,
     String? originalPostId,
     String? originalAuthorId,
   }) {
@@ -107,6 +108,7 @@ class PostModel {
       visibility: visibility ?? this.visibility,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
+      deletedAt: deletedAt ?? this.deletedAt,
       originalPostId: originalPostId ?? this.originalPostId,
       originalAuthorId: originalAuthorId ?? this.originalAuthorId,
     );

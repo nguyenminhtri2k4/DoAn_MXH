@@ -17,6 +17,7 @@ import 'package:visibility_detector/visibility_detector.dart';
 import 'package:mangxahoi/services/video_cache_manager.dart';
 import 'package:mangxahoi/view/widgets/share_bottom_sheet.dart';
 import 'package:mangxahoi/view/post/edit_post_view.dart';
+import 'package:mangxahoi/request/post_request.dart';
 
 class PostWidget extends StatefulWidget {
   final PostModel post;
