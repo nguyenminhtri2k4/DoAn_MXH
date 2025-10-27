@@ -1,3 +1,4 @@
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:mangxahoi/viewmodel/profile_view_model.dart';
@@ -61,21 +62,42 @@ class _ProfileContent extends StatelessWidget {
       child: Stack(
         alignment: Alignment.center,
         children: [
+          // <--- CHỈNH SỬA: HIỂN THỊ ẢNH NỀN --->
           Positioned(
             top: 0,
             left: 0,
             right: 0,
             height: 200,
             child: Container(
-              decoration: const BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [AppColors.primary, AppColors.primaryLight],
+              decoration: BoxDecoration(
+                // Hiển thị ảnh nền nếu có
+                image: vm.user!.backgroundImageUrl.isNotEmpty
+                    ? DecorationImage(
+                        image: NetworkImage(vm.user!.backgroundImageUrl),
+                        fit: BoxFit.cover,
+                      )
+                    : null,
+                // Giữ gradient làm fallback
+                gradient: vm.user!.backgroundImageUrl.isEmpty
+                    ? const LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [AppColors.primary, AppColors.primaryLight],
+                      )
+                    : null,
+                // Thêm màu fallback phòng trường hợp gradient cũng null
+                color: AppColors.primaryLight,
+              ),
+              // Thêm một lớp overlay mờ để chữ dễ đọc hơn
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Colors.black.withOpacity(0.2), 
                 ),
               ),
             ),
           ),
+          // <--- KẾT THÚC CHỈNH SỬA --->
+
           Positioned(
             top: 130,
             child: CircleAvatar(
@@ -308,10 +330,7 @@ class _ProfileContent extends StatelessWidget {
     );
   }
   
-  // SỬA: Toàn bộ hàm này đã được viết lại cho an toàn và rõ ràng hơn
   Widget _buildBodyWithPosts(BuildContext context, ProfileViewModel vm) {
-    // SỬA: Thêm một kiểm tra an toàn quan trọng ở đây
-    // Nếu chưa lấy được thông tin người dùng đang đăng nhập, hiển thị loading
     if (vm.currentUserData == null) {
       return const Center(child: CircularProgressIndicator());
     }
@@ -332,7 +351,6 @@ class _ProfileContent extends StatelessWidget {
 
           final posts = snapshot.data ?? [];
           
-          // SỬA: Dùng ListView đơn giản thay vì ListView.builder với logic index phức tạp
           return ListView(
             padding: const EdgeInsets.all(8.0),
             children: [
@@ -340,15 +358,12 @@ class _ProfileContent extends StatelessWidget {
               _buildInfoSection(context, vm),
               if (isCurrentUser) _buildCreatePostSection(context, vm),
               
-              // Tiêu đề "Bài viết", chỉ hiển thị nếu có bài viết
               if (posts.isNotEmpty)
                 const Padding(
                   padding: EdgeInsets.fromLTRB(16, 16, 16, 8),
                   child: Text('Bài viết', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
                 ),
 
-              // SỬA: Dùng toán tử spread (...) để trải danh sách PostWidget ra
-              // Luôn truyền ID của người dùng đang đăng nhập (currentUserData)
               ...posts.map((post) => PostWidget(
                     post: post,
                     currentUserDocId: vm.currentUserData!.id,

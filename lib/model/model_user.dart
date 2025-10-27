@@ -1,3 +1,4 @@
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class UserModel {
@@ -14,10 +15,11 @@ class UserModel {
   final String role;
   final String relationship;
   final String statusAccount;
+  final String backgroundImageUrl; 
 
   final List<String> avatar;
   final List<String> friends;
-  final List<String> locketFriends; // <--- THÊM
+  final List<String> locketFriends; 
   final List<String> groups;
   final List<String> posterList;
   final int followerCount;
@@ -43,6 +45,7 @@ class UserModel {
     required this.role,
     required this.relationship,
     required this.statusAccount,
+    required this.backgroundImageUrl, 
     required this.avatar,
     required this.friends,
     required this.groups,
@@ -53,8 +56,8 @@ class UserModel {
     this.dateOfBirth,
     this.lastActive,
     required this.notificationSettings,
-    List<String>? locketFriends, // <--- THÊM
-  }) : locketFriends = locketFriends ?? []; // <--- THÊM
+    List<String>? locketFriends, 
+  }) : locketFriends = locketFriends ?? []; 
 
   factory UserModel.fromFirestore(DocumentSnapshot doc) {
     final data = doc.data() as Map<String, dynamic>;
@@ -91,9 +94,10 @@ class UserModel {
       role: data['role'] ?? 'user',
       relationship: data['relationship'] ?? '',
       statusAccount: data['statusAccount'] ?? data['statusAccont'] ?? 'active',
+      backgroundImageUrl: data['backgroundImageUrl'] ?? '', 
       avatar: parseStringList(data['avatar']),
       friends: parseStringList(data['friends']),
-      locketFriends: parseStringList(data['locketFriends']), // <--- THÊM
+      locketFriends: parseStringList(data['locketFriends']), 
       groups: parseStringList(data['groups']),
       posterList: parseStringList(data['posterList']),
       followerCount: parseCount(data['followerCount']),
@@ -124,9 +128,10 @@ class UserModel {
       'role': role,
       'relationship': relationship,
       'statusAccount': statusAccount,
+      'backgroundImageUrl': backgroundImageUrl, 
       'avatar': avatar,
       'friends': friends,
-      'locketFriends': locketFriends, // <--- THÊM
+      'locketFriends': locketFriends, 
       'groups': groups,
       'posterList': posterList,
       'followerCount': followerCount,
@@ -149,15 +154,17 @@ class UserModel {
     String? liveAt,
     String? comeFrom,
     String? relationship,
+    String? backgroundImageUrl, 
     List<String>? avatar,
     List<String>? friends,
-    List<String>? locketFriends, // <--- THÊM
+    List<String>? locketFriends, 
     List<String>? groups,
     List<String>? posterList,
     int? followerCount,
     int? followingCount,
     DateTime? dateOfBirth,
     DateTime? lastActive,
+    Map<String, bool>? notificationSettings, // <--- THÊM LẠI DÒNG NÀY
   }) {
     return UserModel(
       id: id ?? this.id,
@@ -173,9 +180,10 @@ class UserModel {
       role: role,
       relationship: relationship ?? this.relationship,
       statusAccount: statusAccount,
+      backgroundImageUrl: backgroundImageUrl ?? this.backgroundImageUrl, 
       avatar: avatar ?? this.avatar,
       friends: friends ?? this.friends,
-      locketFriends: locketFriends ?? this.locketFriends, // <--- THÊM
+      locketFriends: locketFriends ?? this.locketFriends, 
       groups: groups ?? this.groups,
       posterList: posterList ?? this.posterList,
       followerCount: followerCount ?? this.followerCount,
@@ -183,7 +191,7 @@ class UserModel {
       createAt: createAt,
       dateOfBirth: dateOfBirth ?? this.dateOfBirth,
       lastActive: lastActive ?? this.lastActive,
-      notificationSettings: notificationSettings,
+      notificationSettings: notificationSettings ?? this.notificationSettings, // <--- THÊM LẠI DÒNG NÀY
     );
   }
 }
