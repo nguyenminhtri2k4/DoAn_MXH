@@ -1,19 +1,32 @@
 
 import 'dart:async';
+import 'dart:io'; 
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:image_picker/image_picker.dart'; 
 import 'package:mangxahoi/model/model_user.dart';
 import 'package:mangxahoi/model/model_post.dart';
 import 'package:mangxahoi/request/user_request.dart';
 import 'package:mangxahoi/request/post_request.dart';
 import 'package:mangxahoi/request/friend_request_manager.dart'; 
-import 'package:mangxahoi/request/post_request.dart';
+import 'package:mangxahoi/request/storage_request.dart'; 
 
 class ProfileViewModel extends ChangeNotifier {
   final _auth = FirebaseAuth.instance;
   final _userRequest = UserRequest();
   final _postRequest = PostRequest();
   final _friendManager = FriendRequestManager(); 
+
+  final ImagePicker _picker = ImagePicker();
+  final StorageRequest _storageRequest = StorageRequest();
+  
+  bool _isUpdatingImage = false;
+  bool get isUpdatingImage => _isUpdatingImage;
+
+  void _setUpdatingImage(bool value) {
+    _isUpdatingImage = value;
+    notifyListeners();
+  }
 
   UserModel? user;
   UserModel? currentUserData; 
@@ -60,7 +73,6 @@ class ProfileViewModel extends ChangeNotifier {
       }
       
       if (user != null) {
-        // Cập nhật logic lấy bài viết
         userPostsStream = _postRequest.getPostsByAuthorId(
           user!.id,
           currentUserId: currentUserData?.id,
@@ -95,58 +107,57 @@ class ProfileViewModel extends ChangeNotifier {
     await loadProfile(userId: user!.id);
   }
 
-  UserModel _copyUserWith({
-    String? name,
-    String? bio,
-    String? phone,
-    String? gender,
-    String? relationship,
-    String? liveAt,
-    String? comeFrom,
-    DateTime? dateOfBirth,
-    List<String>? avatar,
-    Map<String, bool>? notificationSettings,
-  }) {
-        return UserModel(
-      id: user!.id,
-      uid: user!.uid,
-      name: name ?? user!.name,
-      email: user!.email,
-      password: user!.password,
-      phone: phone ?? user!.phone,
-      bio: bio ?? user!.bio,
-      gender: gender ?? user!.gender,
-      liveAt: liveAt ?? user!.liveAt,
-      comeFrom: comeFrom ?? user!.comeFrom,
-      role: user!.role,
-      relationship: relationship ?? user!.relationship,
-      statusAccount: user!.statusAccount,
-      followerCount: user!.followerCount,
-      followingCount: user!.followingCount,
-      createAt: user!.createAt,
-      dateOfBirth: dateOfBirth ?? user!.dateOfBirth,
-      lastActive: user!.lastActive,
-      avatar: avatar ?? user!.avatar,
-      friends: user!.friends,
-      groups: user!.groups,
-      posterList: user!.posterList,
-      notificationSettings: notificationSettings ?? user!.notificationSettings,
-    );
-  }
+  // <--- SỬA HÀM NÀY: Trả về Future<bool> --->
+  Future<bool> pickAndUpdateAvatar() async {
+    final XFile? image = await _picker.pickImage(source: ImageSource.gallery, imageQuality: 80);
+    if (image == null) return false;
 
-  Future<void> updateAvatar(String newAvatarUrl) async {
-    if (user == null || newAvatarUrl.trim().isEmpty) return;
-
+    _setUpdatingImage(true);
+    
     try {
-      final updatedUser = _copyUserWith(
-        avatar: [newAvatarUrl.trim()],
-      );
-      await _userRequest.updateUser(updatedUser);
-      user = updatedUser;
-      print('✅ Cập nhật avatar thành công');
-      notifyListeners();
+      final File imageFile = File(image.path);
+      final String? downloadUrl = await _storageRequest.uploadProfileImage(imageFile, user!.uid, 'user_avatars');
+      
+      if (downloadUrl != null) {
+        user = user!.copyWith(avatar: [downloadUrl]); 
+        await _userRequest.updateUser(user!);
+        notifyListeners();
+        return true; // <--- Báo thành công
+      } else {
+        return false; // <--- Báo thất bại
+      }
     } catch (e) {
       print('❌ Lỗi khi cập nhật avatar: $e');
+      return false; // <--- Báo thất bại
+    } finally {
+      _setUpdatingImage(false);
+    }
+  }
+
+  // <--- SỬA HÀM NÀY: Trả về Future<bool> --->
+  Future<bool> pickAndUpdateBackground() async {
+    final XFile? image = await _picker.pickImage(source: ImageSource.gallery, imageQuality: 80);
+    if (image == null) return false;
+
+    _setUpdatingImage(true);
+
+    try {
+      final File imageFile = File(image.path);
+      final String? downloadUrl = await _storageRequest.uploadProfileImage(imageFile, user!.uid, 'user_backgrounds');
+      
+      if (downloadUrl != null) {
+        user = user!.copyWith(backgroundImageUrl: downloadUrl);
+        await _userRequest.updateUser(user!);
+        notifyListeners();
+        return true; // <--- Báo thành công
+      } else {
+        return false; // <--- Báo thất bại
+      }
+    } catch (e) {
+      print('❌ Lỗi khi cập nhật ảnh nền: $e');
+      return false; // <--- Báo thất bại
+    } finally {
+      _setUpdatingImage(false);
     }
   }
 
@@ -165,8 +176,8 @@ class ProfileViewModel extends ChangeNotifier {
     try {
       isLoading = true;
       notifyListeners();
-
-      final updatedUser = _copyUserWith(
+      
+      final updatedUser = user!.copyWith(
         name: name,
         bio: bio,
         phone: phone,
@@ -195,7 +206,9 @@ class ProfileViewModel extends ChangeNotifier {
     try {
       final updatedSettings = Map<String, bool>.from(user!.notificationSettings);
       updatedSettings[key] = value;
-      final updatedUser = _copyUserWith(notificationSettings: updatedSettings);
+      
+      final updatedUser = user!.copyWith(notificationSettings: updatedSettings);
+      
       user = updatedUser;
       notifyListeners();
       await _userRequest.updateUser(updatedUser);

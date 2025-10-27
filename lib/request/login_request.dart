@@ -1,3 +1,4 @@
+
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:mangxahoi/authanet/firestore_service.dart';
 import 'package:mangxahoi/model/model_user.dart';
@@ -71,6 +72,7 @@ class LoginRequest {
         role: 'user',
         relationship: '',
         statusAccount: 'active',
+        backgroundImageUrl: '', // <--- SỬA LỖI: THÊM DÒNG NÀY
         avatar: [],
         friends: [],
         groups: [],

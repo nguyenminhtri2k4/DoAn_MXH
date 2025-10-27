@@ -10,6 +10,24 @@ class StorageRequest {
   final ImagePicker _picker = ImagePicker();
   final MediaRequest _mediaRequest = MediaRequest();
 
+  // <--- THÊM MỚI HÀM NÀY --->
+  /// Tải lên một file (ảnh/video) cho profile và trả về URL.
+  /// [folder] có thể là 'user_avatars' hoặc 'user_backgrounds'.
+  Future<String?> uploadProfileImage(File file, String userId, String folder) async {
+    try {
+      final fileName = '${userId}_${DateTime.now().millisecondsSinceEpoch}_${file.path.split('/').last}';
+      final ref = _storage.ref().child('$folder/$fileName');
+      final uploadTask = ref.putFile(file);
+      final snapshot = await uploadTask.whenComplete(() => {});
+      final downloadUrl = await snapshot.ref.getDownloadURL();
+      return downloadUrl;
+    } catch (e) {
+      print('Lỗi khi tải file ($folder): $e');
+      return null;
+    }
+  }
+  // <--- KẾT THÚC HÀM MỚI --->
+
   Future<List<File>> pickImages() async {
     final pickedFiles = await _picker.pickMultiImage(imageQuality: 80);
     return pickedFiles.map((file) => File(file.path)).toList();

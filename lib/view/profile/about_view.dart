@@ -19,43 +19,54 @@ class AboutView extends StatelessWidget {
     return DateFormat('dd/MM/yyyy').format(date);
   }
 
-  // HÀM MỚI ĐỂ HIỂN THỊ DIALOG CHỈNH SỬA AVATAR
-  void _showEditAvatarDialog(BuildContext context) {
-    final avatarController = TextEditingController(
-      text: viewModel.user!.avatar.isNotEmpty ? viewModel.user!.avatar.first : ''
-    );
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: const Text('Thay đổi ảnh đại diện'),
-          content: TextField(
-            controller: avatarController,
-            decoration: const InputDecoration(
-              labelText: 'URL ảnh đại diện mới',
-              hintText: 'https://example.com/image.png',
-            ),
+  // <--- SỬA LỖI: THAY ĐỔI TOÀN BỘ HÀM NÀY --->
+  void _pickAvatar(BuildContext context) async { // Thêm async
+    final success = await viewModel.pickAndUpdateAvatar(); // Await kết quả
+    
+    // Kiểm tra context còn tồn tại trước khi dùng
+    if (!context.mounted) return; 
+
+    if (success) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Row(
+            children: [
+              Icon(Icons.check_circle, color: Colors.white),
+              SizedBox(width: 12),
+              Text('Cập nhật ảnh đại diện thành công!'),
+            ],
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Hủy'),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                viewModel.updateAvatar(avatarController.text);
-                Navigator.pop(context);
-              },
-              child: const Text('Lưu'),
-            ),
-          ],
-        );
-      },
-    );
+          backgroundColor: Colors.green[600],
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          margin: const EdgeInsets.all(16),
+        ),
+      );
+    } else {
+      // (Tùy chọn) Hiển thị thông báo lỗi
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Row(
+            children: [
+              Icon(Icons.error, color: Colors.white),
+              SizedBox(width: 12),
+              Text('Cập nhật thất bại. Vui lòng thử lại.'),
+            ],
+          ),
+          backgroundColor: Colors.red[600],
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          margin: const EdgeInsets.all(16),
+        ),
+      );
+    }
   }
+  // <--- KẾT THÚC SỬA ĐỔI --->
 
   @override
   Widget build(BuildContext context) {
+    // Chúng ta không cần Consumer ở đây vì viewModel được truyền vào
+    // và chúng ta xử lý logic trong hàm _pickAvatar
     final user = viewModel.user!;
 
     return Scaffold(
@@ -69,12 +80,11 @@ class AboutView extends StatelessWidget {
         padding: const EdgeInsets.all(16.0),
         child: Column(
           children: [
-            // ==================== MỤC ẢNH ĐẠI DIỆN MỚI ====================
             _buildSection(
               context: context,
               title: 'Ảnh đại diện',
               isCurrentUser: isCurrentUser,
-              onEdit: () => _showEditAvatarDialog(context),
+              onEdit: () => _pickAvatar(context), // <--- Gọi hàm đã sửa
               children: [
                 Center(
                   child: CircleAvatar(
@@ -91,11 +101,10 @@ class AboutView extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 16),
-            // =============================================================
             _buildSection(
               context: context,
               title: 'Thông tin liên hệ',
-              isCurrentUser: false, // Không cần nút sửa ở đây nữa
+              isCurrentUser: false,
               children: [
                 _buildInfoRow(Icons.email_outlined, 'Email', user.email),
                 _buildInfoRow(Icons.phone_outlined, 'Di động', user.phone),
@@ -132,7 +141,7 @@ class AboutView extends StatelessWidget {
                 },
                 icon: Icon(
                     Icons.edit_note,
-                    color: AppColors.textWhite, // 👈 icon cùng màu với chữ
+                    color: AppColors.textWhite,
                 ),
                 label: const Text('Chỉnh sửa chi tiết'),
                 style: ElevatedButton.styleFrom(
@@ -156,8 +165,7 @@ class AboutView extends StatelessWidget {
     required bool isCurrentUser,
     VoidCallback? onEdit,
   }) {
-    // ... (Giữ nguyên không thay đổi)
-        final visibleChildren = children.where((child) => child is! SizedBox).toList();
+    final visibleChildren = children.where((child) => child is! SizedBox).toList();
     
     if (visibleChildren.isEmpty) {
       return const SizedBox.shrink();
@@ -184,7 +192,7 @@ class AboutView extends StatelessWidget {
             ],
           ),
           const Divider(height: 24),
-          ...visibleChildren, // Chỉ hiển thị các dòng có nội dung
+          ...visibleChildren,
         ],
       ),
     );
@@ -194,8 +202,7 @@ class AboutView extends StatelessWidget {
     if (mainText.isEmpty || mainText == 'Chưa cung cấp') {
       return const SizedBox.shrink();
     }
-    // ... (Giữ nguyên không thay đổi)
-        return Padding(
+    return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8.0),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
