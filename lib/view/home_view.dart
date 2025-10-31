@@ -11,6 +11,8 @@ import 'package:mangxahoi/view/video_view.dart';
 import 'package:mangxahoi/services/video_cache_manager.dart';
 import 'package:mangxahoi/view/locket/locket_view.dart'; // <--- THÊM MỚI
 import 'package:mangxahoi/view/notification_view.dart'; // <--- VẪN GIỮ (để dùng cho nút trên AppBar)
+import 'package:provider/provider.dart';
+import 'package:mangxahoi/services/call_service.dart';
 
 class HomeView extends StatelessWidget {
   const HomeView({super.key});
@@ -40,6 +42,14 @@ class _HomeViewContentState extends State<_HomeViewContent> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) { 
+        // Lấy UserService từ Provider
+        final userService = context.read<UserService>(); 
+        // Khởi động CallService và truyền UserService vào
+        context.read<CallService>().init(userService); 
+      }
+    });
     _scrollController.addListener(_handleScroll);
     
     _scrollController.addListener(() {
