@@ -28,6 +28,10 @@ dependencies:
   timeago: ^3.6.0
   smooth_page_indicator: ^1.1.0
   path: ^1.9.0 
+  
+  zego_express_engine: ^3.0.0
+  permission_handler: ^12.0.1
+  uuid: ^4.2.1              # Dùng để tạo ID cuộc gọi duy nhất
  
   
 

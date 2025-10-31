@@ -860,6 +860,8 @@ import 'package:mangxahoi/services/user_service.dart';
 // Import màn hình xem ảnh/video full
 import 'package:mangxahoi/view/widgets/full_screen_image_viewer.dart';
 import 'package:mangxahoi/view/widgets/full_screen_video_player.dart';
+import 'package:mangxahoi/services/call_service.dart'; // Để dùng cho ViewModel
+import 'package:mangxahoi/model/model_call.dart';
 
 
 class ChatView extends StatelessWidget {
@@ -871,7 +873,7 @@ class ChatView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // --- Lấy currentUserId từ UserService ---
-    final String? currentUserId = context.watch<UserService>().currentUser?.uid;
+    final String? currentUserId = context.watch<UserService>().currentUser?.id;
 
     return ChangeNotifierProvider(
       // --- Truyền currentUserId vào ViewModel ---
@@ -908,6 +910,23 @@ class _ChatViewContent extends StatelessWidget {
         title: Text(chatName),
         backgroundColor: AppColors.backgroundLight,
         elevation: 1,
+        actions: [
+          // Chỉ hiển thị nút gọi nếu KHÔNG phải là nhóm
+          if (!vm.isGroup) // ViewModel sẽ tự biết
+            IconButton(
+              icon: Icon(Icons.call),
+              onPressed: () {
+                vm.startAudioCall(context);
+              },
+            ),
+          if (!vm.isGroup)
+            IconButton(
+              icon: Icon(Icons.videocam),
+              onPressed: () {
+                 vm.startVideoCall(context);
+              },
+            ),
+        ],
       ),
       body: Column(
         children: [
