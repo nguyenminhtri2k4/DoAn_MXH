@@ -32,8 +32,8 @@ dependencies:
   zego_express_engine: ^3.0.0
   permission_handler: ^12.0.1
   uuid: ^4.2.1              # Dùng để tạo ID cuộc gọi duy nhất
- 
-  
+  audioplayers: ^6.0.0
+
 
 dev_dependencies:
   flutter_test:
@@ -46,6 +46,7 @@ flutter:
   assets:
     - assets/logoapp.png
     - assets/logosybau.png
+    - assets/sounds/
 
 # ⚙️ Cấu hình icon ứng dụng
 flutter_launcher_icons:
@@ -54,6 +55,7 @@ flutter_launcher_icons:
   web:
     generate: true
   image_path: "assets/logoapp.png"
+  
   min_sdk_android: 21
 
 # ⚙️ Cấu hình màn hình khởi động (Splash)

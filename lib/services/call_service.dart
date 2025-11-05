@@ -11,6 +11,7 @@ import 'package:mangxahoi/view/call/incoming_call_screen.dart';
 import 'package:permission_handler/permission_handler.dart'; 
 import 'package:zego_express_engine/zego_express_engine.dart'; 
 import 'package:uuid/uuid.dart';
+import 'package:mangxahoi/constant/app_colors.dart';
 
 class CallService with ChangeNotifier {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -67,13 +68,16 @@ class CallService with ChangeNotifier {
         );
       } else {
         // 2. CHO ANDROID/iOS: BẮT BUỘC CÓ appSign (dưới dạng tham số TÊN)
-        // Cú pháp: ZegoEngineProfile(appID, scenario, appSign: appSign)
+        
+        // ▼▼▼ SỬA LỖI 1: SỬA LỖI CÚ PHÁP SAI THỨ TỰ THAM SỐ ▼▼▼
+        // Đưa tham số vị trí (Positional) ZegoScenario.General LÊN TRƯỚC
+        // tham số tên (Named) appSign.
         profile = ZegoEngineProfile(
-          ZegoCloudConfig.appId,  
-          appSign: ZegoCloudConfig.appSign,     // Vị trí 1
-          ZegoScenario.General,        // Vị trí 2
-           // <--- Sửa: Dùng tham số TÊN
+          ZegoCloudConfig.appId,     // Tham số vị trí 1
+          ZegoScenario.General,      // Tham số vị trí 2
+          appSign: ZegoCloudConfig.appSign, // Tham số tên (SAU CÙNG)
         );
+        // ▲▲▲ KẾT THÚC SỬA LỖI 1 ▲▲▲
       }
       
       await ZegoExpressEngine.createEngineWithProfile(profile);
@@ -153,7 +157,7 @@ class CallService with ChangeNotifier {
     } catch (e) {
       print("❌ [SERVICE DEBUG] LỖI khi join room: $e");
       print("📞 [SERVICE DEBUG] ========================================");
-      rethrow;
+      rethrow; // Ném lỗi ra để makeOneToOneCall bắt được
     }
   }
   
@@ -199,54 +203,126 @@ class CallService with ChangeNotifier {
     );
   }
 
-  Future<CallModel?> makeOneToOneCall(UserModel receiverUser, CallMediaType mediaType) async {
-    print("📞 [SERVICE DEBUG] makeOneToOneCall được gọi");
+  // ▼▼▼ SỬA LỖI 2: ĐẢO NGƯỢC THỨ TỰ LOGIC (ZEGO TRƯỚC, FIRESTORE SAU) ▼▼▼
+//   Future<CallModel?> makeOneToOneCall(UserModel receiverUser, CallMediaType mediaType) async {
+//     print("📞 [SERVICE DEBUG] makeOneToOneCall được gọi");
     
-    if (_currentUser == null || currentUserId == null) {
-      print("❌ [SERVICE DEBUG] currentUser hoặc currentUserId = null");
-      return null;
-    }
+//     if (_currentUser == null || currentUserId == null) {
+//       print("❌ [SERVICE DEBUG] currentUser hoặc currentUserId = null");
+//       return null;
+//     }
     
-    if (receiverUser.uid.isEmpty) {
-      print("❌ [SERVICE DEBUG] receiverUser.uid rỗng");
-      return null;
-    }
+//     if (receiverUser.uid.isEmpty) {
+//       print("❌ [SERVICE DEBUG] receiverUser.uid rỗng");
+//       return null;
+//     }
     
-    print("📞 [SERVICE DEBUG] Đang xin quyền...");
-    await _handlePermissions(mediaType);
+//     print("📞 [SERVICE DEBUG] Đang xin quyền...");
+//     await _handlePermissions(mediaType);
 
-    String callId = Uuid().v4();
-    String channelName = "call_$callId";
+//     String callId = Uuid().v4();
+//     String channelName = "call_$callId";
     
-    CallModel call = CallModel(
-      id: callId,
-      callerId: currentUserId!,
-      callerName: _currentUser!.name,
-      callerAvatar: _currentUser!.avatar.isNotEmpty ? _currentUser!.avatar.first : '',
-      receiverIds: [receiverUser.uid],
-      status: CallStatus.pending,
-      callType: CallType.oneToOne,
-      mediaType: mediaType,
-      channelName: channelName,
-      createdAt: Timestamp.now(),
-    );
+//     CallModel call = CallModel(
+//       id: callId,
+//       callerId: currentUserId!,
+//       callerName: _currentUser!.name,
+//       callerAvatar: _currentUser!.avatar.isNotEmpty ? _currentUser!.avatar.first : '',
+//       receiverIds: [receiverUser.uid],
+//       status: CallStatus.pending,
+//       callType: CallType.oneToOne,
+//       mediaType: mediaType,
+//       channelName: channelName,
+//       createdAt: Timestamp.now(),
+//     );
 
-    _currentCall = call;
+//     _currentCall = call;
     
-    try {
-      print("📞 [SERVICE DEBUG] Đang lưu call vào Firestore...");
-      await _callsCollection.doc(call.id).set(call.toJson());
-      print("✅ [SERVICE DEBUG] Call đã lưu thành công");
+//     try {
+//       // BƯỚC 1: NGƯỜI GỌI JOIN PHÒNG ZEGO TRƯỚC
+//       print("📞 [SERVICE DEBUG] Người gọi đang join room (Zego)...");
+//       await _joinRoom(call.channelName, call.mediaType);
+//       print("✅ [SERVICE DEBUG] Join room (Zego) thành công");
       
-      print("📞 [SERVICE DEBUG] Người gọi đang join room...");
-      await _joinRoom(call.channelName, call.mediaType);
+//       // BƯỚC 2: NẾU ZEGO THÀNH CÔNG, MỚI LƯU LÊN FIRESTORE (ĐỂ GỬI TÍN HIỆU)
+//       print("📞 [SERVICE DEBUG] Đang lưu call vào Firestore...");
+//       await _callsCollection.doc(call.id).set(call.toJson());
+//       print("✅ [SERVICE DEBUG] Call đã lưu (Firestore) thành công");
       
-      return call;
-    } catch (e) {
-      print("❌ [SERVICE DEBUG] Lỗi makeOneToOneCall: $e");
-      return null;
-    }
+//       // BƯỚC 3: Trả về call để ChatViewModel điều hướng
+//       return call;
+
+//     } catch (e) {
+//       // BƯỚC 4: NẾU ZEGO THẤT BẠI (ở Bước 1)
+//       print("❌ [SERVICE DEBUG] Lỗi makeOneToOneCall (Zego thất bại): $e");
+//       _cleanUp(); // Dọn dẹp _currentCall vì cuộc gọi thất bại
+//       return null; // Trả về null, sẽ KHÔNG ghi gì lên Firestore
+//     }
+//   }
+  // ▲▲▲ KẾT THÚC SỬA LỖI 2 ▲▲▲
+  // lib/services/call_service.dart - SỬA LẠI
+
+Future<CallModel?> makeOneToOneCall(UserModel receiverUser, CallMediaType mediaType) async {
+  print("📞 [SERVICE DEBUG] makeOneToOneCall được gọi");
+  
+  if (_currentUser == null || currentUserId == null) {
+    print("❌ [SERVICE DEBUG] currentUser hoặc currentUserId = null");
+    return null;
   }
+  
+  if (receiverUser.uid.isEmpty) {
+    print("❌ [SERVICE DEBUG] receiverUser.uid rỗng");
+    return null;
+  }
+  
+  print("📞 [SERVICE DEBUG] Đang xin quyền...");
+  await _handlePermissions(mediaType);
+
+  String callId = Uuid().v4();
+  String channelName = "call_$callId";
+  
+  // ▼▼▼ THÊM LINK MẶC ĐỊNH CỦA BẠN VÀO ĐÂY ▼▼▼
+
+  CallModel call = CallModel(
+    id: callId,
+    callerId: currentUserId!,
+    callerName: _currentUser!.name,
+    
+    // ▼▼▼ SỬA DÒNG NÀY ▼▼▼
+    // Đảm bảo không bao giờ gửi link rỗng ""
+    callerAvatar: _currentUser!.avatar.isNotEmpty 
+        ? _currentUser!.avatar.first 
+        : AppColors.defaultAvatar,
+    // ▲▲▲ KẾT THÚC SỬA ▲▲▲
+
+    receiverIds: [receiverUser.uid],
+    status: CallStatus.pending,
+    callType: CallType.oneToOne,
+    mediaType: mediaType,
+    channelName: channelName,
+    createdAt: Timestamp.now(),
+  );
+
+  _currentCall = call;
+  
+  try {
+    // (Toàn bộ phần try/catch giữ nguyên)
+    print("📞 [SERVICE DEBUG] Người gọi đang join room (Zego)...");
+    await _joinRoom(call.channelName, call.mediaType);
+    print("✅ [SERVICE DEBUG] Join room (Zego) thành công");
+    
+    print("📞 [SERVICE DEBUG] Đang lưu call vào Firestore...");
+    await _callsCollection.doc(call.id).set(call.toJson());
+    print("✅ [SERVICE DEBUG] Call đã lưu (Firestore) thành công");
+    
+    return call;
+
+  } catch (e) {
+    print("❌ [SERVICE DEBUG] Lỗi makeOneToOneCall (Zego thất bại): $e");
+    _cleanUp(); 
+    return null; 
+  }
+}
 
   Future<void> acceptCall(CallModel call) async {
     print("📞 [SERVICE DEBUG] ========================================");
@@ -311,7 +387,6 @@ class CallService with ChangeNotifier {
   }
 
   Future<void> _handlePermissions(CallMediaType mediaType) async {
-    // Không cần xin quyền trên Web, trình duyệt sẽ tự hỏi
     if (kIsWeb) return; 
 
     print("📞 [SERVICE DEBUG] Đang xin quyền ${mediaType.name}...");

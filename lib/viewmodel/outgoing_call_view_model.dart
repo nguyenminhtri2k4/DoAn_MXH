@@ -13,14 +13,15 @@ import 'package:mangxahoi/services/call_service.dart';
 import 'package:mangxahoi/request/user_request.dart';
 
 import 'package:mangxahoi/view/call/ongoing_call_screen.dart';
+import 'package:mangxahoi/services/sound_service.dart';
 
 
 
 class OutgoingCallViewModel extends ChangeNotifier {
 
   final CallService callService;
-
   final CallModel call;
+  final SoundService soundService;
 
   
 
@@ -34,10 +35,13 @@ class OutgoingCallViewModel extends ChangeNotifier {
 
 
 
-  OutgoingCallViewModel({required this.call, required this.callService}) {
+  OutgoingCallViewModel({
+    required this.call, 
+    required this.callService, 
+    required this.soundService
+  }) { // <--- SỬA LẠI NHƯ NÀY
 
     _loadReceiverInfo();
-
   }
 
 
@@ -81,6 +85,7 @@ class OutgoingCallViewModel extends ChangeNotifier {
 
 
   Future<void> onCancelCall(BuildContext context) async {
+    await soundService.playEndCall();
 
     await callService.rejectOrCancelCall(call);
 
@@ -109,6 +114,7 @@ class OutgoingCallViewModel extends ChangeNotifier {
         );
 
       } else if (status == CallStatus.declined || status == CallStatus.ended) {
+        soundService.playEndCall();
 
         _callStatusSubscription?.cancel();
 
