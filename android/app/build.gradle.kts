@@ -30,6 +30,14 @@ android {
     buildTypes {
         release {
             signingConfig = signingConfigs.getByName("debug")
+            // THÊM CÁC DÒNG NÀY ĐỂ BẬT PROGUARD CHO ZEGO
+            isMinifyEnabled = true
+            isShrinkResources = true
+            
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro" // <--- Báo cho Android dùng file bạn tạo
+            )
         }
     }
 }

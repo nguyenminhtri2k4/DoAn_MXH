@@ -1,3 +1,4 @@
+
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -32,14 +33,17 @@ import 'package:mangxahoi/view/post/edit_post_view.dart';
 import 'package:mangxahoi/view/trash_view.dart';
 import 'package:mangxahoi/view/locket/locket_manage_friends_view.dart';
 import 'package:mangxahoi/view/locket/my_locket_history_view.dart';
-import 'package:mangxahoi/view/locket/locket_trash_view.dart';
+// import 'package:mangxahoi/view/locket/locket_trash_view.dart'; // Đã xóa vì file này không tồn tại
 import 'package:mangxahoi/services/call_service.dart';
 import 'firebase_options.dart'; // <--- Import file options
 import 'package:flutter/foundation.dart'; // <--- Import để kiểm tra kIsWeb
+import 'package:mangxahoi/services/sound_service.dart';
+
+// 1. THÊM IMPORT CỦA ZEGO ENGINE
+import 'package:zego_express_engine/zego_express_engine.dart';
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
-// ▼▼▼ SỬA LỖI CHO ANDROID VÀ WEB ▼▼▼
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
@@ -55,7 +59,6 @@ void main() async {
   
   runApp(MyApp());
 }
-// ▲▲▲ KẾT THÚC SỬA LỖI ▲▲▲
 
 class MyApp extends StatelessWidget {
   MyApp({super.key});
@@ -70,8 +73,11 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(
           create: (_) => CallService(navigatorKey: navigatorKey),
         ),
+        Provider<SoundService>(
+          create: (_) => SoundService(),
+          dispose: (_, service) => service.dispose(), 
+        ),
       ],
-      // ✅ Thêm Consumer để init CallService khi UserService có currentUser
       child: Consumer<UserService>(
         builder: (context, userService, _) {
           // Init CallService khi user đã đăng nhập
@@ -117,8 +123,8 @@ class MyApp extends StatelessWidget {
                 
                 case '/edit_post':
                     if (settings.arguments is PostModel) {
-                     final post = settings.arguments as PostModel;
-                     return MaterialPageRoute(builder: (context) => EditPostView(post: post));
+                      final post = settings.arguments as PostModel;
+                      return MaterialPageRoute(builder: (context) => EditPostView(post: post));
                     }
                     return null;
 
@@ -199,6 +205,7 @@ class MyApp extends StatelessWidget {
               '/trash': (context) => const TrashView(),
               '/locket_manage_friends': (context) => const LocketManageFriendsView(),
               '/my_locket_history': (context) => const MyLocketHistoryView(),
+              // Đã xóa route '/locket_trash_view' bị lỗi
             },
           );
         },
@@ -218,6 +225,14 @@ class MyApp extends StatelessWidget {
       try {
         final callService = context.read<CallService>();
         print("🚀 [MAIN] Đang init CallService...");
+
+        // ▼▼▼ 2. SỬA LỖI 1002001 (HOT RESTART) ▼▼▼
+        // Luôn logout session cũ trước khi init session mới
+        print("👍 [MAIN] Đang logout Zego room cũ (nếu có)...");
+        // Sửa từ: logoutUser() -> Thành: logoutRoom()
+        await ZegoExpressEngine.destroyEngine();
+        // ▲▲▲ KẾT THÚC SỬA LỖI ▲▲▲
+
         await callService.init(userService);
         _hasInitialized = true;
         print("✅ [MAIN] CallService đã được init thành công");
@@ -225,7 +240,7 @@ class MyApp extends StatelessWidget {
         print("❌ [MAIN] Lỗi khi init CallService: $e");
       }
     } else {
-        print("⚠️ [MAIN] Bỏ qua init CallService trên Web.");
+      print("⚠️ [MAIN] Bỏ qua init CallService trên Web.");
     }
   }
 }

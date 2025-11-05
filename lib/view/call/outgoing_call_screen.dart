@@ -5,6 +5,7 @@ import 'package:mangxahoi/model/model_call.dart';
 import 'package:mangxahoi/services/call_service.dart';
 import 'package:mangxahoi/viewmodel/outgoing_call_view_model.dart';
 import 'package:provider/provider.dart';
+import 'package:mangxahoi/services/sound_service.dart';
 
 class OutgoingCallScreen extends StatelessWidget {
   final CallModel call;
@@ -16,6 +17,7 @@ class OutgoingCallScreen extends StatelessWidget {
       create: (_) => OutgoingCallViewModel(
         call: call,
         callService: context.read<CallService>(),
+        soundService: context.read<SoundService>(),
       ),
       child: Scaffold(
         backgroundColor: Colors.grey[800],

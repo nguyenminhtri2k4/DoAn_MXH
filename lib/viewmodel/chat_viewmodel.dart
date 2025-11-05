@@ -189,7 +189,27 @@ class ChatViewModel extends ChangeNotifier {
 
   // ===== MESSAGE ACTIONS =====
   Future<void> markAsSeen(String messageId) async {
-    await _chatRequest.updateMessageStatus(chatId, messageId, 'seen');
+    try {
+      // Lấy thông tin tin nhắn trước khi cập nhật
+      final doc = await FirebaseFirestore.instance
+          .collection('Chat')
+          .doc(chatId)
+          .collection('messages')
+          .doc(messageId)
+          .get();
+      
+      if (!doc.exists) return;
+      
+      final messageData = doc.data() as Map<String, dynamic>;
+      final currentStatus = messageData['status'] as String?;
+      
+      // CHỈ cập nhật nếu status KHÔNG phải là 'recalled' hoặc 'deleted'
+      if (currentStatus != 'recalled' && currentStatus != 'deleted') {
+        await _chatRequest.updateMessageStatus(chatId, messageId, 'seen');
+      }
+    } catch (e) {
+      print('❌ Lỗi khi đánh dấu tin nhắn đã xem: $e');
+    }
   }
 
   Future<void> recallMessage(String messageId) async {
