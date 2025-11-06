@@ -33,30 +33,28 @@ import 'package:mangxahoi/view/post/edit_post_view.dart';
 import 'package:mangxahoi/view/trash_view.dart';
 import 'package:mangxahoi/view/locket/locket_manage_friends_view.dart';
 import 'package:mangxahoi/view/locket/my_locket_history_view.dart';
-// import 'package:mangxahoi/view/locket/locket_trash_view.dart'; // Đã xóa vì file này không tồn tại
 import 'package:mangxahoi/services/call_service.dart';
-import 'firebase_options.dart'; // <--- Import file options
-import 'package:flutter/foundation.dart'; // <--- Import để kiểm tra kIsWeb
+import 'firebase_options.dart';
+import 'package:flutter/foundation.dart';
 import 'package:mangxahoi/services/sound_service.dart';
+// Import file mới
+import 'package:mangxahoi/view/follow_viewer.dart';
 
-// 1. THÊM IMPORT CỦA ZEGO ENGINE
 import 'package:zego_express_engine/zego_express_engine.dart';
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
+
   if (kIsWeb) {
-    // 1. Chạy cấu hình cho Web (dùng file firebase_options.dart)
     await Firebase.initializeApp(
       options: DefaultFirebaseOptions.currentPlatform,
     );
   } else {
-    // 2. Chạy cấu hình mặc định cho Android/iOS (tự động đọc file json/plist)
-    await Firebase.initializeApp(); 
+    await Firebase.initializeApp();
   }
-  
+
   runApp(MyApp());
 }
 
@@ -75,18 +73,17 @@ class MyApp extends StatelessWidget {
         ),
         Provider<SoundService>(
           create: (_) => SoundService(),
-          dispose: (_, service) => service.dispose(), 
+          dispose: (_, service) => service.dispose(),
         ),
       ],
       child: Consumer<UserService>(
         builder: (context, userService, _) {
-          // Init CallService khi user đã đăng nhập
           if (userService.currentUser != null && !userService.isLoading) {
             WidgetsBinding.instance.addPostFrameCallback((_) {
               _initCallService(context, userService);
             });
           }
-          
+
           return MaterialApp(
             navigatorKey: navigatorKey,
             debugShowCheckedModeBanner: false,
@@ -101,7 +98,7 @@ class MyApp extends StatelessWidget {
                 case '/profile':
                   final userId = settings.arguments as String?;
                   return MaterialPageRoute(builder: (context) => ProfileView(userId: userId));
-                
+
                 case '/create_post':
                   if (settings.arguments is UserModel) {
                     final user = settings.arguments as UserModel;
@@ -120,21 +117,21 @@ class MyApp extends StatelessWidget {
                     );
                   }
                   return null;
-                
+
                 case '/edit_post':
-                    if (settings.arguments is PostModel) {
-                      final post = settings.arguments as PostModel;
-                      return MaterialPageRoute(builder: (context) => EditPostView(post: post));
-                    }
-                    return null;
+                  if (settings.arguments is PostModel) {
+                    final post = settings.arguments as PostModel;
+                    return MaterialPageRoute(builder: (context) => EditPostView(post: post));
+                  }
+                  return null;
 
                 case '/edit_profile':
                   if (settings.arguments is ProfileViewModel) {
                     final viewModel = settings.arguments as ProfileViewModel;
                     return MaterialPageRoute(builder: (context) => EditProfileView(viewModel: viewModel));
                   }
-                    return null;
-                  
+                  return null;
+
                 case '/about':
                   if (settings.arguments is Map<String, dynamic>) {
                     final args = settings.arguments as Map<String, dynamic>;
@@ -142,50 +139,50 @@ class MyApp extends StatelessWidget {
                     final isCurrentUser = args['isCurrentUser'] as bool;
                     return MaterialPageRoute(builder: (context) => AboutView(viewModel: viewModel, isCurrentUser: isCurrentUser));
                   }
-                    return null;
-                  
+                  return null;
+
                 case '/chat':
                   if (settings.arguments is Map<String, dynamic>) {
-                      final args = settings.arguments as Map<String, dynamic>;
-                      final chatId = args['chatId'] as String?;
-                      final chatName = args['chatName'] as String?;
-                      if (chatId != null && chatName != null) {
-                        return MaterialPageRoute(builder: (context) => ChatView(chatId: chatId, chatName: chatName));
-                      }
+                    final args = settings.arguments as Map<String, dynamic>;
+                    final chatId = args['chatId'] as String?;
+                    final chatName = args['chatName'] as String?;
+                    if (chatId != null && chatName != null) {
+                      return MaterialPageRoute(builder: (context) => ChatView(chatId: chatId, chatName: chatName));
+                    }
                   }
                   return null;
-                  
+
                 case '/post_group':
                   if (settings.arguments is GroupModel) {
-                      final group = settings.arguments as GroupModel;
-                      return MaterialPageRoute(builder: (context) => PostGroupView(group: group));
+                    final group = settings.arguments as GroupModel;
+                    return MaterialPageRoute(builder: (context) => PostGroupView(group: group));
                   }
-                    return null;
-                
+                  return null;
+
                 case '/share_post':
                   if (settings.arguments is Map<String, dynamic>) {
-                      final args = settings.arguments as Map<String, dynamic>;
-                      final originalPost = args['originalPost'] as PostModel?;
-                      final currentUser = args['currentUser'] as UserModel?;
-                      if (originalPost != null && currentUser != null) {
-                        return MaterialPageRoute(builder: (context) => SharePostView(originalPost: originalPost, currentUser: currentUser));
-                      }
+                    final args = settings.arguments as Map<String, dynamic>;
+                    final originalPost = args['originalPost'] as PostModel?;
+                    final currentUser = args['currentUser'] as UserModel?;
+                    if (originalPost != null && currentUser != null) {
+                      return MaterialPageRoute(builder: (context) => SharePostView(originalPost: originalPost, currentUser: currentUser));
+                    }
                   }
-                    return null;
+                  return null;
 
                 case '/share_to_messenger':
                   if (settings.arguments is PostModel) {
-                      final post = settings.arguments as PostModel;
-                      return MaterialPageRoute(builder: (context) => ShareToMessengerView(postToShare: post));
+                    final post = settings.arguments as PostModel;
+                    return MaterialPageRoute(builder: (context) => ShareToMessengerView(postToShare: post));
                   }
-                    return null;
+                  return null;
 
                 case '/post_detail':
                   if (settings.arguments is String) {
-                      final postId = settings.arguments as String;
-                      return MaterialPageRoute(builder: (context) => PostDetailView(postId: postId));
+                    final postId = settings.arguments as String;
+                    return MaterialPageRoute(builder: (context) => PostDetailView(postId: postId));
                   }
-                    return null;
+                  return null;
 
                 default:
                   return null;
@@ -205,34 +202,31 @@ class MyApp extends StatelessWidget {
               '/trash': (context) => const TrashView(),
               '/locket_manage_friends': (context) => const LocketManageFriendsView(),
               '/my_locket_history': (context) => const MyLocketHistoryView(),
-              // Đã xóa route '/locket_trash_view' bị lỗi
+              // Sử dụng class mới FollowViewer
+              '/follow': (context) {
+                final args = ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>;
+                return FollowViewer(
+                  userId: args['userId'],
+                  initialIndex: args['initialIndex'] ?? 0,
+                );
+              },
             },
           );
         },
       ),
     );
   }
-  
-  // ✅ HÀM INIT CALLSERVICE
+
   bool _hasInitialized = false;
-  
+
   void _initCallService(BuildContext context, UserService userService) async {
-    // Tránh gọi init nhiều lần
     if (_hasInitialized) return;
-    
-    // Chỉ init nếu không phải là Web (vì Zego Web đang lỗi)
+
     if (!kIsWeb) {
       try {
         final callService = context.read<CallService>();
         print("🚀 [MAIN] Đang init CallService...");
-
-        // ▼▼▼ 2. SỬA LỖI 1002001 (HOT RESTART) ▼▼▼
-        // Luôn logout session cũ trước khi init session mới
-        print("👍 [MAIN] Đang logout Zego room cũ (nếu có)...");
-        // Sửa từ: logoutUser() -> Thành: logoutRoom()
         await ZegoExpressEngine.destroyEngine();
-        // ▲▲▲ KẾT THÚC SỬA LỖI ▲▲▲
-
         await callService.init(userService);
         _hasInitialized = true;
         print("✅ [MAIN] CallService đã được init thành công");

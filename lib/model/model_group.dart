@@ -6,6 +6,7 @@ class GroupModel {
   final String ownerId;
   final String name;
   final String description;
+  final String coverImage; // <--- Đã thêm trường này
   final List<String> managers;
   final List<String> members;
   final String settings;
@@ -18,6 +19,7 @@ class GroupModel {
     required this.ownerId,
     required this.name,
     required this.description,
+    this.coverImage = '', // <--- Mặc định là chuỗi rỗng
     required this.managers,
     required this.members,
     required this.settings,
@@ -33,6 +35,7 @@ class GroupModel {
       ownerId: map['ownerId'] ?? '',
       name: map['name'] ?? '',
       description: map['description'] ?? '',
+      coverImage: map['coverImage'] ?? '', // <--- Đọc từ Firestore
       managers: List<String>.from(map['managers'] ?? []),
       members: List<String>.from(map['members'] ?? []),
       settings: map['settings'] ?? '',
@@ -50,6 +53,7 @@ class GroupModel {
       'ownerId': ownerId,
       'name': name,
       'description': description,
+      'coverImage': coverImage, // <--- Ghi lên Firestore
       'managers': managers,
       'members': members,
       'settings': settings,

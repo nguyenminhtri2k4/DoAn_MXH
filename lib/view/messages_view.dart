@@ -109,16 +109,43 @@ class _ChatListItem extends StatelessWidget {
       return FutureBuilder<DocumentSnapshot>(
         future: FirebaseFirestore.instance.collection('Group').doc(chat.id).get(),
         builder: (context, snapshot) {
-          if (!snapshot.hasData) {
-            return const ListTile(title: Text("Đang tải nhóm..."));
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const ListTile(
+              leading: CircleAvatar(child: Icon(Icons.group)),
+              title: Text("Đang tải..."),
+            );
           }
-          final group = GroupModel.fromMap(snapshot.data!.id, snapshot.data!.data() as Map<String, dynamic>);
-          
+
+          if (snapshot.hasError || !snapshot.hasData || !snapshot.data!.exists || snapshot.data!.data() == null) {
+             return ListTile(
+              leading: const CircleAvatar(child: Icon(Icons.error_outline)),
+              title: const Text("Nhóm không tồn tại"),
+              subtitle: Text(chat.lastMessage, maxLines: 1, overflow: TextOverflow.ellipsis),
+            );
+          }
+
+          final groupData = snapshot.data!.data() as Map<String, dynamic>;
+          final group = GroupModel.fromMap(snapshot.data!.id, groupData);
+
+          // Xác định ảnh đại diện cho nhóm
+          ImageProvider? backgroundImage;
+          if (group.coverImage.isNotEmpty) {
+            backgroundImage = NetworkImage(group.coverImage);
+          } else {
+            // Dùng ảnh mặc định từ assets nếu không có coverImage
+            backgroundImage = const AssetImage(AppColors.defaultAvatar);
+          }
+
           return ListTile(
             leading: CircleAvatar(
               backgroundColor: AppColors.primary.withOpacity(0.2),
               foregroundColor: AppColors.primary,
-              child: Text(group.name.isNotEmpty ? group.name[0].toUpperCase() : 'G'),
+              backgroundImage: backgroundImage,
+              // Nếu dùng ảnh mặc định mà vẫn lỗi (ví dụ chưa thêm vào assets), hiện chữ cái đầu
+              onBackgroundImageError: (_, __) {}, 
+              child: (group.coverImage.isEmpty)
+                  ? null // Nếu đang dùng ảnh mặc định thì không hiện text đè lên
+                  : null,
             ),
             title: Text(group.name, style: const TextStyle(fontWeight: FontWeight.bold)),
             subtitle: Text(

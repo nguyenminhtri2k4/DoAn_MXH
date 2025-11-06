@@ -14,6 +14,7 @@ import 'package:mangxahoi/view/notification_view.dart'; // <--- VẪN GIỮ (đ�
 import 'package:provider/provider.dart';
 import 'package:mangxahoi/services/call_service.dart';
 
+
 class HomeView extends StatelessWidget {
   const HomeView({super.key});
 
@@ -311,6 +312,24 @@ class _HomeViewContentState extends State<_HomeViewContent> {
                           _onTabTapped(1);
                         },
                       ),
+                      _buildDrawerItem(
+            icon: Icons.people_alt_outlined,
+            text: 'Theo dõi',
+            onTap: () {
+              Navigator.pop(context);
+              if (userService.currentUser != null) {
+                // Gọi route '/follow' đã đăng ký ở main.dart
+                Navigator.pushNamed(
+                  context,
+                  '/follow',
+                  arguments: {
+                    'userId': userService.currentUser!.id,
+                    'initialIndex': 0,
+                  },
+                );
+              }
+            },
+          ),
                       _buildDrawerItem(
                         icon: Icons.group_outlined,
                         text: 'Nhóm',
