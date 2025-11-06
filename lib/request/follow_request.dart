@@ -1,6 +1,6 @@
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:mangxahoi/model/model_follow.dart';
-// Import để kiểm tra chặn từ FriendRequestManager nếu cần
 import 'package:mangxahoi/request/friend_request_manager.dart';
 
 class FollowRequest {
@@ -25,7 +25,7 @@ class FollowRequest {
       followerId: currentUserId,
       followingId: targetUserId,
       createdAt: DateTime.now(),
-      status: 'active', // Đặt trạng thái là active
+      status: 'active',
     );
 
     final batch = _firestore.batch();
@@ -34,41 +34,61 @@ class FollowRequest {
     final followDoc = _firestore.collection(_collection).doc('${currentUserId}_$targetUserId');
     batch.set(followDoc, follow.toMap());
 
-    // 3. Tăng followerCount
+    // 3. Tăng followerCount của người được theo dõi
+    // Sử dụng set với merge: true để tự động tạo document nếu chưa tồn tại, tránh lỗi NOT_FOUND
     final targetUserRef = _firestore.collection(_userCollection).doc(targetUserId);
-    batch.update(targetUserRef, {'followerCount': FieldValue.increment(1)});
+    batch.set(
+      targetUserRef,
+      {'followerCount': FieldValue.increment(1)},
+      SetOptions(merge: true),
+    );
 
-    // 4. Tăng followingCount
+    // 4. Tăng followingCount của người đi theo dõi
     final currentUserRef = _firestore.collection(_userCollection).doc(currentUserId);
-    batch.update(currentUserRef, {'followingCount': FieldValue.increment(1)});
+    batch.set(
+      currentUserRef,
+      {'followingCount': FieldValue.increment(1)},
+      SetOptions(merge: true),
+    );
 
     await batch.commit();
   }
 
-  /// Hủy theo dõi (Xóa hẳn bản ghi hoặc chuyển status thành 'inactive' tuỳ bạn. Ở đây tôi xóa hẳn để đơn giản hoá việc đếm)
+  /// Hủy theo dõi
   Future<void> unfollowUser(String currentUserId, String targetUserId) async {
     final followDocRef = _firestore.collection(_collection).doc('${currentUserId}_$targetUserId');
     final docSnapshot = await followDocRef.get();
 
     if (!docSnapshot.exists) return; // Nếu chưa follow thì bỏ qua
 
-    // Nếu muốn giữ history thì update status = 'inactive' thay vì delete,
-    // nhưng cần xử lý logic đếm follower cẩn thận hơn.
-    // Ở đây tôi giữ nguyên logic xóa để đồng bộ với việc tăng/giảm count.
     final batch = _firestore.batch();
+    // Xóa document follow
     batch.delete(followDocRef);
 
+    // Giảm followerCount của người bị hủy theo dõi
     final targetUserRef = _firestore.collection(_userCollection).doc(targetUserId);
-    batch.update(targetUserRef, {'followerCount': FieldValue.increment(-1)});
+    batch.set(
+      targetUserRef,
+      {'followerCount': FieldValue.increment(-1)},
+      SetOptions(merge: true),
+    );
 
+    // Giảm followingCount của người hủy theo dõi
     final currentUserRef = _firestore.collection(_userCollection).doc(currentUserId);
-    batch.update(currentUserRef, {'followingCount': FieldValue.increment(-1)});
+    batch.set(
+      currentUserRef,
+      {'followingCount': FieldValue.increment(-1)},
+      SetOptions(merge: true),
+    );
 
     await batch.commit();
   }
 
   /// Kiểm tra xem currentUserId có đang theo dõi targetUserId không (chỉ tính 'active')
   Future<bool> isFollowing(String currentUserId, String targetUserId) async {
+    // Nếu target chính là mình thì luôn trả về false
+    if (currentUserId == targetUserId) return false;
+    
     final doc = await _firestore.collection(_collection).doc('${currentUserId}_$targetUserId').get();
     return doc.exists && doc.data()?['status'] == 'active';
   }
@@ -78,7 +98,7 @@ class FollowRequest {
     return _firestore
         .collection(_collection)
         .where('followingId', isEqualTo: userId)
-        .where('status', isEqualTo: 'active') // Chỉ lấy active
+        .where('status', isEqualTo: 'active')
         .snapshots()
         .map((snapshot) => snapshot.docs.map((doc) => doc['followerId'] as String).toList());
   }
@@ -88,7 +108,7 @@ class FollowRequest {
     return _firestore
         .collection(_collection)
         .where('followerId', isEqualTo: userId)
-        .where('status', isEqualTo: 'active') // Chỉ lấy active
+        .where('status', isEqualTo: 'active')
         .snapshots()
         .map((snapshot) => snapshot.docs.map((doc) => doc['followingId'] as String).toList());
   }
