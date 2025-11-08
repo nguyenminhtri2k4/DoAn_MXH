@@ -31,8 +31,8 @@ android {
         release {
             signingConfig = signingConfigs.getByName("debug")
             // THÊM CÁC DÒNG NÀY ĐỂ BẬT PROGUARD CHO ZEGO
-            isMinifyEnabled = true
-            isShrinkResources = true
+            isMinifyEnabled = false
+            isShrinkResources = false
             
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
