@@ -18,6 +18,7 @@ class GroupRequest {
         members: memberIds,
         managers: [ownerId],
         description: '',
+        coverImage: '', // Đảm bảo bạn đã thêm trường này trong model_group.dart
         settings: '',
         status: 'active',
         type: type,
@@ -39,5 +40,26 @@ class GroupRequest {
         .map((snapshot) => snapshot.docs
             .map((doc) => GroupModel.fromMap(doc.id, doc.data()))
             .toList());
+  }
+
+  /// --- PHƯƠNG THỨC MỚI ĐỂ THÊM THÀNH VIÊN ---
+  /// Cập nhật nhóm bằng cách thêm các thành viên mới (dùng arrayUnion)
+  Future<void> addMembersToGroup(String groupId, List<UserModel> newMembers) async {
+    try {
+      // Lấy danh sách ID từ UserModel
+      final newMemberIds = newMembers.map((user) => user.id).toList();
+
+      // Lấy tham chiếu đến tài liệu nhóm
+      final groupRef = _firestore.collection(_collectionName).doc(groupId);
+
+      // Sử dụng FieldValue.arrayUnion để thêm các ID mới vào mảng 'members'
+      // mà không bị trùng lặp
+      await groupRef.update({
+        'members': FieldValue.arrayUnion(newMemberIds),
+      });
+    } catch (e) {
+      print('Error adding members to group: $e');
+      rethrow;
+    }
   }
 }
