@@ -7,12 +7,13 @@ import 'package:mangxahoi/view/widgets/post_widget.dart';
 import 'package:mangxahoi/view/friends_view.dart';
 import 'package:mangxahoi/view/profile/profile_view.dart';
 import 'package:mangxahoi/services/user_service.dart';
-import 'package:mangxahoi/view/video_view.dart';
+import 'package:mangxahoi/view/video_feed_view.dart';
 import 'package:mangxahoi/services/video_cache_manager.dart';
 import 'package:mangxahoi/view/locket/locket_view.dart'; // <--- THÊM MỚI
 import 'package:mangxahoi/view/notification_view.dart'; // <--- VẪN GIỮ (để dùng cho nút trên AppBar)
 import 'package:provider/provider.dart';
 import 'package:mangxahoi/services/call_service.dart';
+import 'package:mangxahoi/view/video_feed_view.dart';
 
 
 class HomeView extends StatelessWidget {
@@ -185,7 +186,7 @@ class _HomeViewContentState extends State<_HomeViewContent> {
     final List<Widget> pages = [
       _buildHomePageBody(context),
       const FriendsView(),
-      const VideoView(),
+      const VideoFeedView(),
       const LocketView(), // <--- THAY ĐỔI
       const ProfileView(),
     ];
