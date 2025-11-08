@@ -1,81 +1,11 @@
-// // lib/view/widgets/post/post_media.dart
-// import 'package:flutter/material.dart';
-// import 'package:mangxahoi/authanet/firestore_listener.dart'; // Cần để lấy media
-// import 'package:mangxahoi/model/model_media.dart';
-// import 'package:provider/provider.dart';
-// import 'package:cached_network_image/cached_network_image.dart';
-// import 'video_player_item.dart'; // Import widget video vừa tách
 
-// // --- Widget PostMedia ---
-// class PostMedia extends StatelessWidget {
-//   final List<String> mediaIds;
-
-//   const PostMedia({super.key, required this.mediaIds});
-
-//   @override
-//   Widget build(BuildContext context) {
-//     // Chỉ hiển thị nếu có mediaIds
-//     if (mediaIds.isEmpty) {
-//       return const SizedBox.shrink();
-//     }
-
-//     final listener = context.watch<FirestoreListener>(); // Dùng watch để cập nhật nếu media thay đổi
-//     // Hiện tại chỉ lấy media đầu tiên, có thể mở rộng sau
-//     final mediaId = mediaIds.first;
-//     final media = listener.getMediaById(mediaId);
-
-//     // Xử lý trường hợp media chưa load kịp hoặc không tồn tại
-//     if (media == null) {
-//       return Padding(
-//         padding: const EdgeInsets.only(top: 12.0), // Padding gốc từ PostWidget
-//         child: Container(
-//           height: 250,
-//           color: Colors.grey[200],
-//           child: const Center(child: CircularProgressIndicator()),
-//         ),
-//       );
-//     }
-
-//     // Hiển thị Video hoặc Image
-//     Widget mediaWidget;
-//     if (media.type == 'video') {
-//       mediaWidget = VideoPlayerItem(
-//         // Sử dụng ValueKey để đảm bảo widget được cập nhật đúng khi URL thay đổi
-//         key: ValueKey('media_video_${media.id}'),
-//         videoUrl: media.url
-//       );
-//     } else { // Mặc định là image
-//       mediaWidget = CachedNetworkImage(
-//         imageUrl: media.url,
-//         fit: BoxFit.cover,
-//         width: double.infinity,
-//         placeholder: (context, url) => Container(
-//           height: 250,
-//           color: Colors.grey[200],
-//           child: const Center(child: CircularProgressIndicator()),
-//         ),
-//         errorWidget: (context, url, error) => Container(
-//           height: 250,
-//           color: Colors.grey[200],
-//           child: const Center(
-//               child: Icon(Icons.error_outline, color: Colors.red)),
-//         ),
-//       );
-//     }
-
-//     // Thêm Padding bên ngoài cho cả video và image
-//     return Padding(
-//       padding: const EdgeInsets.only(top: 12.0),
-//       child: mediaWidget,
-//     );
-//   }
-// }
 import 'package:flutter/material.dart';
 import 'package:mangxahoi/authanet/firestore_listener.dart';
 import 'package:mangxahoi/model/model_media.dart';
 import 'package:provider/provider.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'video_player_item.dart';
+import 'package:mangxahoi/view/widgets/post/full_screen_gallery_viewer.dart';
 
 class PostMedia extends StatelessWidget {
   final List<String> mediaIds;
@@ -210,12 +140,15 @@ class PostMedia extends StatelessWidget {
         }
 
         Widget mediaWidget;
-        if (media.type == 'video') {
+        bool isVideo = media.type == 'video'; // Kiểm tra có phải video không
+
+        if (isVideo) {
           mediaWidget = VideoPlayerItem(
             key: ValueKey('media_video_${media.id}'),
             videoUrl: media.url,
           );
         } else {
+          // Là ảnh
           mediaWidget = CachedNetworkImage(
             imageUrl: media.url,
             // Nếu có height cố định (trong lưới) thì dùng cover, ngược lại để tự nhiên
@@ -234,9 +167,11 @@ class PostMedia extends StatelessWidget {
           );
         }
 
+        Widget finalWidget; // Widget cuối cùng sẽ được trả về
+
         // Lớp phủ hiển thị số lượng ảnh còn lại (+N)
         if (moreCount != null && moreCount > 0) {
-          return Stack(
+          finalWidget = Stack(
             fit: StackFit.expand,
             children: [
               mediaWidget,
@@ -257,8 +192,8 @@ class PostMedia extends StatelessWidget {
         }
         
         // Icon play nếu là video nằm trong lưới ảnh
-        if (media.type == 'video' && height != null) {
-           return Stack(
+        else if (isVideo && height != null) {
+           finalWidget = Stack(
              fit: StackFit.expand,
              children: [
                mediaWidget,
@@ -267,7 +202,56 @@ class PostMedia extends StatelessWidget {
            );
         }
 
-        return mediaWidget;
+        // Chỉ là media đơn thuần (không có lớp phủ)
+        else {
+          finalWidget = mediaWidget;
+        }
+
+
+        // --- BẮT ĐẦU CODE MỚI ---
+        // Nếu media là ẢNH (!isVideo), bọc nó bằng GestureDetector
+        if (!isVideo) {
+          return GestureDetector(
+            onTap: () {
+              // Lấy listener (dùng context.read để không bị rebuild)
+              final listener = context.read<FirestoreListener>();
+              
+              // 1. Lấy tất cả các MediaModel là ẢNH từ mediaIds của bài post
+              final List<MediaModel> imageMediaModels = [];
+              // mediaIds là biến final của class PostMedia
+              for (String id in mediaIds) { 
+                final m = listener.getMediaById(id);
+                // Chỉ thêm nếu media tồn tại và là ảnh
+                if (m != null && m.type == 'image') {
+                  imageMediaModels.add(m);
+                }
+              }
+              
+              // 2. Tạo danh sách các URL từ các model đã lọc
+              final List<String> imageUrls = imageMediaModels.map((m) => m.url).toList();
+
+              // 3. Tìm vị trí (index) của ảnh vừa nhấn trong danh sách ảnh
+              int initialIndex = imageMediaModels.indexWhere((m) => m.id == media.id);
+              if (initialIndex == -1) initialIndex = 0; // Fallback
+
+              // 4. Điều hướng đến màn hình xem ảnh (chỉ khi có ảnh để xem)
+              if (imageUrls.isNotEmpty) {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => FullScreenGalleryViewer( // Sử dụng Widget mới
+                      imageUrls: imageUrls,
+                      initialIndex: initialIndex,
+                    ),
+                  ),
+                );
+              }
+            },
+            child: finalWidget, // Bọc widget cuối cùng (có thể là Stack hoặc chỉ là ảnh)
+          );
+        }
+
+        return finalWidget;
       },
     );
   }

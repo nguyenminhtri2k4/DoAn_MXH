@@ -8,6 +8,7 @@ import 'package:mangxahoi/viewmodel/post_interaction_view_model.dart';
 import 'package:mangxahoi/request/user_request.dart';
 import 'package:mangxahoi/request/reaction_request.dart';
 import 'package:mangxahoi/view/widgets/comment_sheet.dart';
+import 'package:mangxahoi/constant/reactions.dart' as reaction_helper;
 
 class TikTokVideoItem extends StatefulWidget {
   final PostModel post;
@@ -29,26 +30,29 @@ class _TikTokVideoItemState extends State<TikTokVideoItem> with TickerProviderSt
   VideoPlayerController? _controller;
   bool _isInitialized = false;
   bool _hasError = false;
-  AnimationController? _discAnimationController; // Chuyển thành nullable
+  AnimationController? _discAnimationController; 
 
-  bool _isLiked = false;
-  int _likesCount = 0;
+  // --- SỬA LỖI: Cập nhật logic state ---
+  String? _currentReaction; // Loại reaction của user, ví dụ 'love'
+  int _totalReactions = 0; // Tổng số reactions
   final ReactionRequest _reactionRequest = ReactionRequest();
+  // --- KẾT THÚC SỬA LỖI ---
 
   UserModel? _author;
 
   @override
   void initState() {
     super.initState();
-    _likesCount = widget.post.likesCount;
-    // Khởi tạo animation controller
+    // --- SỬA LỖI: Tính tổng reactions ---
+    _totalReactions = widget.post.reactionsCount.values.fold(0, (a, b) => a + b);
+    
     _discAnimationController = AnimationController(
       vsync: this,
       duration: const Duration(seconds: 5),
     )..repeat();
 
     _initializeVideo();
-    _checkIfLiked();
+    _checkUserReaction(); // <-- SỬA LỖI: Đổi tên hàm
     _fetchAuthorData();
   }
 
@@ -59,10 +63,10 @@ class _TikTokVideoItemState extends State<TikTokVideoItem> with TickerProviderSt
       if (oldWidget.isFocused != widget.isFocused) {
         if (widget.isFocused) {
           _controller!.play();
-          _discAnimationController?.repeat(); // Quay đĩa nhạc khi video chạy
+          _discAnimationController?.repeat(); 
         } else {
           _controller!.pause();
-          _discAnimationController?.stop(); // Dừng đĩa nhạc khi video dừng
+          _discAnimationController?.stop(); 
         }
       }
     }
@@ -81,14 +85,16 @@ class _TikTokVideoItemState extends State<TikTokVideoItem> with TickerProviderSt
     }
   }
 
-  Future<void> _checkIfLiked() async {
+  // --- SỬA LỖI: Đổi logic hàm ---
+  Future<void> _checkUserReaction() async {
     try {
-      final isLiked = await _reactionRequest.hasUserLikedPost(widget.post.id, widget.currentUserDocId);
+      // Dùng hàm mới từ ReactionRequest
+      final reactionType = await _reactionRequest.getUserReactionType(widget.post.id, widget.currentUserDocId);
       if (mounted) {
-        setState(() => _isLiked = isLiked);
+        setState(() => _currentReaction = reactionType);
       }
     } catch (e) {
-      debugPrint("Lỗi kiểm tra like: $e");
+      debugPrint("Lỗi kiểm tra reaction: $e");
     }
   }
 
@@ -118,9 +124,9 @@ class _TikTokVideoItemState extends State<TikTokVideoItem> with TickerProviderSt
       await _controller!.initialize();
       _controller!.setLooping(true);
       if (widget.isFocused) {
-         _controller!.play();
+          _controller!.play();
       } else {
-         _discAnimationController?.stop(); // Dừng quay nếu không focus ban đầu
+          _discAnimationController?.stop();
       }
       if (mounted) setState(() => _isInitialized = true);
     } catch (e) {
@@ -130,7 +136,7 @@ class _TikTokVideoItemState extends State<TikTokVideoItem> with TickerProviderSt
 
   @override
   void dispose() {
-    _discAnimationController?.dispose(); // Kiểm tra null trước khi dispose
+    _discAnimationController?.dispose(); 
     _controller?.dispose();
     super.dispose();
   }
@@ -163,11 +169,11 @@ class _TikTokVideoItemState extends State<TikTokVideoItem> with TickerProviderSt
       onTap: () {
         setState(() {
           if (_controller!.value.isPlaying) {
-             _controller!.pause();
-             _discAnimationController?.stop();
+              _controller!.pause();
+              _discAnimationController?.stop();
           } else {
-             _controller!.play();
-             _discAnimationController?.repeat();
+              _controller!.play();
+              _discAnimationController?.repeat();
           }
         });
       },
@@ -213,7 +219,7 @@ class _TikTokVideoItemState extends State<TikTokVideoItem> with TickerProviderSt
           ),
           const SizedBox(height: 8),
           if (widget.post.content.isNotEmpty) ...[
-             Text(
+            Text(
               widget.post.content,
               maxLines: 3,
               overflow: TextOverflow.ellipsis,
@@ -250,42 +256,81 @@ class _TikTokVideoItemState extends State<TikTokVideoItem> with TickerProviderSt
         children: [
           _buildProfileAvatar(),
           const SizedBox(height: 25),
-          _buildIconButton(
-            icon: Icons.favorite_rounded,
-            iconColor: _isLiked ? Colors.red : Colors.white,
-            label: "$_likesCount",
-            onTap: () async {
-              setState(() {
-                _isLiked = !_isLiked;
-                _likesCount += _isLiked ? 1 : -1;
-              });
-              await interactionVM.toggleLike(widget.currentUserDocId);
-            },
+          
+          StreamBuilder<DocumentSnapshot>(
+            stream: FirebaseFirestore.instance
+                .collection('Post')
+                .doc(widget.post.id)
+                .collection('reactions')
+                .doc(widget.currentUserDocId)
+                .snapshots(),
+            builder: (context, reactionSnapshot) {
+              final currentReaction = (reactionSnapshot.hasData && reactionSnapshot.data!.exists)
+                  ? (reactionSnapshot.data!.data() as Map<String, dynamic>)['type']
+                  : null;
+              
+              return StreamBuilder<DocumentSnapshot>(
+                stream: FirebaseFirestore.instance.collection('Post').doc(widget.post.id).snapshots(),
+                builder: (context, postSnapshot) {
+                  int totalReactions = 0;
+                  if (postSnapshot.hasData && postSnapshot.data!.exists) {
+                    final data = postSnapshot.data!.data() as Map<String, dynamic>;
+                    final reactionsMap = Map<String, int>.from(data['reactionsCount'] ?? {});
+                    totalReactions = reactionsMap.values.fold(0, (a, b) => a + b);
+                  } else {
+                    totalReactions = _totalReactions; // Dùng state cũ
+                  }
+                  
+                  return _buildIconButton(
+                    icon: Icons.favorite_rounded,
+                    iconColor: currentReaction == reaction_helper.ReactionType.love ? Colors.red : Colors.white,
+                    label: "$totalReactions",
+                    onTap: () async {
+                      // SỬA LỖI: Gọi hàm handleReaction
+                      await interactionVM.handleReaction(widget.currentUserDocId, reaction_helper.ReactionType.love);
+                    },
+                  );
+                }
+              );
+            }
           ),
           const SizedBox(height: 20),
-          _buildIconButton(
-            icon: Icons.comment_rounded,
-            label: "${widget.post.commentsCount}",
-            onTap: () {
-              showModalBottomSheet(
-                context: context,
-                isScrollControlled: true,
-                backgroundColor: Colors.transparent,
-                builder: (context) => DraggableScrollableSheet(
-                  initialChildSize: 0.75,
-                  minChildSize: 0.5,
-                  maxChildSize: 0.95,
-                  builder: (_, controller) => CommentSheet(
-                    postId: widget.post.id,
-                    // ĐÃ SỬA: Truyền currentUserDocId thay vì postOwnerId
-                    currentUserDocId: widget.currentUserDocId,
-                  ),
-                ),
+          
+          StreamBuilder<DocumentSnapshot>(
+            stream: FirebaseFirestore.instance.collection('Post').doc(widget.post.id).snapshots(),
+            builder: (context, postSnapshot) {
+              int totalComments = 0;
+              if (postSnapshot.hasData && postSnapshot.data!.exists) {
+                totalComments = (postSnapshot.data!.data() as Map<String, dynamic>)['commentsCount'] ?? 0;
+              } else {
+                totalComments = widget.post.commentsCount;
+              }
+
+              return _buildIconButton(
+                icon: Icons.comment_rounded,
+                label: "$totalComments",
+                onTap: () {
+                  showModalBottomSheet(
+                    context: context,
+                    isScrollControlled: true,
+                    backgroundColor: Colors.transparent,
+                    builder: (context) => DraggableScrollableSheet(
+                      initialChildSize: 0.75,
+                      minChildSize: 0.5,
+                      maxChildSize: 0.95,
+                      builder: (_, controller) => CommentSheet(
+                        postId: widget.post.id,
+                        currentUserDocId: widget.currentUserDocId,
+                      ),
+                    ),
+                  );
+                },
               );
-            },
+            }
           ),
-           const SizedBox(height: 20),
-           _buildIconButton(
+
+          const SizedBox(height: 20),
+            _buildIconButton(
             icon: Icons.share_rounded,
             label: "Chia sẻ",
             iconSize: 32,
@@ -299,6 +344,7 @@ class _TikTokVideoItemState extends State<TikTokVideoItem> with TickerProviderSt
       ),
     );
   }
+
 
   Widget _buildProfileAvatar() {
     return GestureDetector(
@@ -363,7 +409,6 @@ class _TikTokVideoItemState extends State<TikTokVideoItem> with TickerProviderSt
   }
 
   Widget _buildMusicDisc() {
-    // Kiểm tra null trước khi dùng animation
     if (_discAnimationController == null) {
         return Container(
           padding: const EdgeInsets.all(8),
@@ -372,7 +417,7 @@ class _TikTokVideoItemState extends State<TikTokVideoItem> with TickerProviderSt
             borderRadius: BorderRadius.circular(25),
             border: Border.all(color: Colors.grey.shade800, width: 8),
           ),
-           child: const Icon(Icons.music_note, size: 14, color: Colors.white),
+          child: const Icon(Icons.music_note, size: 14, color: Colors.white),
         );
     }
 

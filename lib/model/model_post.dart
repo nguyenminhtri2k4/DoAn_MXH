@@ -6,17 +6,17 @@ class PostModel {
   final String authorId;
   final String content;
   final List<String> mediaIds;
-  final String? groupId; // Có thể null nếu là bài viết cá nhân
+  final String? groupId;
   final int commentsCount;
-  final int likesCount;
+  final Map<String, int> reactionsCount;
   final int shareCount;
   final String status;
-  final String visibility; // public, friends, private
+  final String visibility;
   final DateTime createdAt;
   final DateTime updatedAt;
-  final DateTime? deletedAt; // THÊM MỚI: Theo dõi thời gian xóa
-  final String? originalPostId; // Dùng cho bài viết được chia sẻ
-  final String? originalAuthorId; // Dùng cho bài viết được chia sẻ
+  final DateTime? deletedAt; 
+  final String? originalPostId; 
+  final String? originalAuthorId; 
 
   const PostModel({
     required this.id,
@@ -25,7 +25,7 @@ class PostModel {
     required this.mediaIds,
     this.groupId,
     required this.commentsCount,
-    required this.likesCount,
+    required this.reactionsCount,
     required this.shareCount,
     required this.status,
     required this.visibility,
@@ -36,7 +36,7 @@ class PostModel {
     this.originalAuthorId,
   });
 
-  /// Factory constructor để tạo một đối tượng PostModel từ một DocumentSnapshot của Firestore.
+  /// Factory constructor
   factory PostModel.fromMap(String id, Map<String, dynamic> map) {
     return PostModel(
       id: id,
@@ -45,19 +45,19 @@ class PostModel {
       mediaIds: List<String>.from(map['mediaIds'] ?? []),
       groupId: map['groupId'],
       commentsCount: map['commentsCount'] ?? 0,
-      likesCount: map['likesCount'] ?? 0,
+      reactionsCount: Map<String, int>.from(map['reactionsCount'] ?? {}),
       shareCount: map['shareCount'] ?? 0,
       status: map['status'] ?? 'active',
       visibility: map['visibility'] ?? 'public',
       createdAt: (map['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
       updatedAt: (map['updatedAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
-      deletedAt: (map['deletedAt'] as Timestamp?)?.toDate(), // THÊM MỚI
+      deletedAt: (map['deletedAt'] as Timestamp?)?.toDate(), 
       originalPostId: map['originalPostId'],
       originalAuthorId: map['originalAuthorId'],
     );
   }
 
-  /// Chuyển đổi một đối tượng PostModel thành một Map để lưu trữ trên Firestore.
+  /// Chuyển đổi thành Map
   Map<String, dynamic> toMap() {
     return {
       'authorId': authorId,
@@ -65,19 +65,19 @@ class PostModel {
       'mediaIds': mediaIds,
       'groupId': groupId,
       'commentsCount': commentsCount,
-      'likesCount': likesCount,
+      'reactionsCount': reactionsCount,
       'shareCount': shareCount,
       'status': status,
       'visibility': visibility,
       'createdAt': Timestamp.fromDate(createdAt),
       'updatedAt': Timestamp.fromDate(updatedAt),
-      'deletedAt': deletedAt != null ? Timestamp.fromDate(deletedAt!) : null, // THÊM MỚI
+      'deletedAt': deletedAt != null ? Timestamp.fromDate(deletedAt!) : null, 
       'originalPostId': originalPostId,
       'originalAuthorId': originalAuthorId,
     };
   }
 
-  /// Tạo một bản sao của đối tượng PostModel nhưng với một vài trường được cập nhật.
+  /// CopyWith
   PostModel copyWith({
     String? id,
     String? authorId,
@@ -85,7 +85,7 @@ class PostModel {
     List<String>? mediaIds,
     String? groupId,
     int? commentsCount,
-    int? likesCount,
+    Map<String, int>? reactionsCount,
     int? shareCount,
     String? status,
     String? visibility,
@@ -102,7 +102,7 @@ class PostModel {
       mediaIds: mediaIds ?? this.mediaIds,
       groupId: groupId ?? this.groupId,
       commentsCount: commentsCount ?? this.commentsCount,
-      likesCount: likesCount ?? this.likesCount,
+      reactionsCount: reactionsCount ?? this.reactionsCount,
       shareCount: shareCount ?? this.shareCount,
       status: status ?? this.status,
       visibility: visibility ?? this.visibility,
