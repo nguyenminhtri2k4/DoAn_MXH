@@ -169,7 +169,7 @@ class PostRequest {
         originalAuthorId: originalPost.authorId,
         mediaIds: [],
         commentsCount: 0,
-        likesCount: 0,
+        reactionsCount: {}, // Một Map rỗng
         shareCount: 0,
         status: 'active',
       );

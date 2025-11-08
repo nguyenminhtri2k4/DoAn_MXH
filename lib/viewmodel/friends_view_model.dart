@@ -1,3 +1,4 @@
+
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:mangxahoi/model/model_friend_request.dart';
@@ -8,7 +9,7 @@ import 'package:mangxahoi/authanet/firestore_listener.dart';
 class FriendsViewModel extends ChangeNotifier {
   final FriendRequestManager _requestManager = FriendRequestManager();
   final FirebaseAuth _auth = FirebaseAuth.instance;
-  final FirestoreListener _listener;
+  final FirestoreListener _listener; // Đây là FirestoreListener
 
   String? _currentUserDocId;
   UserModel? _currentUser;
@@ -24,6 +25,7 @@ class FriendsViewModel extends ChangeNotifier {
   String? get currentUserDocId => _currentUserDocId;
 
   FriendsViewModel(this._listener) {
+    // <-- _listener được inject
     _initialize();
   }
 
@@ -47,8 +49,10 @@ class FriendsViewModel extends ChangeNotifier {
       _currentUser = newCurrentUser;
       _currentUserDocId = _currentUser!.id;
 
-      incomingRequestsStream ??= _requestManager.getIncomingRequests(_currentUserDocId!);
-      sentRequestsStream ??= _requestManager.getSentRequests(_currentUserDocId!);
+      incomingRequestsStream ??=
+          _requestManager.getIncomingRequests(_currentUserDocId!);
+      sentRequestsStream ??=
+          _requestManager.getSentRequests(_currentUserDocId!);
 
       if (_isLoading) {
         _isLoading = false;
@@ -60,6 +64,10 @@ class FriendsViewModel extends ChangeNotifier {
   Future<void> acceptRequest(FriendRequestModel request) async {
     try {
       await _requestManager.acceptRequest(request);
+      // --- DÒNG SỬA LỖI ---
+      // Gọi hàm cập nhật local cache ngay lập tức, báo là "thêm bạn" (true)
+      _listener.updateLocalFriendship(request.fromUserId, request.toUserId, true);
+      // --------------------
     } catch (e) {
       _errorMessage = 'Lỗi chấp nhận lời mời: $e';
       notifyListeners();

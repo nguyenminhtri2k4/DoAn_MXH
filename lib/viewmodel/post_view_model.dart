@@ -149,7 +149,7 @@ class PostViewModel extends ChangeNotifier {
         createdAt: now,
         updatedAt: now, // SỬA Ở ĐÂY
         commentsCount: 0, // SỬA Ở ĐÂY
-        likesCount: 0, // SỬA Ở ĐÂY
+        reactionsCount: {}, // Một Map rỗng
         shareCount: 0, // SỬA Ở ĐÂY
         status: 'active', // SỬA Ở ĐÂY
       );

@@ -116,7 +116,7 @@ class _EditPostViewState extends State<EditPostView> {
         mediaIds: updatedMediaIds,
         groupId: widget.post.groupId,
         commentsCount: widget.post.commentsCount,
-        likesCount: widget.post.likesCount,
+        reactionsCount: widget.post.reactionsCount,
         shareCount: widget.post.shareCount,
         status: widget.post.status,
         visibility: widget.post.visibility,

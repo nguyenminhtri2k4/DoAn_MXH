@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:mangxahoi/services/user_service.dart';
+import 'package:mangxahoi/authanet/firestore_listener.dart'; // <-- THÊM IMPORT
 import 'package:mangxahoi/viewmodel/locket_view_model.dart';
 import 'package:mangxahoi/constant/app_colors.dart';
 import 'package:mangxahoi/model/model_user.dart';
@@ -29,26 +30,37 @@ class _LocketViewContent extends StatefulWidget {
 }
 
 class _LocketViewContentState extends State<_LocketViewContent> {
-  // *** BIẾN QUAN TRỌNG ĐỂ FIX LỖI TREO ***
   bool _hasDataBeenCalled = false;
 
   @override
   Widget build(BuildContext context) {
-    // *** SỬA LỖI: Dùng context.watch để lắng nghe thay đổi của UserService ***
-    final currentUser = context.watch<UserService>().currentUser;
+    // --- BẮT ĐẦU SỬA LỖI ---
+    // 1. Dùng context.read để lấy ID (chỉ 1 lần)
+    final userService = context.read<UserService>();
+    // 2. Dùng context.watch để lắng nghe thay đổi (quan trọng)
+    final firestoreListener = context.watch<FirestoreListener>();
     final locketViewModel = context.read<LocketViewModel>();
 
-    // Nếu user chưa được tải xong (currentUser là null), hiển thị loading
-    if (currentUser == null) {
-      print("LocketView: Đang chờ UserService tải currentUser...");
+    // 3. Xử lý nếu ID chưa kịp tải
+    if (userService.currentUser == null) {
+      print("LocketView: Đang chờ UserService tải ID...");
       return const Center(child: CircularProgressIndicator());
     }
 
-    // *** SỬA LỖI: Chỉ gọi fetchLocketData KHI currentUser đã có VÀ chưa gọi lần nào ***
+    // 4. Lấy currentUser MỚI NHẤT từ listener
+    final currentUser = firestoreListener.getUserById(userService.currentUser!.id);
+
+    // 5. Xử lý nếu listener chưa kịp tải
+    if (currentUser == null) {
+      print("LocketView: Đang chờ FirestoreListener tải currentUser...");
+      return const Center(child: CircularProgressIndicator());
+    }
+    // --- KẾT THÚC SỬA LỖI ---
+
+    // Logic gọi data (giữ nguyên)
     if (!_hasDataBeenCalled) {
       print("LocketView: currentUser đã sẵn sàng. Gọi fetchLocketData...");
       _hasDataBeenCalled = true; // Đánh dấu đã gọi
-      // Gọi qua addPostFrameCallback để tránh lỗi 'setState during build'
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) {
           locketViewModel.fetchLocketData(currentUser.id);
@@ -70,6 +82,7 @@ class _LocketViewContentState extends State<_LocketViewContent> {
               await Navigator.pushNamed(context, '/locket_manage_friends');
               if (mounted) {
                  // Sau khi quay lại, gọi lại fetch để cập nhật
+                 // (currentUser ở đây là MỚI NHẤT nhờ bước 4)
                  locketViewModel.fetchLocketData(currentUser.id);
                  _hasDataBeenCalled = true; // đảm bảo
               }

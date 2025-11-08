@@ -101,6 +101,9 @@ class _HomeViewContentState extends State<_HomeViewContent> {
     final homeViewModel = context.watch<HomeViewModel>();
     final userService = context.watch<UserService>();
 
+    // Lấy chiều cao màn hình để tính cacheExtent
+    final double screenHeight = MediaQuery.of(context).size.height;
+
     if (userService.isLoading || userService.currentUser == null) {
       return const Center(child: CircularProgressIndicator());
     }
@@ -137,6 +140,15 @@ class _HomeViewContentState extends State<_HomeViewContent> {
           bottom: 85,
         ),
         itemCount: posts.length + (homeViewModel.hasMore ? 1 : 0),
+       
+        cacheExtent: screenHeight * 1.5,
+        
+        // 2. Các tối ưu cuộn khác
+        addRepaintBoundaries: false,
+        addSemanticIndexes: false,
+
+        // --- KẾT THÚC CÁC TỐI ƯU ---
+
         itemBuilder: (context, index) {
           if (index == posts.length) {
             return const Padding(
@@ -144,7 +156,9 @@ class _HomeViewContentState extends State<_HomeViewContent> {
               child: Center(child: CircularProgressIndicator()),
             );
           }
+        
           return PostWidget(
+            key: ValueKey(posts[index].id), // <-- THÊM DÒNG NÀY
             post: posts[index],
             currentUserDocId: currentUserId,
           );
