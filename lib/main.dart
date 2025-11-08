@@ -41,6 +41,9 @@ import 'package:mangxahoi/services/sound_service.dart';
 import 'package:mangxahoi/view/follow_viewer.dart';
 
 import 'package:zego_express_engine/zego_express_engine.dart';
+import 'package:mangxahoi/view/group_chat/add_members_view.dart';
+import 'package:mangxahoi/view/group_chat/group_management_view.dart';
+import 'package:mangxahoi/view/group_chat/group_management_view.dart';
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
@@ -209,6 +212,15 @@ class MyApp extends StatelessWidget {
                   userId: args['userId'],
                   initialIndex: args['initialIndex'] ?? 0,
                 );
+              },
+              '/group_management': (context) {
+                final groupId = ModalRoute.of(context)!.settings.arguments as String;
+                return GroupManagementView(groupId: groupId);
+              },
+              
+              '/add_members': (context) {
+                final groupId = ModalRoute.of(context)!.settings.arguments as String;
+                return AddMembersView(groupId: groupId);
               },
             },
           );

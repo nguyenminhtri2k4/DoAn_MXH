@@ -19,6 +19,12 @@ import 'package:mangxahoi/services/user_service.dart';
 import 'package:mangxahoi/view/widgets/full_screen_image_viewer.dart';
 import 'package:mangxahoi/view/widgets/full_screen_video_player.dart';
 
+// --- IMPORT MỚI ĐỂ ĐIỀU HƯỚNG ---
+import 'package:mangxahoi/view/group_chat/add_members_view.dart';
+import 'package:mangxahoi/view/group_chat/group_management_view.dart';
+// ---------------------------------
+
+
 class ChatView extends StatelessWidget {
   final String chatId;
   final String chatName;
@@ -56,10 +62,45 @@ class _ChatViewContent extends StatelessWidget {
       });
     }
 
+    // --- LOGIC CHO APPBAR TITLE ---
+    Widget appBarTitle;
+    
+    if (vm.isGroup) {
+      // Nếu là nhóm, thử lấy thông tin nhóm từ cache
+      final group = firestoreListener.getGroupById(vm.chatId);
+      final bool hasCoverImage = group?.coverImage.isNotEmpty ?? false;
+
+      if (hasCoverImage) {
+        // Nếu có ảnh bìa, hiển thị Avatar + Tên
+        appBarTitle = Row(
+          mainAxisSize: MainAxisSize.min, // Giúp Row co lại
+          children: [
+            CircleAvatar(
+              radius: 18, // Kích thước nhỏ cho AppBar
+              backgroundImage: CachedNetworkImageProvider(group!.coverImage),
+            ),
+            const SizedBox(width: 12),
+            Text(chatName),
+          ],
+        );
+      } else {
+        // Nếu là nhóm nhưng không có ảnh bìa, chỉ hiển thị tên
+        appBarTitle = Text(chatName);
+      }
+    } else {
+      // Nếu không phải nhóm, chỉ hiển thị tên
+      appBarTitle = Text(chatName);
+    }
+    // --- KẾT THÚC LOGIC ---
+
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: Text(chatName),
+        // --- SỬA ĐỔI Ở ĐÂY ---
+        title: appBarTitle,
+        centerTitle: false, // Tắt căn giữa
+        titleSpacing: 0, // Xóa khoảng cách bên trái title
+        // -----------------------
         backgroundColor: AppColors.backgroundLight,
         elevation: 1,
         actions: [
@@ -73,6 +114,33 @@ class _ChatViewContent extends StatelessWidget {
               icon: const Icon(Icons.videocam),
               onPressed: () => vm.startVideoCall(context),
             ),
+          
+          if (vm.isGroup) // Chỉ hiển thị nếu là group chat
+            IconButton(
+              icon: const Icon(Icons.person_add),
+              tooltip: 'Thêm thành viên',
+              onPressed: () {
+                // Điều hướng đến màn hình AddMembersView
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => AddMembersView(groupId: vm.chatId),
+                  ),
+                );
+              },
+            ),
+            if (vm.isGroup)
+    IconButton(
+      icon: const Icon(Icons.info_outline),
+      tooltip: 'Thông tin nhóm',
+      onPressed: () {
+        Navigator.pushNamed(
+          context,
+          '/group_management',
+          arguments: vm.chatId,
+        );
+      },
+    ),
         ],
       ),
       body: Column(

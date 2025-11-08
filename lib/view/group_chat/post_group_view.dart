@@ -1,3 +1,4 @@
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:mangxahoi/model/model_group.dart';
@@ -6,6 +7,10 @@ import 'package:mangxahoi/constant/app_colors.dart';
 import 'package:mangxahoi/viewmodel/post_group_viewmodel.dart';
 import 'package:mangxahoi/view/widgets/post_widget.dart';
 import 'package:mangxahoi/model/model_user.dart';
+
+// --- IMPORT MỚI ĐỂ ĐIỀU HƯỚNG ---
+import 'package:mangxahoi/view/group_chat/add_members_view.dart';
+// ---------------------------------
 
 class PostGroupView extends StatelessWidget {
   final GroupModel group;
@@ -41,6 +46,24 @@ class _PostGroupViewContent extends StatelessWidget {
                     pinned: true,
                     backgroundColor: AppColors.backgroundLight,
                     foregroundColor: AppColors.textPrimary,
+                    
+                    // --- THÊM NÚT MỚI VÀO ĐÂY ---
+                    actions: [
+                      IconButton(
+                        icon: const Icon(Icons.person_add),
+                        onPressed: () {
+                          // Điều hướng đến màn hình AddMembersView
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => AddMembersView(groupId: vm.group.id),
+                            ),
+                          );
+                        },
+                      ),
+                    ],
+                    // ---------------------------------
+
                     flexibleSpace: FlexibleSpaceBar(
                       title: Text(
                         vm.group.name,
