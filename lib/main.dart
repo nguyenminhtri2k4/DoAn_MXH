@@ -37,13 +37,17 @@ import 'package:mangxahoi/services/call_service.dart';
 import 'firebase_options.dart';
 import 'package:flutter/foundation.dart';
 import 'package:mangxahoi/services/sound_service.dart';
-// Import file mới
 import 'package:mangxahoi/view/follow_viewer.dart';
 
 import 'package:zego_express_engine/zego_express_engine.dart';
 import 'package:mangxahoi/view/group_chat/add_members_view.dart';
 import 'package:mangxahoi/view/group_chat/group_management_view.dart';
-import 'package:mangxahoi/view/group_chat/group_management_view.dart';
+import 'package:mangxahoi/view/locket/locket_trash_view.dart';
+import 'package:mangxahoi/constant/app_colors.dart'; // Import AppColors
+
+// --- THÊM CÁC IMPORT STORY ---
+import 'package:mangxahoi/view/story/create_story_view.dart';
+// ------------------------------
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
@@ -55,7 +59,10 @@ void main() async {
       options: DefaultFirebaseOptions.currentPlatform,
     );
   } else {
-    await Firebase.initializeApp();
+    // Tự động chọn nền tảng
+    await Firebase.initializeApp(
+       options: DefaultFirebaseOptions.currentPlatform,
+    );
   }
 
   runApp(MyApp());
@@ -81,6 +88,7 @@ class MyApp extends StatelessWidget {
       ],
       child: Consumer<UserService>(
         builder: (context, userService, _) {
+          // Khởi tạo call service khi user đã được tải
           if (userService.currentUser != null && !userService.isLoading) {
             WidgetsBinding.instance.addPostFrameCallback((_) {
               _initCallService(context, userService);
@@ -94,8 +102,31 @@ class MyApp extends StatelessWidget {
             theme: ThemeData(
               primarySwatch: Colors.blue,
               useMaterial3: true,
+              scaffoldBackgroundColor: AppColors.background,
+              appBarTheme: const AppBarTheme(
+                backgroundColor: Colors.white,
+                foregroundColor: Colors.black,
+                elevation: 0,
+              ),
             ),
-            initialRoute: '/login',
+            // Sửa home để xử lý trạng thái
+            home: StreamBuilder<User?>(
+              stream: FirebaseAuth.instance.authStateChanges(),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.active) {
+                  if (snapshot.hasData) {
+                    // UserService sẽ tự động lắng nghe và tải user
+                    return const HomeView(); // Chuyển đến HomeView
+                  }
+                  // Nếu không có user, về Login
+                  return const LoginView();
+                }
+                // Đang chờ, hiển thị màn hình loading
+                return const Scaffold(
+                  body: Center(child: CircularProgressIndicator()),
+                );
+              },
+            ),
             onGenerateRoute: (settings) {
               switch (settings.name) {
                 case '/profile':
@@ -205,7 +236,7 @@ class MyApp extends StatelessWidget {
               '/trash': (context) => const TrashView(),
               '/locket_manage_friends': (context) => const LocketManageFriendsView(),
               '/my_locket_history': (context) => const MyLocketHistoryView(),
-              // Sử dụng class mới FollowViewer
+              '/locket_trash': (context) => const LocketTrashView(),
               '/follow': (context) {
                 final args = ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>;
                 return FollowViewer(
@@ -222,6 +253,10 @@ class MyApp extends StatelessWidget {
                 final groupId = ModalRoute.of(context)!.settings.arguments as String;
                 return AddMembersView(groupId: groupId);
               },
+
+              // --- THÊM ROUTE MỚI CHO STORY ---
+              '/create_story': (context) => const CreateStoryView(),
+              // ---------------------------------
             },
           );
         },

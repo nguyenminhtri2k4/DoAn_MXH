@@ -1,4 +1,6 @@
 
+import 'dart:async'; // Thêm
+import 'dart:collection'; // Thêm
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:mangxahoi/model/model_post.dart';
@@ -8,19 +10,38 @@ import 'package:mangxahoi/services/video_cache_manager.dart';
 import 'package:provider/provider.dart';
 import 'package:mangxahoi/authanet/firestore_listener.dart';
 import 'package:mangxahoi/services/user_service.dart';
+import 'package:mangxahoi/model/model_user.dart'; // Thêm
+
+// --- IMPORT MỚI CHO STORY ---
+import 'package:mangxahoi/model/model_story.dart';
+import 'package:mangxahoi/request/story_request.dart';
+// -----------------------------
 
 class HomeViewModel extends ChangeNotifier {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final PostRequest _postRequest = PostRequest();
   
+  // --- THÊM STORY REQUEST ---
+  final StoryRequest _storyRequest = StoryRequest();
+  // -------------------------
+
   List<PostModel> posts = [];
   bool isLoading = false;
   bool _isFetchingMore = false;
   bool hasMore = true;
   DocumentSnapshot? _lastDocument;
 
+  // --- THÊM BIẾN QUẢN LÝ STORY ---
+  Map<String, List<StoryModel>> _stories = {};
+  /// Dùng UnmodifiableMapView để ngăn UI sửa đổi trực tiếp
+  UnmodifiableMapView<String, List<StoryModel>> get stories => UnmodifiableMapView(_stories);
+  List<StreamSubscription> _storySubscriptions = [];
+  // ------------------------------
+
+  // Giữ constructor rỗng của bạn
   HomeViewModel();
 
+  // Hàm _preloadVideosForPosts của bạn
   void _preloadVideosForPosts(BuildContext context, List<PostModel> newPosts) {
     try {
       final videoCacheManager = context.read<VideoCacheManager>();
@@ -48,13 +69,51 @@ class HomeViewModel extends ChangeNotifier {
     }
   }
 
+  // Hàm refreshPosts của bạn
   Future<void> refreshPosts(BuildContext context) async {
     _lastDocument = null;
     hasMore = true;
     posts.clear();
     await fetchInitialPosts(context);
+    // Tải lại story khi refresh
+    listenToStories(context); 
   }
 
+  // --- HÀM MỚI ĐỂ LẮNG NGHE STORY ---
+  void listenToStories(BuildContext context) {
+    final userService = context.read<UserService>();
+    final currentUser = userService.currentUser;
+
+    if (currentUser == null) return;
+
+    // Hủy các listener cũ
+    for (var sub in _storySubscriptions) {
+      sub.cancel();
+    }
+    _storySubscriptions.clear();
+    _stories.clear();
+    print('Bắt đầu lắng nghe story...');
+
+    // Lắng nghe story của bạn bè (và của chính mình)
+    List<String> userIdsToFetch = List.from(currentUser.friends);
+    userIdsToFetch.add(currentUser.id); // Thêm chính mình
+
+    for (String userId in userIdsToFetch.toSet()) { // Dùng toSet() để tránh trùng lặp
+      var subscription = _storyRequest.getStoriesForUser(userId).listen((userStories) {
+        if (userStories.isNotEmpty) {
+          _stories[userId] = userStories;
+        } else {
+          _stories.remove(userId); // Xóa nếu user không còn story
+        }
+        notifyListeners();
+      });
+      _storySubscriptions.add(subscription);
+    }
+    notifyListeners(); // Cập nhật lần đầu
+  }
+  // ---------------------------------
+
+  // Hàm fetchInitialPosts của bạn
   Future<void> fetchInitialPosts(BuildContext context) async {
     if (isLoading) return;
     isLoading = true;
@@ -90,6 +149,7 @@ class HomeViewModel extends ChangeNotifier {
     }
   }
 
+  // Hàm fetchMorePosts của bạn
   Future<void> fetchMorePosts(BuildContext context) async {
     if (_isFetchingMore || !hasMore) return;
     _isFetchingMore = true;
@@ -125,12 +185,10 @@ class HomeViewModel extends ChangeNotifier {
     }
   }
 
-  // ==================== SỬA LỖI TẠI ĐÂY ====================
+  // Hàm signOut của bạn
   Future<void> signOut(BuildContext context) async {
     try {
-      // Dừng tất cả các video trước khi đăng xuất
       context.read<VideoCacheManager>().pauseAllVideos();
-
       await _auth.signOut();
       
       if (context.mounted) {
@@ -140,4 +198,14 @@ class HomeViewModel extends ChangeNotifier {
       print('❌ Lỗi khi đăng xuất: $e');
     }
   }
+
+  // --- THÊM HÀM DISPOSE ĐỂ HỦY LISTENER ---
+  @override
+  void dispose() {
+    for (var sub in _storySubscriptions) {
+      sub.cancel();
+    }
+    super.dispose();
+  }
+  // ------------------------------------
 }
