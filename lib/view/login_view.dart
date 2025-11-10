@@ -26,21 +26,37 @@ class LoginForm extends StatefulWidget {
 class _LoginFormState extends State<LoginForm> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  final _emailFocusNode = FocusNode();
   final _formKey = GlobalKey<FormState>();
   bool _passwordVisible = false;
+  bool _hasEmailFocused = false;
 
   @override
   void initState() {
     super.initState();
     // Pre-fill with test credentials for development
-    _emailController.text = 'minhtri@gmail.com';
+    _emailController.text = 'Tên đăng nhập';
     _passwordController.text = 'Susu@123';
+
+    // Listen to email focus changes
+    _emailFocusNode.addListener(() {
+      if (_emailFocusNode.hasFocus && !_hasEmailFocused) {
+        // Clear placeholder text when focused for the first time
+        if (_emailController.text == 'Tên đăng nhập') {
+          setState(() {
+            _emailController.clear();
+            _hasEmailFocused = true;
+          });
+        }
+      }
+    });
   }
 
   @override
   void dispose() {
     _emailController.dispose();
     _passwordController.dispose();
+    _emailFocusNode.dispose();
     super.dispose();
   }
 
@@ -134,11 +150,12 @@ class _LoginFormState extends State<LoginForm> {
                             children: [
                               _buildTextField(
                                 controller: _emailController,
+                                focusNode: _emailFocusNode,
                                 label: 'Email',
                                 icon: Icons.email_outlined,
                                 keyboardType: TextInputType.emailAddress,
                                 validator: (value) {
-                                  if (value == null || value.isEmpty) {
+                                  if (value == null || value.isEmpty || value == 'Tên đăng nhập') {
                                     return 'Vui lòng nhập email';
                                   }
                                   if (!value.contains('@')) {
@@ -252,6 +269,7 @@ class _LoginFormState extends State<LoginForm> {
     required TextEditingController controller,
     required String label,
     required IconData icon,
+    FocusNode? focusNode,
     bool obscureText = false,
     Widget? suffixIcon,
     String? Function(String?)? validator,
@@ -271,6 +289,7 @@ class _LoginFormState extends State<LoginForm> {
         const SizedBox(height: 8),
         TextFormField(
           controller: controller,
+          focusNode: focusNode,
           obscureText: obscureText,
           keyboardType: keyboardType,
           style: const TextStyle(fontSize: 15),
