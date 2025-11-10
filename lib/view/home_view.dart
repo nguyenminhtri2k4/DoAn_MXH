@@ -417,8 +417,9 @@ class _HomeViewContentState extends State<_HomeViewContent> {
         slivers: [
           // Thêm 3 mục này vào đầu
           SliverToBoxAdapter(
-            child: _buildCreatePostSection(context, currentUser),
-          ),
+              child: SizedBox(height: 90), // Giữ khoảng cách thay cho CreatePostSection
+            ),
+          // Phân cách
           SliverToBoxAdapter(
             child: Container(
               height: 200, // Chiều cao của story bar

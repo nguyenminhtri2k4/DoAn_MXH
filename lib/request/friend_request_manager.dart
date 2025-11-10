@@ -51,12 +51,13 @@ class FriendRequestManager {
     await _firestore.collection(_friendRequestCollection).doc(requestId).delete();
   }
 
-  Stream<List<FriendRequestModel>> getIncomingRequests(String userId) {
+   Stream<List<FriendRequestModel>> getIncomingRequests(String userId) {
     return _firestore
         .collection(_friendRequestCollection)
         .where('toUserId', isEqualTo: userId)
         .where('status', isEqualTo: 'pending')
         .orderBy('createdAt', descending: true)
+        .limit(50) // 🔥 THÊM LIMIT
         .snapshots()
         .map((snapshot) => snapshot.docs
             .map((doc) => FriendRequestModel.fromMap(doc.id, doc.data()))
@@ -69,6 +70,7 @@ class FriendRequestManager {
         .where('fromUserId', isEqualTo: userId)
         .where('status', isEqualTo: 'pending')
         .orderBy('createdAt', descending: true)
+        .limit(50) 
         .snapshots()
         .map((snapshot) => snapshot.docs
             .map((doc) => FriendRequestModel.fromMap(doc.id, doc.data()))
