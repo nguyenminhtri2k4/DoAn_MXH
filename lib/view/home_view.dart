@@ -20,6 +20,8 @@ import 'package:mangxahoi/model/model_story.dart';
 import 'package:mangxahoi/authanet/firestore_listener.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:mangxahoi/view/story/story_viewer_screen.dart';
+// Thêm vào phần import của home_view.dart
+import 'package:mangxahoi/view/group_chat/qr_scanner_view.dart';
 // -----------------
 
 
@@ -617,6 +619,20 @@ class _HomeViewContentState extends State<_HomeViewContent> {
                   ),
                   child: Column(
                     children: [
+                      // Trong Drawer, thêm mục menu mới
+                      _buildDrawerItem(
+                        icon: Icons.qr_code_scanner,
+                        text: 'Quét mã QR',
+                        onTap: () {
+                          Navigator.pop(context);
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const QRScannerView(),
+                            ),
+                          );
+                        },
+                      ),
                       _buildDrawerItem(
                         icon: Icons.home_outlined,
                         text: 'Trang chủ',

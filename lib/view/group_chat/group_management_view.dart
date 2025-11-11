@@ -9,6 +9,8 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:mangxahoi/view/group_chat/add_members_view.dart';
 import 'package:mangxahoi/services/user_service.dart';
 import 'package:intl/intl.dart'; // Import để định dạng ngày
+// Thêm vào phần import của group_management_view.dart
+import 'package:mangxahoi/view/group_chat/group_qr_code_view.dart';
 
 class GroupManagementView extends StatelessWidget {
   final String groupId;
@@ -313,6 +315,28 @@ class _GroupManagementContent extends StatelessWidget {
       margin: const EdgeInsets.symmetric(horizontal: 16),
       child: Row(
         children: [
+         Expanded(
+          child: _buildActionButton(
+            icon: Icons.qr_code,
+            label: 'Mã QR',
+            gradient: LinearGradient(
+              colors: [Colors.purple[400]!, Colors.purple[600]!],
+            ),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => GroupQRCodeView(
+                    group: vm.group!,
+                    // SỬA LẠI DÒNG NÀY
+                    currentUserName: vm.currentUser?.name ?? 'Người dùng',
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+        const SizedBox(width: 12),
           if (vm.canInviteMembers)
             Expanded(
               child: _buildActionButton(
@@ -331,19 +355,19 @@ class _GroupManagementContent extends StatelessWidget {
                 },
               ),
             ),
-          if (vm.canInviteMembers) const SizedBox(width: 12),
-          Expanded(
-            child: _buildActionButton(
-              icon: Icons.notifications_outlined,
-              label: 'Thông báo',
-              gradient: LinearGradient(
-                colors: [Colors.orange[400]!, Colors.orange[600]!],
-              ),
-              onPressed: () {
-                // TODO: Implement notification settings
-              },
-            ),
-          ),
+          // if (vm.canInviteMembers) const SizedBox(width: 12),
+          // Expanded(
+          //   child: _buildActionButton(
+          //     icon: Icons.notifications_outlined,
+          //     label: 'Thông báo',
+          //     gradient: LinearGradient(
+          //       colors: [Colors.orange[400]!, Colors.orange[600]!],
+          //     ),
+          //     onPressed: () {
+          //       // TODO: Implement notification settings
+          //     },
+          //   ),
+          // ),
         ],
       ),
     );
