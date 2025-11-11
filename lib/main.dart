@@ -47,6 +47,9 @@ import 'package:mangxahoi/constant/app_colors.dart'; // Import AppColors
 
 // --- THÊM CÁC IMPORT STORY ---
 import 'package:mangxahoi/view/story/create_story_view.dart';
+import 'package:mangxahoi/view/group_chat/qr_scanner_view.dart';
+import 'package:mangxahoi/view/group_chat/group_qr_code_view.dart';
+import 'package:mangxahoi/model/model_group.dart';
 // ------------------------------
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
@@ -211,6 +214,20 @@ class MyApp extends StatelessWidget {
                   }
                   return null;
 
+                case '/group_qr':
+                if (settings.arguments is Map<String, dynamic>) {
+                  final args = settings.arguments as Map<String, dynamic>;
+                  final group = args['group'] as GroupModel;
+                  final userName = args['userName'] as String;
+                  return MaterialPageRoute(
+                    builder: (context) => GroupQRCodeView(
+                      group: group,
+                      currentUserName: userName,
+                    ),
+                  );
+                }
+                  return null;
+
                 case '/post_detail':
                   if (settings.arguments is String) {
                     final postId = settings.arguments as String;
@@ -237,6 +254,7 @@ class MyApp extends StatelessWidget {
               '/locket_manage_friends': (context) => const LocketManageFriendsView(),
               '/my_locket_history': (context) => const MyLocketHistoryView(),
               '/locket_trash': (context) => const LocketTrashView(),
+              '/qr_scanner': (context) => const QRScannerView(),
               '/follow': (context) {
                 final args = ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>;
                 return FollowViewer(

@@ -28,7 +28,6 @@ dependencies:
   timeago: ^3.6.0
   smooth_page_indicator: ^1.1.0
   path: ^1.9.0 
-  
   zego_express_engine: ^3.0.0
   permission_handler: ^12.0.1
   uuid: ^4.2.1              # Dùng để tạo ID cuộc gọi duy nhất
@@ -38,6 +37,9 @@ dependencies:
   file_picker: ^10.3.3       
   just_audio: ^0.9.38       
   percent_indicator: ^4.2.3
+  qr_flutter: ^4.1.0  # Tạo QR code
+  mobile_scanner: ^3.5.5  # Quét QR code
+  share_plus: ^7.2.1  # Để chia sẻ QR code
 
 
 dev_dependencies:
