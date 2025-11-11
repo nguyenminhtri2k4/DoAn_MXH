@@ -22,8 +22,13 @@ import 'package:mangxahoi/view/widgets/full_screen_video_player.dart';
 // --- IMPORT MỚI ĐỂ ĐIỀU HƯỚNG ---
 import 'package:mangxahoi/view/group_chat/add_members_view.dart';
 import 'package:mangxahoi/view/group_chat/group_management_view.dart';
-// ---------------------------------
 
+// === CÁC IMPORT MỚI ĐỂ XỬ LÝ LỜI MỜI ===
+import 'package:mangxahoi/model/model_qr_invite.dart';
+import 'package:mangxahoi/request/group_request.dart';
+import 'package:mangxahoi/notification/notification_service.dart';
+import 'package:mangxahoi/model/model_group.dart';
+// ========================================
 
 class ChatView extends StatelessWidget {
   final String chatId;
@@ -367,8 +372,91 @@ class _MessageBubble extends StatelessWidget {
   Widget build(BuildContext context) {
     if (message.status == 'recalled') return _buildRecalledMessageBubble();
     if (message.type == 'share_post' && message.sharedPostId != null) return _buildSharedPostBubble(context);
+    
+    // === THÊM LOGIC MỚI ===
+    if (message.type == 'share_group_qr' && message.sharedPostId != null) {
+      return _buildSharedGroupQRBubble(context);
+    }
+    // ======================
+
     return _buildTextBubble(context);
   }
+
+  // === WIDGET MỚI ĐỂ HIỂN THỊ LỜI MỜI NHÓM ===
+  Widget _buildSharedGroupQRBubble(BuildContext context) {
+    final alignment = isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start;
+    final rowAlignment = isMe ? MainAxisAlignment.end : MainAxisAlignment.start;
+    final avatarImage = sender?.avatar.isNotEmpty ?? false ? NetworkImage(sender!.avatar.first) : null;
+
+    // 1. Phân tích dữ liệu QR từ content
+    QRInviteData? qrData;
+    try {
+      qrData = QRInviteData.fromQRString(message.content);
+    } catch (e) {
+      print('Lỗi phân tích QR invite data: $e');
+      // Nếu lỗi, hiển thị như tin nhắn văn bản (chứa chuỗi QR)
+      return _buildTextBubble(context);
+    }
+
+    // 2. Lấy ID người dùng hiện tại và data nhóm
+    final currentUserId = context.read<UserService>().currentUser?.id ?? '';
+    final group = context.watch<FirestoreListener>().getGroupById(message.sharedPostId!);
+    final bool isAlreadyMember = group?.members.contains(currentUserId) ?? false;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6.0),
+      child: Column(
+        crossAxisAlignment: alignment,
+        children: [
+          Row(
+            mainAxisAlignment: rowAlignment,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              if (!isMe) ...[
+                CircleAvatar(
+                  radius: 18.0,
+                  backgroundImage: avatarImage,
+                  child: avatarImage == null ? const Icon(Icons.person, size: 18) : null,
+                ),
+                const SizedBox(width: 8.0),
+              ],
+              Column(
+                crossAxisAlignment: alignment,
+                children: [
+                  if (!isMe && sender != null)
+                    Padding(
+                      padding: const EdgeInsets.only(left: 4.0, bottom: 4.0),
+                      child: Text(
+                        '${sender!.name} đã gửi lời mời nhóm', // Văn bản tùy chỉnh
+                        style: const TextStyle(fontSize: 12.0, color: Colors.grey),
+                      ),
+                    ),
+                  // 3. UI bong bóng lời mời
+                  _GroupInvitePreview(
+                    qrData: qrData,
+                    groupId: message.sharedPostId!,
+                    isAlreadyMember: isAlreadyMember,
+                    currentUserId: currentUserId,
+                  ),
+                ],
+              ),
+            ],
+          ),
+          Padding(
+            padding: EdgeInsets.only(top: 4, left: isMe ? 0 : 52, right: isMe ? 8 : 0),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(DateFormat('HH:mm').format(message.createdAt), style: const TextStyle(fontSize: 10.0, color: Colors.grey)),
+                if (isMe) ...[const SizedBox(width: 4), _buildStatusIcon(message.status)]
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+  // ============================================
 
   Widget _buildRecalledMessageBubble() {
     return Row(
@@ -655,5 +743,172 @@ class _SharedPostPreview extends StatelessWidget {
     if (media == null) return const SizedBox.shrink();
     if (media.type == 'video') return Container(height: 150, decoration: const BoxDecoration(color: Colors.black, borderRadius: BorderRadius.vertical(bottom: Radius.circular(15))), child: const Center(child: Icon(Icons.play_circle_outline, color: Colors.white, size: 40)));
     return ClipRRect(borderRadius: const BorderRadius.vertical(bottom: Radius.circular(15)), child: CachedNetworkImage(imageUrl: media.url, height: 150, width: double.infinity, fit: BoxFit.cover));
+  }
+}
+
+// === WIDGET HELPER MỚI ĐỂ HIỂN THỊ UI LỜI MỜI ===
+// === THAY THẾ TOÀN BỘ WIDGET NÀY TRONG LIB/VIEW/GROUP_CHAT/CHAT_VIEW.DART ===
+class _GroupInvitePreview extends StatefulWidget {
+  final QRInviteData qrData;
+  final String groupId;
+  final bool isAlreadyMember;
+  final String currentUserId;
+
+  const _GroupInvitePreview({
+    required this.qrData,
+    required this.groupId,
+    required this.isAlreadyMember,
+    required this.currentUserId,
+  });
+
+  @override
+  State<_GroupInvitePreview> createState() => _GroupInvitePreviewState();
+}
+
+class _GroupInvitePreviewState extends State<_GroupInvitePreview> {
+  bool _isLoading = false;
+  final GroupRequest _groupRequest = GroupRequest();
+
+  void _handleJoinGroup() async {
+    // Không cho tham gia nếu đã là thành viên hoặc đang loading
+    if (widget.isAlreadyMember || _isLoading) return;
+
+    setState(() => _isLoading = true);
+    
+    try {
+      // Kiểm tra lại nhóm và thành viên
+      final groupDoc = await FirebaseFirestore.instance
+          .collection('Group')
+          .doc(widget.groupId)
+          .get();
+      
+      if (!groupDoc.exists) {
+        if (mounted) NotificationService().showErrorDialog(context: context, title: 'Lỗi', message: 'Nhóm không còn tồn tại.');
+        return;
+      }
+
+      final group = GroupModel.fromMap(groupDoc.id, groupDoc.data()!);
+
+      if (group.members.contains(widget.currentUserId)) {
+        if (mounted) NotificationService().showSuccessDialog(context: context, title: 'Thông báo', message: 'Bạn đã ở trong nhóm này.');
+        return; // Đã là thành viên
+      }
+
+      // Tham gia nhóm
+      await _groupRequest.joinGroup(widget.groupId, widget.currentUserId);
+
+      if (mounted) {
+        NotificationService().showSuccessDialog(
+          context: context,
+          title: 'Thành công',
+          message: 'Đã tham gia nhóm "${widget.qrData.groupName}".',
+        );
+      }
+
+    } catch (e) {
+      print('Lỗi tham gia nhóm từ lời mời: $e');
+      if (mounted) {
+        NotificationService().showErrorDialog(
+          context: context,
+          title: 'Thất bại',
+          message: 'Không thể tham gia nhóm. $e',
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  // === HÀM MỚI ĐỂ XEM THÔNG TIN NHÓM ===
+  void _navigateToGroupInfo() {
+    Navigator.pushNamed(
+      context,
+      '/group_management',
+      arguments: widget.groupId,
+    );
+  }
+  // ======================================
+
+  @override
+  Widget build(BuildContext context) {
+    final bool hasCover = widget.qrData.groupCover?.isNotEmpty ?? false;
+
+    return Container(
+      width: MediaQuery.of(context).size.width * 0.65,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(15),
+        border: Border.all(color: Colors.grey.shade300)
+      ),
+      child: Column(
+        children: [
+          // === BỌC PHẦN HEADER BẰNG INKWELL ===
+          InkWell(
+            onTap: _navigateToGroupInfo, // <-- Gọi hàm xem thông tin
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(15)),
+            child: Padding(
+              padding: const EdgeInsets.all(12.0),
+              child: Row(
+                children: [
+                  // Avatar nhóm
+                  CircleAvatar(
+                    radius: 24,
+                    backgroundImage: hasCover 
+                      ? CachedNetworkImageProvider(widget.qrData.groupCover!) 
+                      : null,
+                    child: !hasCover 
+                      ? const Icon(Icons.groups, size: 24) 
+                      : null,
+                  ),
+                  const SizedBox(width: 12),
+                  // Tên nhóm & Người mời
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          widget.qrData.groupName, 
+                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15), 
+                          overflow: TextOverflow.ellipsis
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          'Lời mời từ ${widget.qrData.inviterName}', 
+                          style: const TextStyle(color: Colors.grey, fontSize: 12),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          // =====================================
+          const Divider(height: 1),
+          // Nút (Giữ nguyên logic)
+          InkWell(
+            onTap: widget.isAlreadyMember 
+              ? _navigateToGroupInfo // Nếu đã là thành viên, nhấn nút cũng là xem thông tin
+              : _handleJoinGroup, // Nếu chưa, gọi hàm tham gia
+            borderRadius: const BorderRadius.vertical(bottom: Radius.circular(15)),
+            child: Container(
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              alignment: Alignment.center,
+              child: _isLoading
+                  ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2))
+                  : Text(
+                      widget.isAlreadyMember ? 'Xem thông tin' : 'Tham gia nhóm',
+                      style: TextStyle(
+                        color: widget.isAlreadyMember ? AppColors.textPrimary : AppColors.primary,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 15,
+                      ),
+                    ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
