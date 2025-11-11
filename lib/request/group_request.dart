@@ -42,7 +42,7 @@ class GroupRequest {
             .toList());
   }
 
-  /// --- PHƯƠNG THỨC MỚI ĐỂ THÊM THÀNH VIÊN ---
+  /// --- PHƯƠSNG THỨC MỚI ĐỂ THÊM THÀNH VIÊN ---
   /// Cập nhật nhóm bằng cách thêm các thành viên mới (dùng arrayUnion)
   Future<void> addMembersToGroup(String groupId, List<UserModel> newMembers) async {
     try {
@@ -62,4 +62,20 @@ class GroupRequest {
       rethrow;
     }
   }
+
+  // === THÊM PHƯƠNG THỨC NÀY (SỬA LỖI 1) ===
+  /// Tham gia nhóm bằng ID người dùng
+  Future<void> joinGroup(String groupId, String userId) async {
+    try {
+      final groupRef = _firestore.collection(_collectionName).doc(groupId);
+      // Sử dụng FieldValue.arrayUnion để thêm 1 ID mới vào mảng 'members'
+      await groupRef.update({
+        'members': FieldValue.arrayUnion([userId]),
+      });
+    } catch (e) {
+      print('Error joining group: $e');
+      rethrow;
+    }
+  }
+  // ==========================================
 }

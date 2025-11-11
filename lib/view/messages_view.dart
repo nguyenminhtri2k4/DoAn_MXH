@@ -1,3 +1,4 @@
+
 // lib/view/messages_view.dart
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -9,6 +10,11 @@ import 'package:mangxahoi/authanet/firestore_listener.dart';
 import 'package:mangxahoi/constant/app_colors.dart';
 import 'package:intl/intl.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+
+// === IMPORT MỚI ĐỂ PHÂN TÍCH JSON ===
+import 'dart:convert';
+import 'package:mangxahoi/model/model_qr_invite.dart';
+// ======================================
 
 class MessagesView extends StatelessWidget {
   const MessagesView({super.key});
@@ -62,6 +68,42 @@ class _MessagesViewContent extends StatelessWidget {
   }
 }
 
+// === HÀM HELPER MỚI ===
+/// Xây dựng văn bản tóm tắt cho tin nhắn cuối cùng
+Widget _buildSummary(String lastMessage) {
+  // 1. Xử lý tin nhắn media (thường có content rỗng)
+  if (lastMessage.isEmpty) {
+    return const Text(
+      'Đã gửi một tệp media.',
+      style: TextStyle(fontStyle: FontStyle.italic, color: Colors.grey),
+      overflow: TextOverflow.ellipsis,
+    );
+  }
+
+  // 2. Xử lý lời mời nhóm (dạng JSON)
+  try {
+    // Thử phân tích chuỗi JSON của QRInviteData
+    final qrData = QRInviteData.fromQRString(lastMessage);
+    
+    // Nếu thành công, đây là lời mời
+    return Text(
+      'Lời mời tham gia  ${qrData.groupName}',
+      style: const TextStyle(fontStyle: FontStyle.italic, color: Colors.grey),
+      overflow: TextOverflow.ellipsis,
+    );
+  } catch (e) {
+    // Bắt lỗi: Không phải JSON lời mời, tiếp tục xử lý như text bình thường
+  }
+  
+  // 3. Xử lý tin nhắn text bình thường (bao gồm cả "share_post")
+  return Text(
+    lastMessage,
+    maxLines: 1,
+    overflow: TextOverflow.ellipsis,
+  );
+}
+// =========================
+
 class _ChatListItem extends StatelessWidget {
   final ChatModel chat;
   final String currentUserId;
@@ -89,11 +131,9 @@ class _ChatListItem extends StatelessWidget {
           child: avatarImage == null ? const Icon(Icons.person) : null,
         ),
         title: Text(otherUser.name, style: const TextStyle(fontWeight: FontWeight.bold)),
-        subtitle: Text(
-          chat.lastMessage,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-        ),
+        // === SỬA ĐỔI TẠI ĐÂY ===
+        subtitle: _buildSummary(chat.lastMessage),
+        // ========================
         trailing: Text(DateFormat('HH:mm').format(chat.updatedAt)),
         onTap: () {
           Navigator.pushNamed(
@@ -120,7 +160,9 @@ class _ChatListItem extends StatelessWidget {
              return ListTile(
               leading: const CircleAvatar(child: Icon(Icons.error_outline)),
               title: const Text("Nhóm không tồn tại"),
-              subtitle: Text(chat.lastMessage, maxLines: 1, overflow: TextOverflow.ellipsis),
+              // === SỬA ĐỔI TẠI ĐÂY ===
+              subtitle: _buildSummary(chat.lastMessage),
+              // ========================
             );
           }
 
@@ -148,11 +190,9 @@ class _ChatListItem extends StatelessWidget {
                   : null,
             ),
             title: Text(group.name, style: const TextStyle(fontWeight: FontWeight.bold)),
-            subtitle: Text(
-              chat.lastMessage,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
+            // === SỬA ĐỔI TẠI ĐÂY ===
+            subtitle: _buildSummary(chat.lastMessage),
+            // ========================
             trailing: Text(DateFormat('HH:mm').format(chat.updatedAt)),
             onTap: () {
               Navigator.pushNamed(

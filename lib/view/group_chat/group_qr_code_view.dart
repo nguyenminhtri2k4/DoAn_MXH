@@ -1,3 +1,4 @@
+
 import 'package:flutter/material.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:mangxahoi/model/model_group.dart';
@@ -5,6 +6,10 @@ import 'package:mangxahoi/model/model_qr_invite.dart';
 import 'package:mangxahoi/constant/app_colors.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:share_plus/share_plus.dart';
+
+// === THÊM DÒNG NÀY (SỬA LỖI 5) ===
+import 'package:mangxahoi/view/share_qr_to_messenger_view.dart';
+// ==================================
 
 class GroupQRCodeView extends StatelessWidget {
   final GroupModel group;
@@ -25,6 +30,7 @@ class GroupQRCodeView extends StatelessWidget {
       createdAt: DateTime.now(),
       groupCover: group.coverImage,
     );
+    final qrDataString = qrData.toQRString();
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -33,6 +39,22 @@ class GroupQRCodeView extends StatelessWidget {
         backgroundColor: Colors.white,
         elevation: 0,
         actions: [
+            IconButton(
+            icon: const Icon(Icons.send_rounded), // Hoặc Icons.message
+            tooltip: 'Gửi qua Messenger',
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => ShareQRToMessengerView(
+                    qrDataString: qrDataString, // Truyền chuỗi QR
+                    groupName: group.name,       // Truyền tên nhóm
+                    groupId: group.id,         // Truyền ID nhóm
+                  ),
+                ),
+              );
+            },
+          ),
           IconButton(
             icon: const Icon(Icons.share),
             onPressed: () {

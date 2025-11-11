@@ -311,6 +311,12 @@ class _GroupManagementContent extends StatelessWidget {
   }
 
   Widget _buildActionButtons(BuildContext context, GroupManagementViewModel vm) {
+    final bool isMember = vm.group!.members.contains(vm.currentUserId);
+
+    // Nếu không phải là thành viên, không hiển thị bất kỳ nút nào
+    if (!isMember) {
+      return const SizedBox.shrink(); // Trả về một widget rỗng
+    }
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16),
       child: Row(
