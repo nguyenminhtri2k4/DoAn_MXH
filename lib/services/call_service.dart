@@ -38,7 +38,7 @@ class CallService with ChangeNotifier {
       return;
     }
 
-    currentUserId = _currentUser!.uid;
+    currentUserId = _currentUser!.id;
     print("✅ [SERVICE DEBUG] CallService đã init:");
     print("   - currentUserId (Auth UID): $currentUserId");
     print("   - currentUser.name: ${_currentUser!.name}");
@@ -264,6 +264,7 @@ class CallService with ChangeNotifier {
   Future<CallModel?> makeOneToOneCall(
     UserModel receiverUser,
     CallMediaType mediaType,
+    String chatId,
   ) async {
     print("📞 [SERVICE DEBUG] makeOneToOneCall được gọi");
 
@@ -272,7 +273,7 @@ class CallService with ChangeNotifier {
       return null;
     }
 
-    if (receiverUser.uid.isEmpty) {
+    if (receiverUser.id.isEmpty) {
       print("❌ [SERVICE DEBUG] receiverUser.uid rỗng");
       return null;
     }
@@ -290,12 +291,13 @@ class CallService with ChangeNotifier {
       callerAvatar: _currentUser!.avatar.isNotEmpty
           ? _currentUser!.avatar.first
           : AppColors.defaultAvatar,
-      receiverIds: [receiverUser.uid],
+      receiverIds: [receiverUser.id],
       status: CallStatus.pending,
       callType: CallType.oneToOne,
       mediaType: mediaType,
       channelName: channelName,
       createdAt: Timestamp.now(),
+      chatId: chatId,
     );
 
     _currentCall = call;

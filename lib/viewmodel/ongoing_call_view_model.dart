@@ -9,15 +9,27 @@ import 'package:mangxahoi/services/call_service.dart';
 import 'package:mangxahoi/request/user_request.dart';
 import 'package:zego_express_engine/zego_express_engine.dart';
 
+// === CÁC IMPORT ĐÃ SỬA ===
+import 'package:mangxahoi/request/chat_request.dart'; // Import trực tiếp
+import 'package:mangxahoi/model/model_message.dart';  // Import trực tiếp
+// (Không cần Provider cho ChatRequest/UserService)
+// ==========================
+
 class OngoingCallViewModel extends ChangeNotifier {
   final CallService callService;
   final CallModel call;
   final bool isReceiver;
 
+  // === THÊM DÒNG NÀY ===
+  final ChatRequest _chatRequest = ChatRequest();
+  // ======================
+
   bool isMuted = false;
-  bool isSpeakerOn = true; // Mặc định luôn là TRUE để dễ test
+  bool isSpeakerOn = true; 
   bool isVideoOff = false;
   bool isFrontCamera = true;
+  
+  bool _isCallEnded = false; // Cờ quan trọng để tránh gửi 2 lần
 
   Timer? _timer;
   int _seconds = 0;
@@ -25,7 +37,6 @@ class OngoingCallViewModel extends ChangeNotifier {
 
   String _otherUserName = "Đang tải...";
   String _otherUserAvatar = "";
-
   String? _remoteStreamID;
 
   OngoingCallViewModel({
@@ -37,21 +48,17 @@ class OngoingCallViewModel extends ChangeNotifier {
   void init(BuildContext context) {
     _loadOtherUserInfo();
     _startTimer();
+    _listenToCallStatus(context); // Cần context cho Navigator
 
-    // 1. Cấu hình ban đầu
     if (call.mediaType == CallMediaType.audio) {
       isVideoOff = true;
       ZegoExpressEngine.instance.enableCamera(false);
     }
-
-    // 2. Bật loa ngoài ngay lập tức
     isSpeakerOn = true;
     ZegoExpressEngine.instance.setAudioRouteToSpeaker(true);
 
-    // 3. Lắng nghe sự kiện thay đổi đường dẫn âm thanh để "ép" lại nếu cần
     ZegoExpressEngine.onAudioRouteChange = (ZegoAudioRoute audioRoute) {
       debugPrint("🔊 [ZEGO EVENT] Audio Route changed to: $audioRoute");
-      // Nếu hệ thống tự chuyển về Receiver (loa trong), ta ép lại về Speaker (loa ngoài)
       if (audioRoute == ZegoAudioRoute.Receiver && isSpeakerOn) {
          debugPrint("🔊 [ZEGO] Hệ thống tự chuyển về loa trong, đang ép bật lại loa ngoài...");
          ZegoExpressEngine.instance.setAudioRouteToSpeaker(true);
@@ -62,20 +69,14 @@ class OngoingCallViewModel extends ChangeNotifier {
       if (updateType == ZegoUpdateType.Add) {
         _remoteStreamID = streamList.first.streamID;
         debugPrint("🔌 [ZEGO] Phát hiện stream mới: $_remoteStreamID");
-
-        // Luôn start playing bất kể là video hay audio
         ZegoExpressEngine.instance.startPlayingStream(_remoteStreamID!);
-
-        // "Spam" lệnh bật loa ngoài để đảm bảo nó có hiệu lực sau khi stream bắt đầu
         Future.delayed(const Duration(milliseconds: 500), () => ZegoExpressEngine.instance.setAudioRouteToSpeaker(true));
         Future.delayed(const Duration(seconds: 2), () => ZegoExpressEngine.instance.setAudioRouteToSpeaker(true));
-
       } else if (updateType == ZegoUpdateType.Delete) {
          _remoteStreamID = null;
+         debugPrint("🔌 [ZEGO] Stream đã bị xóa (người kia cúp máy).");
       }
     };
-
-    _listenToCallStatus(context);
   }
 
   void _loadOtherUserInfo() async {
@@ -107,11 +108,22 @@ class OngoingCallViewModel extends ChangeNotifier {
       Map<String, dynamic> data = snapshot.data() as Map<String, dynamic>;
       String status = data['status'];
 
-      if (status == CallStatus.ended.name || status == CallStatus.declined.name) {
+      // === LOGIC SỬA: NẾU NGƯỜI KIA CÚP MÁY ===
+      if ((status == CallStatus.ended.name || status == CallStatus.declined.name) && !_isCallEnded) {
+        print("DEBUG [OngoingCall]: Người kia đã cúp máy (status: $status).");
+        _isCallEnded = true; 
+        _stopTimer();
+
+        // Gửi tin nhắn "completed"
+        // Người gửi tin nhắn là người kia (người đã cúp máy)
+        String remoteUserId = isReceiver ? call.callerId : call.receiverIds.first;
+        _sendCallMessage('completed_$formattedDuration', remoteUserId);
+
         if (Navigator.canPop(context)) {
           Navigator.pop(context);
         }
       }
+      // ======================================
     });
   }
 
@@ -120,6 +132,10 @@ class OngoingCallViewModel extends ChangeNotifier {
       _seconds++;
       notifyListeners();
     });
+  }
+
+  void _stopTimer() {
+    _timer?.cancel();
   }
 
   String get formattedDuration {
@@ -132,14 +148,12 @@ class OngoingCallViewModel extends ChangeNotifier {
   String get otherUserAvatar => _otherUserAvatar;
 
   Future<Widget?> getLocalVideoView() async {
-    return ZegoExpressEngine.instance.createCanvasView((viewID) {
+     return ZegoExpressEngine.instance.createCanvasView((viewID) {
       ZegoCanvas canvas = ZegoCanvas(viewID, viewMode: ZegoViewMode.AspectFill);
       ZegoExpressEngine.instance.startPreview(canvas: canvas);
     });
   }
-
   Future<Widget?> getRemoteVideoView() async {
-    // Đảm bảo streamID đã có trước khi tạo view
     String streamID = _remoteStreamID ?? '${isReceiver ? call.callerId : call.receiverIds.first}_stream';
     return ZegoExpressEngine.instance.createCanvasView((viewID) {
       ZegoCanvas canvas = ZegoCanvas(viewID, viewMode: ZegoViewMode.AspectFill);
@@ -152,30 +166,63 @@ class OngoingCallViewModel extends ChangeNotifier {
     callService.toggleMute(isMuted);
     notifyListeners();
   }
-
   void onToggleSpeaker() {
     isSpeakerOn = !isSpeakerOn;
     debugPrint("🔊 [ViewModel] Người dùng toggle loa: $isSpeakerOn");
     ZegoExpressEngine.instance.setAudioRouteToSpeaker(isSpeakerOn);
     notifyListeners();
   }
-
   void onToggleVideo() {
     isVideoOff = !isVideoOff;
     ZegoExpressEngine.instance.enableCamera(!isVideoOff);
     ZegoExpressEngine.instance.mutePublishStreamVideo(isVideoOff);
     notifyListeners();
   }
-
   void onSwitchCamera() {
     isFrontCamera = !isFrontCamera;
     ZegoExpressEngine.instance.useFrontCamera(isFrontCamera);
     notifyListeners();
   }
 
+  // === HÀM HELPER GỬI TIN NHẮN (ĐÃ SỬA) ===
+  Future<void> _sendCallMessage(String callStatus, String senderId) async {
+    try {
+      final String callType = call.mediaType == CallMediaType.audio ? 'call_audio' : 'call_video';
+      
+      final callMessage = MessageModel(
+        id: '',
+        senderId: senderId, 
+        content: callStatus,
+        createdAt: DateTime.now(),
+        mediaIds: [],
+        status: 'sent',
+        type: callType,
+      );
+      
+      print("DEBUG [OngoingCall]: Đang gửi tin nhắn: $callStatus cho chatId: ${call.chatId} bởi $senderId");
+      // Sử dụng _chatRequest (instance của class), không dùng Provider
+      await _chatRequest.sendMessage(call.chatId, callMessage); 
+    } catch (e) {
+      print('Lỗi khi gửi tin nhắn thông báo cuộc gọi: $e');
+    }
+  }
+  // ===================================
+
   Future<void> onEndCall(BuildContext context) async {
+    if (_isCallEnded) return; 
+    _isCallEnded = true; 
+    
     _callStatusSubscription?.cancel();
+    _stopTimer(); 
+
+    // Gửi tin nhắn "completed" (do MÌNH nhấn cúp)
+    final currentUserId = callService.currentUserId; // Lấy ID từ CallService
+    if (currentUserId != null) {
+      await _sendCallMessage('completed_$formattedDuration', currentUserId);
+    }
+    
     await callService.endCall(call);
+    
     if (context.mounted && Navigator.canPop(context)) {
       Navigator.pop(context);
     }
@@ -185,7 +232,6 @@ class OngoingCallViewModel extends ChangeNotifier {
     _timer?.cancel();
     _callStatusSubscription?.cancel();
     
-    // Hủy các listener
     ZegoExpressEngine.onRoomStreamUpdate = null;
     ZegoExpressEngine.onAudioRouteChange = null;
 
@@ -194,10 +240,6 @@ class OngoingCallViewModel extends ChangeNotifier {
     if (_remoteStreamID != null) {
        ZegoExpressEngine.instance.stopPlayingStream(_remoteStreamID!);
     }
-    ZegoExpressEngine.instance.logoutRoom(call.channelName);
-    
-    // Tắt loa ngoài khi thoát để tránh ảnh hưởng app khác
-    ZegoExpressEngine.instance.setAudioRouteToSpeaker(false);
   }
 
   @override

@@ -101,11 +101,9 @@ class _ChatViewContent extends StatelessWidget {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        // --- SỬA ĐỔI Ở ĐÂY ---
         title: appBarTitle,
-        centerTitle: false, // Tắt căn giữa
-        titleSpacing: 0, // Xóa khoảng cách bên trái title
-        // -----------------------
+        centerTitle: false, 
+        titleSpacing: 0, 
         backgroundColor: AppColors.backgroundLight,
         elevation: 1,
         actions: [
@@ -125,7 +123,6 @@ class _ChatViewContent extends StatelessWidget {
               icon: const Icon(Icons.person_add),
               tooltip: 'Thêm thành viên',
               onPressed: () {
-                // Điều hướng đến màn hình AddMembersView
                 Navigator.push(
                   context,
                   MaterialPageRoute(
@@ -170,7 +167,7 @@ class _ChatViewContent extends StatelessWidget {
                   itemCount: messages.length,
                   itemBuilder: (context, index) {
                     final message = messages[index];
-                    final sender = firestoreListener.getUserByAuthUid(message.senderId);
+                    final sender = firestoreListener.getUserById(message.senderId);
                     final isMe = message.senderId == vm.currentUserId;
 
                     return VisibilityDetector(
@@ -361,6 +358,10 @@ class _ChatViewContent extends StatelessWidget {
   }
 }
 
+// ====================================================================
+// ==================== BONG BÓNG CHAT (QUAN TRỌNG) ===================
+// ====================================================================
+
 class _MessageBubble extends StatelessWidget {
   final MessageModel message;
   final UserModel? sender;
@@ -370,35 +371,193 @@ class _MessageBubble extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // 1. Tin nhắn đã thu hồi
     if (message.status == 'recalled') return _buildRecalledMessageBubble();
+    
+    // 2. Tin nhắn chia sẻ bài viết
     if (message.type == 'share_post' && message.sharedPostId != null) return _buildSharedPostBubble(context);
     
-    // === THÊM LOGIC MỚI ===
+    // 3. Tin nhắn mời nhóm
     if (message.type == 'share_group_qr' && message.sharedPostId != null) {
       return _buildSharedGroupQRBubble(context);
     }
-    // ======================
+    
+    // 4. Tin nhắn CUỘC GỌI (MỚI)
+    if (message.type == 'call_audio' || message.type == 'call_video') {
+      return _buildCallMessageBubble(context);
+    }
 
+    // 5. Tin nhắn văn bản/media thông thường
     return _buildTextBubble(context);
   }
 
-  // === WIDGET MỚI ĐỂ HIỂN THỊ LỜI MỜI NHÓM ===
+  // --- WIDGET 4: TIN NHẮN CUỘC GỌI ---
+  // --- WIDGET 4: TIN NHẮN CUỘC GỌI (GIỐNG ZALO) ---
+  Widget _buildCallMessageBubble(BuildContext context) {
+    final bool isAudioCall = message.type == 'call_audio';
+    final String? currentAuthid = context.read<UserService>().currentUser?.id;
+    final bool isCallFromMe = message.senderId == currentAuthid;
+
+    IconData callIcon;
+    Color iconColor;
+    String callStatusText;
+    String? durationText;
+
+    if (message.content == 'missed') {
+      // Cuộc gọi nhỡ - màu đỏ
+      callStatusText = isAudioCall ? 'Cuộc gọi thoại' : 'Cuộc gọi video';
+      callIcon = isCallFromMe 
+          ? (isAudioCall ? Icons.phone_forwarded : Icons.videocam)
+          : (isAudioCall ? Icons.phone_missed : Icons.videocam); 
+      iconColor = Colors.red;
+      durationText = isCallFromMe ? 'Đã bị từ chối' : 'Nhỡ';
+    } else if (message.content == 'declined') {
+      // Cuộc gọi bị từ chối - màu đỏ
+      callStatusText = isAudioCall ? 'Cuộc gọi thoại' : 'Cuộc gọi video';
+      callIcon = isCallFromMe 
+          ? (isAudioCall ? Icons.phone_forwarded : Icons.videocam)
+          : (isAudioCall ? Icons.phone_missed : Icons.videocam);
+      iconColor = Colors.red;
+      durationText = 'Đã bị từ chối';
+    } else if (message.content.startsWith('completed_')) {
+      // Cuộc gọi thành công - màu xanh/xám
+      try {
+        final duration = message.content.split('_')[1]; // "mm:ss"
+        callStatusText = isAudioCall ? 'Cuộc gọi thoại' : 'Cuộc gọi video';
+        callIcon = isCallFromMe
+            ? (isAudioCall ? Icons.phone_forwarded : Icons.videocam)
+            : (isAudioCall ? Icons.phone_callback : Icons.videocam);
+        iconColor = const Color(0xFF0084FF); // Màu xanh Zalo
+        durationText = duration;
+      } catch (e) {
+        callStatusText = isAudioCall ? 'Cuộc gọi thoại' : 'Cuộc gọi video';
+        callIcon = isAudioCall ? Icons.phone : Icons.videocam;
+        iconColor = Colors.grey[600]!;
+        durationText = 'Đã kết thúc';
+      }
+    } else {
+      // Trạng thái mặc định
+      callStatusText = isAudioCall ? 'Cuộc gọi thoại' : 'Cuộc gọi video';
+      callIcon = isAudioCall ? Icons.phone : Icons.videocam;
+      iconColor = Colors.grey[600]!;
+      durationText = null;
+    }
+    
+    // Avatar cho người gọi đến
+    final avatarImage = sender?.avatar.isNotEmpty ?? false ? NetworkImage(sender!.avatar.first) : null;
+    
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6.0),
+      child: Column(
+        crossAxisAlignment: isCallFromMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: isCallFromMe ? MainAxisAlignment.end : MainAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Avatar bên trái nếu không phải mình gọi
+              if (!isCallFromMe) ...[
+                Container(
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(color: Colors.grey[200]!, width: 1)
+                  ),
+                  child: CircleAvatar(
+                    radius: 18.0,
+                    backgroundColor: Colors.grey[100],
+                    backgroundImage: avatarImage,
+                    child: avatarImage == null ? const Icon(Icons.person, size: 18, color: Colors.grey) : null,
+                  ),
+                ),
+                const SizedBox(width: 8.0),
+              ],
+              
+              // Bong bóng cuộc gọi
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 14.0, vertical: 10.0),
+                decoration: BoxDecoration(
+                  color: isCallFromMe ? AppColors.primary.withOpacity(0.1) : Colors.grey[100],
+                  borderRadius: BorderRadius.circular(18),
+                  border: Border.all(color: Colors.grey[300]!, width: 0.5),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Icon cuộc gọi
+                    Icon(callIcon, size: 18, color: iconColor),
+                    const SizedBox(width: 10),
+                    // Text mô tả
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          callStatusText,
+                          style: TextStyle(
+                            color: Colors.grey[800],
+                            fontSize: 13,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                        if (durationText != null) ...[
+                          const SizedBox(height: 2),
+                          Text(
+                            durationText,
+                            style: TextStyle(
+                              color: iconColor,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          
+          // Timestamp và status
+          Padding(
+            padding: EdgeInsets.only(
+              top: 4,
+              left: isCallFromMe ? 0 : 52,
+              right: isCallFromMe ? 8 : 0
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  DateFormat('HH:mm').format(message.createdAt),
+                  style: const TextStyle(fontSize: 10.0, color: Colors.grey),
+                ),
+                if (isCallFromMe) ...[
+                  const SizedBox(width: 4),
+                  _buildStatusIcon(message.status)
+                ],
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // --- WIDGET 3: LỜI MỜI NHÓM ---
   Widget _buildSharedGroupQRBubble(BuildContext context) {
     final alignment = isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start;
     final rowAlignment = isMe ? MainAxisAlignment.end : MainAxisAlignment.start;
     final avatarImage = sender?.avatar.isNotEmpty ?? false ? NetworkImage(sender!.avatar.first) : null;
 
-    // 1. Phân tích dữ liệu QR từ content
     QRInviteData? qrData;
     try {
       qrData = QRInviteData.fromQRString(message.content);
     } catch (e) {
       print('Lỗi phân tích QR invite data: $e');
-      // Nếu lỗi, hiển thị như tin nhắn văn bản (chứa chuỗi QR)
       return _buildTextBubble(context);
     }
 
-    // 2. Lấy ID người dùng hiện tại và data nhóm
     final currentUserId = context.read<UserService>().currentUser?.id ?? '';
     final group = context.watch<FirestoreListener>().getGroupById(message.sharedPostId!);
     final bool isAlreadyMember = group?.members.contains(currentUserId) ?? false;
@@ -427,11 +586,10 @@ class _MessageBubble extends StatelessWidget {
                     Padding(
                       padding: const EdgeInsets.only(left: 4.0, bottom: 4.0),
                       child: Text(
-                        '${sender!.name} đã gửi lời mời nhóm', // Văn bản tùy chỉnh
+                        '${sender!.name} đã gửi lời mời nhóm', 
                         style: const TextStyle(fontSize: 12.0, color: Colors.grey),
                       ),
                     ),
-                  // 3. UI bong bóng lời mời
                   _GroupInvitePreview(
                     qrData: qrData,
                     groupId: message.sharedPostId!,
@@ -456,8 +614,8 @@ class _MessageBubble extends StatelessWidget {
       ),
     );
   }
-  // ============================================
 
+  // --- WIDGET 1: THU HỒI ---
   Widget _buildRecalledMessageBubble() {
     return Row(
       mainAxisAlignment: isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
@@ -472,6 +630,7 @@ class _MessageBubble extends StatelessWidget {
     );
   }
 
+  // --- WIDGET 2: CHIA SẺ BÀI VIẾT ---
   Widget _buildSharedPostBubble(BuildContext context) {
     final alignment = isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start;
     final rowAlignment = isMe ? MainAxisAlignment.end : MainAxisAlignment.start;
@@ -527,6 +686,7 @@ class _MessageBubble extends StatelessWidget {
     );
   }
 
+  // --- WIDGET 5: VĂN BẢN/MEDIA ---
   Widget _buildTextBubble(BuildContext context) {
     const Radius messageRadius = Radius.circular(18.0);
     final avatarImage = sender?.avatar.isNotEmpty ?? false ? NetworkImage(sender!.avatar.first) : null;
@@ -746,8 +906,6 @@ class _SharedPostPreview extends StatelessWidget {
   }
 }
 
-// === WIDGET HELPER MỚI ĐỂ HIỂN THỊ UI LỜI MỜI ===
-// === THAY THẾ TOÀN BỘ WIDGET NÀY TRONG LIB/VIEW/GROUP_CHAT/CHAT_VIEW.DART ===
 class _GroupInvitePreview extends StatefulWidget {
   final QRInviteData qrData;
   final String groupId;
@@ -770,13 +928,10 @@ class _GroupInvitePreviewState extends State<_GroupInvitePreview> {
   final GroupRequest _groupRequest = GroupRequest();
 
   void _handleJoinGroup() async {
-    // Không cho tham gia nếu đã là thành viên hoặc đang loading
     if (widget.isAlreadyMember || _isLoading) return;
-
     setState(() => _isLoading = true);
     
     try {
-      // Kiểm tra lại nhóm và thành viên
       final groupDoc = await FirebaseFirestore.instance
           .collection('Group')
           .doc(widget.groupId)
@@ -786,17 +941,12 @@ class _GroupInvitePreviewState extends State<_GroupInvitePreview> {
         if (mounted) NotificationService().showErrorDialog(context: context, title: 'Lỗi', message: 'Nhóm không còn tồn tại.');
         return;
       }
-
       final group = GroupModel.fromMap(groupDoc.id, groupDoc.data()!);
-
       if (group.members.contains(widget.currentUserId)) {
         if (mounted) NotificationService().showSuccessDialog(context: context, title: 'Thông báo', message: 'Bạn đã ở trong nhóm này.');
-        return; // Đã là thành viên
+        return; 
       }
-
-      // Tham gia nhóm
       await _groupRequest.joinGroup(widget.groupId, widget.currentUserId);
-
       if (mounted) {
         NotificationService().showSuccessDialog(
           context: context,
@@ -804,7 +954,6 @@ class _GroupInvitePreviewState extends State<_GroupInvitePreview> {
           message: 'Đã tham gia nhóm "${widget.qrData.groupName}".',
         );
       }
-
     } catch (e) {
       print('Lỗi tham gia nhóm từ lời mời: $e');
       if (mounted) {
@@ -819,7 +968,6 @@ class _GroupInvitePreviewState extends State<_GroupInvitePreview> {
     }
   }
 
-  // === HÀM MỚI ĐỂ XEM THÔNG TIN NHÓM ===
   void _navigateToGroupInfo() {
     Navigator.pushNamed(
       context,
@@ -827,7 +975,6 @@ class _GroupInvitePreviewState extends State<_GroupInvitePreview> {
       arguments: widget.groupId,
     );
   }
-  // ======================================
 
   @override
   Widget build(BuildContext context) {
@@ -842,15 +989,13 @@ class _GroupInvitePreviewState extends State<_GroupInvitePreview> {
       ),
       child: Column(
         children: [
-          // === BỌC PHẦN HEADER BẰNG INKWELL ===
           InkWell(
-            onTap: _navigateToGroupInfo, // <-- Gọi hàm xem thông tin
+            onTap: _navigateToGroupInfo, 
             borderRadius: const BorderRadius.vertical(top: Radius.circular(15)),
             child: Padding(
               padding: const EdgeInsets.all(12.0),
               child: Row(
                 children: [
-                  // Avatar nhóm
                   CircleAvatar(
                     radius: 24,
                     backgroundImage: hasCover 
@@ -861,7 +1006,6 @@ class _GroupInvitePreviewState extends State<_GroupInvitePreview> {
                       : null,
                   ),
                   const SizedBox(width: 12),
-                  // Tên nhóm & Người mời
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -884,13 +1028,11 @@ class _GroupInvitePreviewState extends State<_GroupInvitePreview> {
               ),
             ),
           ),
-          // =====================================
           const Divider(height: 1),
-          // Nút (Giữ nguyên logic)
           InkWell(
             onTap: widget.isAlreadyMember 
-              ? _navigateToGroupInfo // Nếu đã là thành viên, nhấn nút cũng là xem thông tin
-              : _handleJoinGroup, // Nếu chưa, gọi hàm tham gia
+              ? _navigateToGroupInfo 
+              : _handleJoinGroup,
             borderRadius: const BorderRadius.vertical(bottom: Radius.circular(15)),
             child: Container(
               padding: const EdgeInsets.symmetric(vertical: 14),

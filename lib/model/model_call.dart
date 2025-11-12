@@ -26,6 +26,7 @@ class CallModel {
   
   final String channelName; // Tên phòng (channel) để ZegoCloud kết nối
   final Timestamp createdAt;
+  final String chatId;
 
   CallModel({
     required this.id,
@@ -38,6 +39,8 @@ class CallModel {
     required this.mediaType, // Đã thêm
     required this.channelName,
     required this.createdAt,
+    required this.chatId,
+    
   });
 
   // Chuyển đổi từ CallModel thành một đối tượng JSON để lưu lên Firestore
@@ -53,6 +56,7 @@ class CallModel {
       'mediaType': mediaType.name, // Đã thêm
       'channelName': channelName,
       'createdAt': createdAt,
+      'chatId': chatId,
     };
   }
 
@@ -83,6 +87,7 @@ class CallModel {
       
       channelName: json['channelName'],
       createdAt: json['createdAt'],
+      chatId: json['chatId'],
     );
   }
 }
@@ -99,6 +104,7 @@ extension CallModelExtension on CallModel {
       mediaType: mediaType,
       channelName: channelName,
       createdAt: createdAt,
+      chatId: chatId,
     );
   }
 }
