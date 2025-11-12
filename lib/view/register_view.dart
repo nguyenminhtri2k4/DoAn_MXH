@@ -361,78 +361,101 @@ class RegisterView extends StatelessWidget {
 
   // ==================== BƯỚC 3: HOÀN TẤT ====================
   Widget _buildCompletionStep(BuildContext context, RegisterViewModel viewModel) {
-    return Column(
-      children: [
-        Icon(
-          Icons.check_circle_outline,
-          size: 100,
-          color: AppColors.success,
+  return Column(
+    children: [
+      Icon(
+        Icons.check_circle_outline,
+        size: 100,
+        color: AppColors.success,
+      ),
+      const SizedBox(height: 24),
+      const Text(
+        'Xác thực thành công!',
+        style: TextStyle(
+          fontSize: 28,
+          fontWeight: FontWeight.bold,
+          color: AppColors.textPrimary,
         ),
-        const SizedBox(height: 24),
-        const Text(
-          'Xác thực thành công!',
+      ),
+      const SizedBox(height: 16),
+      const Padding(
+        padding: EdgeInsets.symmetric(horizontal: 20),
+        child: Text(
+          'Email của bạn đã được xác thực. Nhấn nút bên dưới để hoàn tất đăng ký.',
+          textAlign: TextAlign.center,
           style: TextStyle(
-            fontSize: 28,
-            fontWeight: FontWeight.bold,
-            color: AppColors.textPrimary,
+            fontSize: 16,
+            color: AppColors.textSecondary,
           ),
         ),
-        const SizedBox(height: 16),
-        const Padding(
-          padding: EdgeInsets.symmetric(horizontal: 20),
-          child: Text(
-            'Email của bạn đã được xác thực. Nhấn nút bên dưới để hoàn tất đăng ký.',
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: 16,
-              color: AppColors.textSecondary,
-            ),
-          ),
-        ),
-        const SizedBox(height: 40),
-        
-        ElevatedButton(
-          onPressed: viewModel.isLoading
-              ? null
-              : () async {
-                  final success = await viewModel.completeRegistration();
-                  if (success && context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Đăng ký thành công!'),
-                        backgroundColor: AppColors.success,
-                        duration: Duration(seconds: 2),
-                      ),
-                    );
-                    await Future.delayed(const Duration(seconds: 2));
+      ),
+      const SizedBox(height: 40),
+      
+      ElevatedButton(
+        // ✅ Disable khi đang xử lý hoặc đã hoàn tất
+        onPressed: (viewModel.isLoading || viewModel.isCompleting)
+            ? null
+            : () async {
+                final success = await viewModel.completeRegistration();
+                if (success && context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Đăng ký thành công! Đang chuyển về trang đăng nhập...'),
+                      backgroundColor: AppColors.success,
+                      duration: Duration(seconds: 2),
+                    ),
+                  );
+                  await Future.delayed(const Duration(seconds: 2));
+                  if (context.mounted) {
                     Navigator.pushReplacementNamed(context, '/login');
                   }
-                },
-          style: ElevatedButton.styleFrom(
-            backgroundColor: AppColors.primary,
-            foregroundColor: Colors.white,
-            minimumSize: const Size(double.infinity, 56),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
-            ),
+                }
+              },
+        style: ElevatedButton.styleFrom(
+          backgroundColor: AppColors.primary,
+          foregroundColor: Colors.white,
+          minimumSize: const Size(double.infinity, 56),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
           ),
-          child: viewModel.isLoading
-              ? const CircularProgressIndicator(color: Colors.white)
-              : const Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Icons.person_add_alt_1, size: 22),
-                    SizedBox(width: 8),
-                    Text(
-                      'Hoàn Tất Đăng Ký',
-                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-                    ),
-                  ],
-                ),
+          disabledBackgroundColor: Colors.grey[400],
         ),
-      ],
-    );
-  }
+        child: viewModel.isLoading
+            ? const CircularProgressIndicator(color: Colors.white)
+            : viewModel.isCompleting
+                ? const Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          color: Colors.white,
+                          strokeWidth: 2,
+                        ),
+                      ),
+                      SizedBox(width: 12),
+                      Text(
+                        'Đang xử lý...',
+                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                      ),
+                    ],
+                  )
+                : const Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.person_add_alt_1, size: 22),
+                      SizedBox(width: 8),
+                      Text(
+                        'Hoàn Tất Đăng Ký',
+                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                      ),
+                    ],
+                  ),
+      ),
+    ],
+  );
+}
 
   // ==================== HELPER WIDGET ====================
   Widget _buildTextField({

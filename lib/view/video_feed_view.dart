@@ -1,7 +1,8 @@
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:mangxahoi/constant/app_colors.dart';
-import 'package:mangxahoi/viewmodel/home_view_model.dart';
+// import 'package:mangxahoi/viewmodel/home_view_model.dart'; // <-- SỬA LỖI: Xóa
 import 'package:mangxahoi/viewmodel/video_feed_view_model.dart';
 import 'package:mangxahoi/services/user_service.dart';
 // Import widget mới vừa tạo
@@ -29,7 +30,8 @@ class _VideoFeedBody extends StatefulWidget {
 class _VideoFeedBodyState extends State<_VideoFeedBody> with AutomaticKeepAliveClientMixin {
   @override
   bool get wantKeepAlive => true;
-  late HomeViewModel _homeViewModel;
+  // --- SỬA LỖI: Xóa HomeViewModel ---
+  // late HomeViewModel _homeViewModel; 
   
   // Controller cho PageView
   final PageController _pageController = PageController();
@@ -38,25 +40,22 @@ class _VideoFeedBodyState extends State<_VideoFeedBody> with AutomaticKeepAliveC
   @override
   void initState() {
     super.initState();
-    _homeViewModel = context.read<HomeViewModel>();
-    _homeViewModel.addListener(_onHomeDataChanged);
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _onHomeDataChanged();
-    });
+    // --- SỬA LỖI: Xóa toàn bộ logic khỏi initState ---
+    // (VideoFeedViewModel giờ sẽ tự động tải)
   }
 
   @override
   void dispose() {
-    _homeViewModel.removeListener(_onHomeDataChanged);
+    // --- SỬA LỖI: Xóa listener ---
+    // _homeViewModel.removeListener(_onHomeDataChanged);
     _pageController.dispose();
     super.dispose();
   }
 
-  void _onHomeDataChanged() {
-    if (mounted) {
-      context.read<VideoFeedViewModel>().filterVideoPosts(_homeViewModel.posts);
-    }
-  }
+  // --- SỬA LỖI: Xóa hàm này ---
+  // void _onHomeDataChanged() {
+  //   ...
+  // }
 
   // Hàm xử lý khi lướt sang video khác
   void _onPageChanged(int index) {
@@ -68,22 +67,29 @@ class _VideoFeedBodyState extends State<_VideoFeedBody> with AutomaticKeepAliveC
   @override
   Widget build(BuildContext context) {
     super.build(context);
+    // --- SỬA LỖI: Chỉ cần watch 2 provider này ---
     final userService = context.watch<UserService>();
-    final videoVM = context.watch<VideoFeedViewModel>();
+    final videoVM = context.watch<VideoFeedViewModel>(); 
     final currentUser = userService.currentUser;
 
-    if (currentUser == null) {
-      return const Center(child: CircularProgressIndicator(color: AppColors.primary));
+    // --- SỬA LỖI: currentUser có thể null lúc ban đầu, nhưng videoVM cũng cần nó.
+    // Chúng ta sẽ dựa vào isLoading của videoVM, vì nó cũng kiểm tra currentUser.
+    if (videoVM.isLoading && videoVM.videoPosts.isEmpty) {
+       return const Center(child: CircularProgressIndicator(color: Colors.white));
     }
+
+    // --- SỬA LỖI: Đã chuyển sang kiểm tra trong videoVM.isLoading ---
+    // if (currentUser == null) {
+    //   return const Center(child: CircularProgressIndicator(color: AppColors.primary));
+    // }
 
     return Scaffold(
       // Nền đen cho trải nghiệm xem video tốt hơn
       backgroundColor: Colors.black, 
       // Mở rộng body ra sau AppBar (nếu có)
       extendBodyBehindAppBar: true, 
-      body: videoVM.isLoading && videoVM.videoPosts.isEmpty
-          ? const Center(child: CircularProgressIndicator(color: Colors.white))
-          : videoVM.videoPosts.isEmpty
+      // --- SỬA LỖI: Logic tải đã nằm trong videoVM ---
+      body: videoVM.videoPosts.isEmpty
               ? _buildEmptyState()
               // SỬ DỤNG PAGEVIEW THAY VÌ LISTVIEW
               : PageView.builder(
@@ -97,7 +103,8 @@ class _VideoFeedBodyState extends State<_VideoFeedBody> with AutomaticKeepAliveC
                       // Key quan trọng để tránh lỗi khi danh sách thay đổi
                       key: ValueKey('tiktok_post_${post.id}'),
                       post: post,
-                      currentUserDocId: currentUser.id,
+                      // Lấy currentUserId từ videoVM (an toàn hơn)
+                      currentUserDocId: videoVM.currentUserId ?? '', 
                       // Chỉ video đang hiển thị mới được play
                       isFocused: index == _focusedIndex,
                     );

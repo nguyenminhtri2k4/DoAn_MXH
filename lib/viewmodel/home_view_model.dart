@@ -1,6 +1,6 @@
 
-import 'dart:async'; // Thêm
-import 'dart:collection'; // Thêm
+import 'dart:async';
+import 'dart:collection';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:mangxahoi/model/model_post.dart';
@@ -10,20 +10,16 @@ import 'package:mangxahoi/services/video_cache_manager.dart';
 import 'package:provider/provider.dart';
 import 'package:mangxahoi/authanet/firestore_listener.dart';
 import 'package:mangxahoi/services/user_service.dart';
-import 'package:mangxahoi/model/model_user.dart'; // Thêm
-
-// --- IMPORT MỚI CHO STORY ---
+import 'package:mangxahoi/model/model_user.dart';
 import 'package:mangxahoi/model/model_story.dart';
 import 'package:mangxahoi/request/story_request.dart';
-// -----------------------------
+import 'package:mangxahoi/request/user_request.dart';
 
 class HomeViewModel extends ChangeNotifier {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final PostRequest _postRequest = PostRequest();
-  
-  // --- THÊM STORY REQUEST ---
   final StoryRequest _storyRequest = StoryRequest();
-  // -------------------------
+  final UserRequest _userRequest = UserRequest();
 
   List<PostModel> posts = [];
   bool isLoading = false;
@@ -31,17 +27,115 @@ class HomeViewModel extends ChangeNotifier {
   bool hasMore = true;
   DocumentSnapshot? _lastDocument;
 
-  // --- THÊM BIẾN QUẢN LÝ STORY ---
   Map<String, List<StoryModel>> _stories = {};
-  /// Dùng UnmodifiableMapView để ngăn UI sửa đổi trực tiếp
   UnmodifiableMapView<String, List<StoryModel>> get stories => UnmodifiableMapView(_stories);
   List<StreamSubscription> _storySubscriptions = [];
-  // ------------------------------
 
-  // Giữ constructor rỗng của bạn
-  HomeViewModel();
+  // ✅ Biến để tránh init nhiều lần
+  bool _isInitialized = false;
+  bool _storyListenersInitialized = false;
 
-  // Hàm _preloadVideosForPosts của bạn
+  HomeViewModel() {
+    _init();
+  }
+
+  // ✅ Hàm init tự động (KHÔNG gọi _initStoryListeners)
+  void _init() async {
+    if (_isInitialized) return;
+    _isInitialized = true;
+
+    print('🔧 [HomeViewModel] Bắt đầu khởi tạo...');
+    
+    final firebaseUser = _auth.currentUser;
+    if (firebaseUser != null) {
+      try {
+        final user = await _userRequest.getUserByUid(firebaseUser.uid)
+            .timeout(const Duration(seconds: 5));
+        
+        if (user != null) {
+          print('✅ [HomeViewModel] Đã lấy user: ${user.id}');
+          // ✅ KHÔNG gọi _initStoryListeners ở đây
+        } else {
+          print('⚠️ [HomeViewModel] Không tìm thấy user trong Firestore');
+        }
+      } catch (e) {
+        print('❌ [HomeViewModel] Lỗi khi init: $e');
+      }
+    } else {
+      print('⚠️ [HomeViewModel] Chưa đăng nhập');
+    }
+  }
+
+  // ✅ Khởi tạo story listeners (CHỈ 1 LẦN)
+  void _initStoryListeners(UserModel currentUser) {
+    if (_storyListenersInitialized) {
+      print('⚠️ [HomeViewModel] Story listeners đã được khởi tạo, bỏ qua');
+      return;
+    }
+    _storyListenersInitialized = true;
+
+    print('🔄 [HomeViewModel] Bắt đầu lắng nghe story...');
+
+    // Hủy các listener cũ
+    for (var sub in _storySubscriptions) {
+      sub.cancel();
+    }
+    _storySubscriptions.clear();
+    _stories.clear();
+
+    // Tạo danh sách người dùng cần lắng nghe
+    final List<String> userIdsToListen = [
+      currentUser.id,
+      ...currentUser.friends,
+    ].toSet().toList();
+
+    print('👥 [HomeViewModel] Đang lắng nghe story của ${userIdsToListen.length} người dùng');
+
+    // Tạo listener cho mỗi người dùng
+    for (final userId in userIdsToListen) {
+      final subscription = _storyRequest.getStoriesForUser(userId).listen(
+        (userStories) {
+          if (userStories.isNotEmpty) {
+            userStories.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+            _stories[userId] = userStories;
+            print('✅ [HomeViewModel] Nhận được ${userStories.length} story từ user $userId');
+          } else {
+            _stories.remove(userId);
+          }
+          notifyListeners();
+        },
+        onError: (error) {
+          print('❌ [HomeViewModel] Lỗi lắng nghe story của user $userId: $error');
+        },
+      );
+      
+      _storySubscriptions.add(subscription);
+    }
+
+    print('✅ [HomeViewModel] Đã thiết lập ${_storySubscriptions.length} story listeners');
+    notifyListeners();
+  }
+
+  // ✅ listenToStories (CHỈ CHẠY 1 LẦN)
+  void listenToStories(BuildContext context) {
+    print('📞 [HomeViewModel] listenToStories được gọi');
+    
+    if (_storyListenersInitialized) {
+      print('⚠️ [HomeViewModel] listenToStories: đã init rồi, bỏ qua');
+      return;
+    }
+
+    final userService = context.read<UserService>();
+    final currentUser = userService.currentUser;
+
+    if (currentUser == null) {
+      print('⚠️ [HomeViewModel] listenToStories: currentUser = null');
+      return;
+    }
+
+    _initStoryListeners(currentUser);
+  }
+
   void _preloadVideosForPosts(BuildContext context, List<PostModel> newPosts) {
     try {
       final videoCacheManager = context.read<VideoCacheManager>();
@@ -69,69 +163,13 @@ class HomeViewModel extends ChangeNotifier {
     }
   }
 
-  // Hàm refreshPosts của bạn
   Future<void> refreshPosts(BuildContext context) async {
     _lastDocument = null;
     hasMore = true;
     posts.clear();
     await fetchInitialPosts(context);
-    // Tải lại story khi refresh
-    listenToStories(context); 
   }
 
-  // --- HÀM  ĐỂ LẮNG NGHE STORY ---
-  
-  void listenToStories(BuildContext context) {
-    final userService = context.read<UserService>();
-    final currentUser = userService.currentUser;
-
-    if (currentUser == null) return;
-
-    // Hủy các listener cũ
-    for (var sub in _storySubscriptions) {
-      sub.cancel();
-    }
-    _storySubscriptions.clear();
-    _stories.clear();
-    print('🔄 Bắt đầu lắng nghe story...');
-
-    // ✅ TẠO DANH SÁCH NGƯỜI DÙNG CẦN LẮNG NGHE (CHÍNH MÌNH + BẠN BÈ)
-    final List<String> userIdsToListen = [
-      currentUser.id, // Chính mình
-      ...currentUser.friends, // Tất cả bạn bè
-    ].toSet().toList(); // Loại bỏ trùng lặp
-
-    print('👥 Đang lắng nghe story của ${userIdsToListen.length} người dùng');
-
-    // ✅ TẠO LISTENER CHO MỖI NGƯỜI DÙNG
-    for (final userId in userIdsToListen) {
-      final subscription = _storyRequest.getStoriesForUser(userId).listen(
-        (userStories) {
-          if (userStories.isNotEmpty) {
-            // Sắp xếp story theo thời gian mới nhất
-            userStories.sort((a, b) => b.createdAt.compareTo(a.createdAt));
-            _stories[userId] = userStories;
-            print('✅ Nhận được ${userStories.length} story từ user $userId');
-          } else {
-            _stories.remove(userId);
-            print('⚠️ Không còn story nào từ user $userId');
-          }
-          notifyListeners();
-        },
-        onError: (error) {
-          print('❌ Lỗi lắng nghe story của user $userId: $error');
-        },
-      );
-      
-      _storySubscriptions.add(subscription);
-    }
-
-    print('✅ Đã thiết lập ${_storySubscriptions.length} story listeners');
-    notifyListeners();
-  }
-  // ---------------------------------
-
-  // Hàm fetchInitialPosts của bạn
   Future<void> fetchInitialPosts(BuildContext context) async {
     if (isLoading) return;
     isLoading = true;
@@ -167,7 +205,6 @@ class HomeViewModel extends ChangeNotifier {
     }
   }
 
-  // Hàm fetchMorePosts của bạn
   Future<void> fetchMorePosts(BuildContext context) async {
     if (_isFetchingMore || !hasMore) return;
     _isFetchingMore = true;
@@ -203,7 +240,6 @@ class HomeViewModel extends ChangeNotifier {
     }
   }
 
-  // Hàm signOut của bạn
   Future<void> signOut(BuildContext context) async {
     try {
       context.read<VideoCacheManager>().pauseAllVideos();
@@ -217,13 +253,12 @@ class HomeViewModel extends ChangeNotifier {
     }
   }
 
-  // --- THÊM HÀM DISPOSE ĐỂ HỦY LISTENER ---
   @override
   void dispose() {
+    print('🔧 [HomeViewModel] Disposing...');
     for (var sub in _storySubscriptions) {
       sub.cancel();
     }
     super.dispose();
   }
-  // ------------------------------------
 }
