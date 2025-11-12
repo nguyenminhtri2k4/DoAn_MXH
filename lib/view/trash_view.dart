@@ -26,7 +26,7 @@ class _TrashViewContent extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Thùng rác'),
+        title: const Text('Thùng rácdddd'),
         backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,
       ),

@@ -150,7 +150,7 @@ class UserModel {
       comeFrom: data['comeFrom'] ?? '',
       role: data['role'] ?? 'user',
       relationship: data['relationship'] ?? '',
-      statusAccount: data['statusAccount'] ?? data['statusAccont'] ?? 'active',
+      statusAccount: data['statusAccount']  ?? 'active',
       backgroundImageUrl: data['backgroundImageUrl'] ?? '',
       avatar: parseStringList(data['avatar']),
       friends: parseStringList(data['friends']),
