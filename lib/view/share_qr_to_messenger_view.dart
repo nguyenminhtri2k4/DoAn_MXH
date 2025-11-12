@@ -73,7 +73,7 @@ class _ShareQRToMessengerViewState extends State<ShareQRToMessengerView> {
           // Giao diện chat sẽ đọc content này và hiển thị nút "Tham gia"
           content: widget.qrDataString,
           createdAt: DateTime.now(),
-          senderId: currentUser.uid, // Dùng auth Uid
+          senderId: currentUser.id, // Dùng  id không được sửa dù trường hợp nào 
           mediaIds: [], // Không phải media
           status: 'sent',
           type: 'share_group_qr', // Loại tin nhắn mới

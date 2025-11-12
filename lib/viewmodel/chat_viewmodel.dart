@@ -251,7 +251,7 @@ class ChatViewModel extends ChangeNotifier {
     }
     try {
       final callService = context.read<CallService>();
-      final call = await callService.makeOneToOneCall(receiverUser!, mediaType);
+      final call = await callService.makeOneToOneCall(receiverUser!, mediaType, chatId);
       if (call != null && context.mounted) {
         Navigator.push(context, MaterialPageRoute(builder: (_) => OutgoingCallScreen(call: call)));
       } else if (call == null) {

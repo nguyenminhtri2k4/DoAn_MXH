@@ -66,7 +66,7 @@ class _ShareToMessengerViewState extends State<ShareToMessengerView> {
           id: '',
           content: '${currentUser.name} đã chia sẻ một bài viết.',
           createdAt: DateTime.now(),
-          senderId: currentUser.uid, // Dùng auth Uid
+          senderId: currentUser.id, // Dùng auth Uid
           mediaIds: [],
           status: 'sent',
           type: 'share_post', // Loại tin nhắn đặc biệt
