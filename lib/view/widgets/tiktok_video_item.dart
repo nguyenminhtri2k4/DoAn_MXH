@@ -1,3 +1,4 @@
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -30,20 +31,18 @@ class _TikTokVideoItemState extends State<TikTokVideoItem> with TickerProviderSt
   VideoPlayerController? _controller;
   bool _isInitialized = false;
   bool _hasError = false;
-  AnimationController? _discAnimationController; 
+  AnimationController? _discAnimationController;
+  bool _isMuted = true; // Mặc định tắt tiếng như Instagram
 
-  // --- SỬA LỖI: Cập nhật logic state ---
-  String? _currentReaction; // Loại reaction của user, ví dụ 'love'
-  int _totalReactions = 0; // Tổng số reactions
+  String? _currentReaction;
+  int _totalReactions = 0;
   final ReactionRequest _reactionRequest = ReactionRequest();
-  // --- KẾT THÚC SỬA LỖI ---
 
   UserModel? _author;
 
   @override
   void initState() {
     super.initState();
-    // --- SỬA LỖI: Tính tổng reactions ---
     _totalReactions = widget.post.reactionsCount.values.fold(0, (a, b) => a + b);
     
     _discAnimationController = AnimationController(
@@ -52,7 +51,7 @@ class _TikTokVideoItemState extends State<TikTokVideoItem> with TickerProviderSt
     )..repeat();
 
     _initializeVideo();
-    _checkUserReaction(); // <-- SỬA LỖI: Đổi tên hàm
+    _checkUserReaction();
     _fetchAuthorData();
   }
 
@@ -63,10 +62,10 @@ class _TikTokVideoItemState extends State<TikTokVideoItem> with TickerProviderSt
       if (oldWidget.isFocused != widget.isFocused) {
         if (widget.isFocused) {
           _controller!.play();
-          _discAnimationController?.repeat(); 
+          _discAnimationController?.repeat();
         } else {
           _controller!.pause();
-          _discAnimationController?.stop(); 
+          _discAnimationController?.stop();
         }
       }
     }
@@ -76,20 +75,19 @@ class _TikTokVideoItemState extends State<TikTokVideoItem> with TickerProviderSt
     try {
       final author = await UserRequest().getUserData(widget.post.authorId);
       if (mounted && author != null) {
-        setState(() {
-          _author = author;
-        });
+        setState(() => _author = author);
       }
     } catch (e) {
       debugPrint("Lỗi lấy thông tin tác giả: $e");
     }
   }
 
-  // --- SỬA LỖI: Đổi logic hàm ---
   Future<void> _checkUserReaction() async {
     try {
-      // Dùng hàm mới từ ReactionRequest
-      final reactionType = await _reactionRequest.getUserReactionType(widget.post.id, widget.currentUserDocId);
+      final reactionType = await _reactionRequest.getUserReactionType(
+        widget.post.id, 
+        widget.currentUserDocId
+      );
       if (mounted) {
         setState(() => _currentReaction = reactionType);
       }
@@ -100,17 +98,25 @@ class _TikTokVideoItemState extends State<TikTokVideoItem> with TickerProviderSt
 
   Future<String?> _fetchVideoUrl(String mediaId) async {
     try {
-      final docSnapshot = await FirebaseFirestore.instance.collection('Media').doc(mediaId).get();
-      if (docSnapshot.exists) return docSnapshot.data()?['url'] as String?;
-    } catch (e) { debugPrint("Lỗi lấy URL video: $e"); }
+      final docSnapshot = await FirebaseFirestore.instance
+          .collection('Media')
+          .doc(mediaId)
+          .get();
+      if (docSnapshot.exists) {
+        return docSnapshot.data()?['url'] as String?;
+      }
+    } catch (e) {
+      debugPrint("Lỗi lấy URL video: $e");
+    }
     return null;
   }
 
   Future<void> _initializeVideo() async {
     if (widget.post.mediaIds.isEmpty) {
-        if (mounted) setState(() => _hasError = true);
-        return;
+      if (mounted) setState(() => _hasError = true);
+      return;
     }
+    
     final String mediaId = widget.post.mediaIds.first;
     final String? videoUrl = await _fetchVideoUrl(mediaId);
 
@@ -123,20 +129,24 @@ class _TikTokVideoItemState extends State<TikTokVideoItem> with TickerProviderSt
     try {
       await _controller!.initialize();
       _controller!.setLooping(true);
+      _controller!.setVolume(0.0); // Tắt tiếng mặc định
+      
       if (widget.isFocused) {
-          _controller!.play();
+        _controller!.play();
       } else {
-          _discAnimationController?.stop();
+        _discAnimationController?.stop();
       }
+      
       if (mounted) setState(() => _isInitialized = true);
     } catch (e) {
       if (mounted) setState(() => _hasError = true);
+      debugPrint("Lỗi khởi tạo video: $e");
     }
   }
 
   @override
   void dispose() {
-    _discAnimationController?.dispose(); 
+    _discAnimationController?.dispose();
     _controller?.dispose();
     super.dispose();
   }
@@ -152,6 +162,7 @@ class _TikTokVideoItemState extends State<TikTokVideoItem> with TickerProviderSt
             children: [
               _buildVideoPlayer(),
               _buildGradientOverlay(),
+              _buildVolumeButton(), // Nút âm thanh góc trên phải
               _buildPostInfo(),
               _buildRightSideButtons(context, interactionVM),
             ],
@@ -161,19 +172,29 @@ class _TikTokVideoItemState extends State<TikTokVideoItem> with TickerProviderSt
     );
   }
 
+  // Video Player - chỉ có onTap để pause/play
   Widget _buildVideoPlayer() {
-    if (_hasError) return const Center(child: Icon(Icons.error_outline, color: Colors.white, size: 40));
-    if (!_isInitialized || _controller == null) return const Center(child: CircularProgressIndicator(color: Colors.white));
+    if (_hasError) {
+      return const Center(
+        child: Icon(Icons.error_outline, color: Colors.white, size: 40)
+      );
+    }
+    
+    if (!_isInitialized || _controller == null) {
+      return const Center(
+        child: CircularProgressIndicator(color: Colors.white)
+      );
+    }
 
     return GestureDetector(
       onTap: () {
         setState(() {
           if (_controller!.value.isPlaying) {
-              _controller!.pause();
-              _discAnimationController?.stop();
+            _controller!.pause();
+            _discAnimationController?.stop();
           } else {
-              _controller!.play();
-              _discAnimationController?.repeat();
+            _controller!.play();
+            _discAnimationController?.repeat();
           }
         });
       },
@@ -186,9 +207,40 @@ class _TikTokVideoItemState extends State<TikTokVideoItem> with TickerProviderSt
     );
   }
 
+  // Nút âm thanh góc trên phải (Instagram Style)
+  Widget _buildVolumeButton() {
+    return Positioned(
+      top: MediaQuery.of(context).padding.top + 16,
+      right: 12,
+      child: GestureDetector(
+        onTap: () {
+          setState(() {
+            _isMuted = !_isMuted;
+            _controller?.setVolume(_isMuted ? 0.0 : 1.0);
+          });
+        },
+        child: Container(
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(
+            color: Colors.black.withOpacity(0.5),
+            shape: BoxShape.circle,
+          ),
+          child: Icon(
+            _isMuted ? Icons.volume_off_rounded : Icons.volume_up_rounded,
+            color: Colors.white,
+            size: 24,
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildGradientOverlay() {
     return Positioned(
-      bottom: 0, left: 0, right: 0, height: 300,
+      bottom: 0,
+      left: 0,
+      right: 0,
+      height: 300,
       child: Container(
         decoration: BoxDecoration(
           gradient: LinearGradient(
@@ -211,10 +263,19 @@ class _TikTokVideoItemState extends State<TikTokVideoItem> with TickerProviderSt
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           GestureDetector(
-            onTap: () => Navigator.pushNamed(context, '/profile', arguments: widget.post.authorId),
+            onTap: () => Navigator.pushNamed(
+              context, 
+              '/profile', 
+              arguments: widget.post.authorId
+            ),
             child: Text(
               "@${_author?.name ?? 'Người dùng'}",
-              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 17),
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.w700,
+                fontSize: 17,
+                shadows: [Shadow(blurRadius: 8, color: Colors.black54)],
+              ),
             ),
           ),
           const SizedBox(height: 8),
@@ -223,7 +284,11 @@ class _TikTokVideoItemState extends State<TikTokVideoItem> with TickerProviderSt
               widget.post.content,
               maxLines: 3,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(color: Colors.white, fontSize: 15),
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 15,
+                shadows: [Shadow(blurRadius: 8, color: Colors.black54)],
+              ),
             ),
             const SizedBox(height: 10),
           ],
@@ -231,13 +296,16 @@ class _TikTokVideoItemState extends State<TikTokVideoItem> with TickerProviderSt
             children: [
               const Icon(Icons.music_note, size: 15, color: Colors.white),
               const SizedBox(width: 8),
-              SizedBox(
-                width: 150,
+              Expanded(
                 child: Text(
                   'Âm thanh gốc - ${_author?.name ?? 'Unknown'}',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(color: Colors.white, fontSize: 13),
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 13,
+                    shadows: [Shadow(blurRadius: 8, color: Colors.black54)],
+                  ),
                 ),
               ),
             ],
@@ -247,7 +315,10 @@ class _TikTokVideoItemState extends State<TikTokVideoItem> with TickerProviderSt
     );
   }
 
-  Widget _buildRightSideButtons(BuildContext context, PostInteractionViewModel interactionVM) {
+  Widget _buildRightSideButtons(
+    BuildContext context,
+    PostInteractionViewModel interactionVM
+  ) {
     return Positioned(
       right: 8,
       bottom: 50,
@@ -257,6 +328,7 @@ class _TikTokVideoItemState extends State<TikTokVideoItem> with TickerProviderSt
           _buildProfileAvatar(),
           const SizedBox(height: 25),
           
+          // Nút Tim (Like)
           StreamBuilder<DocumentSnapshot>(
             stream: FirebaseFirestore.instance
                 .collection('Post')
@@ -265,29 +337,39 @@ class _TikTokVideoItemState extends State<TikTokVideoItem> with TickerProviderSt
                 .doc(widget.currentUserDocId)
                 .snapshots(),
             builder: (context, reactionSnapshot) {
-              final currentReaction = (reactionSnapshot.hasData && reactionSnapshot.data!.exists)
+              final currentReaction = (reactionSnapshot.hasData && 
+                  reactionSnapshot.data!.exists)
                   ? (reactionSnapshot.data!.data() as Map<String, dynamic>)['type']
                   : null;
               
               return StreamBuilder<DocumentSnapshot>(
-                stream: FirebaseFirestore.instance.collection('Post').doc(widget.post.id).snapshots(),
+                stream: FirebaseFirestore.instance
+                    .collection('Post')
+                    .doc(widget.post.id)
+                    .snapshots(),
                 builder: (context, postSnapshot) {
                   int totalReactions = 0;
                   if (postSnapshot.hasData && postSnapshot.data!.exists) {
                     final data = postSnapshot.data!.data() as Map<String, dynamic>;
-                    final reactionsMap = Map<String, int>.from(data['reactionsCount'] ?? {});
+                    final reactionsMap = Map<String, int>.from(
+                      data['reactionsCount'] ?? {}
+                    );
                     totalReactions = reactionsMap.values.fold(0, (a, b) => a + b);
                   } else {
-                    totalReactions = _totalReactions; // Dùng state cũ
+                    totalReactions = _totalReactions;
                   }
                   
                   return _buildIconButton(
                     icon: Icons.favorite_rounded,
-                    iconColor: currentReaction == reaction_helper.ReactionType.love ? Colors.red : Colors.white,
+                    iconColor: currentReaction == reaction_helper.ReactionType.love
+                        ? Colors.red
+                        : Colors.white,
                     label: "$totalReactions",
                     onTap: () async {
-                      // SỬA LỖI: Gọi hàm handleReaction
-                      await interactionVM.handleReaction(widget.currentUserDocId, reaction_helper.ReactionType.love);
+                      await interactionVM.handleReaction(
+                        widget.currentUserDocId,
+                        reaction_helper.ReactionType.love
+                      );
                     },
                   );
                 }
@@ -296,12 +378,17 @@ class _TikTokVideoItemState extends State<TikTokVideoItem> with TickerProviderSt
           ),
           const SizedBox(height: 20),
           
+          // Nút Comment
           StreamBuilder<DocumentSnapshot>(
-            stream: FirebaseFirestore.instance.collection('Post').doc(widget.post.id).snapshots(),
+            stream: FirebaseFirestore.instance
+                .collection('Post')
+                .doc(widget.post.id)
+                .snapshots(),
             builder: (context, postSnapshot) {
               int totalComments = 0;
               if (postSnapshot.hasData && postSnapshot.data!.exists) {
-                totalComments = (postSnapshot.data!.data() as Map<String, dynamic>)['commentsCount'] ?? 0;
+                totalComments = (postSnapshot.data!.data() 
+                    as Map<String, dynamic>)['commentsCount'] ?? 0;
               } else {
                 totalComments = widget.post.commentsCount;
               }
@@ -328,14 +415,19 @@ class _TikTokVideoItemState extends State<TikTokVideoItem> with TickerProviderSt
               );
             }
           ),
-
           const SizedBox(height: 20),
-            _buildIconButton(
+          
+          // Nút Share
+          _buildIconButton(
             icon: Icons.share_rounded,
             label: "Chia sẻ",
             iconSize: 32,
             onTap: () {
-              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Tính năng chia sẻ đang phát triển")));
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text("Tính năng chia sẻ đang phát triển")
+                )
+              );
             },
           ),
           const SizedBox(height: 40),
@@ -345,10 +437,13 @@ class _TikTokVideoItemState extends State<TikTokVideoItem> with TickerProviderSt
     );
   }
 
-
   Widget _buildProfileAvatar() {
     return GestureDetector(
-      onTap: () => Navigator.pushNamed(context, '/profile', arguments: widget.post.authorId),
+      onTap: () => Navigator.pushNamed(
+        context,
+        '/profile',
+        arguments: widget.post.authorId
+      ),
       child: SizedBox(
         height: 60,
         child: Stack(
@@ -371,13 +466,21 @@ class _TikTokVideoItemState extends State<TikTokVideoItem> with TickerProviderSt
                 ),
               ),
             ),
+            // Nút follow (chỉ hiện nếu không phải chính mình)
             if (widget.post.authorId != widget.currentUserDocId)
               Positioned(
                 bottom: 10,
                 child: Container(
                   padding: const EdgeInsets.all(2),
-                  decoration: const BoxDecoration(color: Colors.red, shape: BoxShape.circle),
-                  child: const Icon(Icons.add, color: Colors.white, size: 14),
+                  decoration: const BoxDecoration(
+                    color: Colors.red,
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.add,
+                    color: Colors.white,
+                    size: 14,
+                  ),
                 ),
               )
           ],
@@ -402,7 +505,12 @@ class _TikTokVideoItemState extends State<TikTokVideoItem> with TickerProviderSt
         const SizedBox(height: 4),
         Text(
           label,
-          style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w600, shadows: [Shadow(blurRadius: 4, color: Colors.black26)]),
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+            shadows: [Shadow(blurRadius: 4, color: Colors.black26)],
+          ),
         ),
       ],
     );
@@ -410,15 +518,15 @@ class _TikTokVideoItemState extends State<TikTokVideoItem> with TickerProviderSt
 
   Widget _buildMusicDisc() {
     if (_discAnimationController == null) {
-        return Container(
-          padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(
-            color: Colors.black87,
-            borderRadius: BorderRadius.circular(25),
-            border: Border.all(color: Colors.grey.shade800, width: 8),
-          ),
-          child: const Icon(Icons.music_note, size: 14, color: Colors.white),
-        );
+      return Container(
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: Colors.black87,
+          borderRadius: BorderRadius.circular(25),
+          border: Border.all(color: Colors.grey.shade800, width: 8),
+        ),
+        child: const Icon(Icons.music_note, size: 14, color: Colors.white),
+      );
     }
 
     return RotationTransition(

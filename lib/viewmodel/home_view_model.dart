@@ -79,7 +79,8 @@ class HomeViewModel extends ChangeNotifier {
     listenToStories(context); 
   }
 
-  // --- HÀM MỚI ĐỂ LẮNG NGHE STORY ---
+  // --- HÀM  ĐỂ LẮNG NGHE STORY ---
+  
   void listenToStories(BuildContext context) {
     final userService = context.read<UserService>();
     final currentUser = userService.currentUser;
@@ -92,24 +93,41 @@ class HomeViewModel extends ChangeNotifier {
     }
     _storySubscriptions.clear();
     _stories.clear();
-    print('Bắt đầu lắng nghe story...');
+    print('🔄 Bắt đầu lắng nghe story...');
 
-    // Lắng nghe story của bạn bè (và của chính mình)
-    List<String> userIdsToFetch = List.from(currentUser.friends);
-    userIdsToFetch.add(currentUser.id); // Thêm chính mình
+    // ✅ TẠO DANH SÁCH NGƯỜI DÙNG CẦN LẮNG NGHE (CHÍNH MÌNH + BẠN BÈ)
+    final List<String> userIdsToListen = [
+      currentUser.id, // Chính mình
+      ...currentUser.friends, // Tất cả bạn bè
+    ].toSet().toList(); // Loại bỏ trùng lặp
 
-    for (String userId in userIdsToFetch.toSet()) { // Dùng toSet() để tránh trùng lặp
-      var subscription = _storyRequest.getStoriesForUser(userId).listen((userStories) {
-        if (userStories.isNotEmpty) {
-          _stories[userId] = userStories;
-        } else {
-          _stories.remove(userId); // Xóa nếu user không còn story
-        }
-        notifyListeners();
-      });
+    print('👥 Đang lắng nghe story của ${userIdsToListen.length} người dùng');
+
+    // ✅ TẠO LISTENER CHO MỖI NGƯỜI DÙNG
+    for (final userId in userIdsToListen) {
+      final subscription = _storyRequest.getStoriesForUser(userId).listen(
+        (userStories) {
+          if (userStories.isNotEmpty) {
+            // Sắp xếp story theo thời gian mới nhất
+            userStories.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+            _stories[userId] = userStories;
+            print('✅ Nhận được ${userStories.length} story từ user $userId');
+          } else {
+            _stories.remove(userId);
+            print('⚠️ Không còn story nào từ user $userId');
+          }
+          notifyListeners();
+        },
+        onError: (error) {
+          print('❌ Lỗi lắng nghe story của user $userId: $error');
+        },
+      );
+      
       _storySubscriptions.add(subscription);
     }
-    notifyListeners(); // Cập nhật lần đầu
+
+    print('✅ Đã thiết lập ${_storySubscriptions.length} story listeners');
+    notifyListeners();
   }
   // ---------------------------------
 
