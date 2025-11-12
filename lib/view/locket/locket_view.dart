@@ -1,11 +1,8 @@
-// lib/view/locket/locket_view.dart
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:mangxahoi/services/user_service.dart';
-import 'package:mangxahoi/authanet/firestore_listener.dart'; // <-- THÊM IMPORT
 import 'package:mangxahoi/viewmodel/locket_view_model.dart';
 import 'package:mangxahoi/constant/app_colors.dart';
-import 'package:mangxahoi/model/model_user.dart';
 import 'package:mangxahoi/model/model_locket_photo.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:timeago/timeago.dart' as timeago;
@@ -16,88 +13,75 @@ class LocketView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ChangeNotifierProvider(
-      create: (_) => LocketViewModel(),
+      create: (_) => LocketViewModel(), // ✅ Tự động init
       child: const _LocketViewContent(),
     );
   }
 }
 
-class _LocketViewContent extends StatefulWidget {
+class _LocketViewContent extends StatelessWidget {
   const _LocketViewContent();
 
   @override
-  State<_LocketViewContent> createState() => _LocketViewContentState();
-}
-
-class _LocketViewContentState extends State<_LocketViewContent> {
-  bool _hasDataBeenCalled = false;
-
-  @override
   Widget build(BuildContext context) {
-    // --- BẮT ĐẦU SỬA LỖI ---
-    // 1. Dùng context.read để lấy ID (chỉ 1 lần)
-    final userService = context.read<UserService>();
-    // 2. Dùng context.watch để lắng nghe thay đổi (quan trọng)
-    final firestoreListener = context.watch<FirestoreListener>();
-    final locketViewModel = context.read<LocketViewModel>();
-
-    // 3. Xử lý nếu ID chưa kịp tải
-    if (userService.currentUser == null) {
-      print("LocketView: Đang chờ UserService tải ID...");
-      return const Center(child: CircularProgressIndicator());
-    }
-
-    // 4. Lấy currentUser MỚI NHẤT từ listener
-    final currentUser = firestoreListener.getUserById(userService.currentUser!.id);
-
-    // 5. Xử lý nếu listener chưa kịp tải
-    if (currentUser == null) {
-      print("LocketView: Đang chờ FirestoreListener tải currentUser...");
-      return const Center(child: CircularProgressIndicator());
-    }
-    // --- KẾT THÚC SỬA LỖI ---
-
-    // Logic gọi data (giữ nguyên)
-    if (!_hasDataBeenCalled) {
-      print("LocketView: currentUser đã sẵn sàng. Gọi fetchLocketData...");
-      _hasDataBeenCalled = true; // Đánh dấu đã gọi
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) {
-          locketViewModel.fetchLocketData(currentUser.id);
+    return Consumer<LocketViewModel>(
+      builder: (context, viewModel, child) {
+        // ✅ Hiển thị loading khi đang khởi tạo
+        if (viewModel.isLoading) {
+          return Scaffold(
+            backgroundColor: AppColors.background,
+            appBar: AppBar(
+              title: const Text('Locket', style: TextStyle(color: AppColors.textPrimary)),
+              backgroundColor: AppColors.backgroundLight,
+            ),
+            body: const Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  CircularProgressIndicator(),
+                  SizedBox(height: 16),
+                  Text('Đang tải dữ liệu Locket...'),
+                ],
+              ),
+            ),
+          );
         }
-      });
-    }
 
-    // Từ đây, UI sẽ lắng nghe LocketViewModel
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: AppBar(
-        title: const Text('Locket', style: TextStyle(color: AppColors.textPrimary)),
-        backgroundColor: AppColors.backgroundLight,
-        elevation: 1,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.group_add_outlined, color: AppColors.textPrimary),
-            onPressed: () async {
-              await Navigator.pushNamed(context, '/locket_manage_friends');
-              if (mounted) {
-                 // Sau khi quay lại, gọi lại fetch để cập nhật
-                 // (currentUser ở đây là MỚI NHẤT nhờ bước 4)
-                 locketViewModel.fetchLocketData(currentUser.id);
-                 _hasDataBeenCalled = true; // đảm bảo
-              }
-            },
-          ),
-        ],
-      ),
-      body: Consumer<LocketViewModel>(
-        builder: (context, viewModel, child) {
-          if (viewModel.isLoading) {
-            return const Center(child: CircularProgressIndicator());
-          }
+        // ✅ Hiển thị lỗi nếu không init được
+        if (!viewModel.isInitialized) {
+          return Scaffold(
+            backgroundColor: AppColors.background,
+            appBar: AppBar(
+              title: const Text('Locket', style: TextStyle(color: AppColors.textPrimary)),
+              backgroundColor: AppColors.backgroundLight,
+            ),
+            body: Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.error_outline, size: 64, color: Colors.red),
+                  const SizedBox(height: 16),
+                  const Text('Không thể tải dữ liệu Locket'),
+                  const SizedBox(height: 16),
+                  ElevatedButton(
+                    onPressed: () => viewModel.refreshLocketData(),
+                    child: const Text('Thử lại'),
+                  ),
+                ],
+              ),
+            ),
+          );
+        }
 
-          if (viewModel.isUploading) {
-            return const Center(
+        // ✅ Hiển thị loading khi đang upload
+        if (viewModel.isUploading) {
+          return Scaffold(
+            backgroundColor: AppColors.background,
+            appBar: AppBar(
+              title: const Text('Locket', style: TextStyle(color: AppColors.textPrimary)),
+              backgroundColor: AppColors.backgroundLight,
+            ),
+            body: const Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
@@ -106,141 +90,174 @@ class _LocketViewContentState extends State<_LocketViewContent> {
                   Text("Đang gửi Locket..."),
                 ],
               ),
-            );
-          }
-          
-          final myLatestPhoto = viewModel.latestPhotos[currentUser.id];
-          final friends = viewModel.locketFriends;
-          final photos = viewModel.latestPhotos;
-          final String? myAvatar = (currentUser.avatar.isNotEmpty) ? currentUser.avatar.first : null;
+            ),
+          );
+        }
 
-          if (friends.isEmpty) {
-            return Center(
-              child: Padding(
-                padding: const EdgeInsets.all(24.0),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Icon(Icons.people_outline, size: 80, color: Colors.grey),
-                    const SizedBox(height: 16),
-                    const Text(
-                      'Không gian Locket của bạn',
-                      style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 8),
-                    const Text(
-                      'Thêm bạn bè thân thiết để bắt đầu chia sẻ khoảnh khắc.',
-                      style: TextStyle(fontSize: 16, color: Colors.grey),
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 20),
-                    ElevatedButton.icon(
-                      icon: const Icon(Icons.group_add),
-                      label: const Text('Quản lý bạn bè'),
-                      onPressed: () async {
-                        await Navigator.pushNamed(context, '/locket_manage_friends');
-                         if (mounted) {
-                            locketViewModel.fetchLocketData(currentUser.id);
-                            _hasDataBeenCalled = true;
-                         }
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.primary,
-                        foregroundColor: Colors.white,
-                      ),
-                    )
-                  ],
-                ),
+        // ✅ UI chính
+        final currentUserId = viewModel.currentUserId!;
+        final myLatestPhoto = viewModel.latestPhotos[currentUserId];
+        final friends = viewModel.locketFriends;
+        final photos = viewModel.latestPhotos;
+
+        return Scaffold(
+          backgroundColor: AppColors.background,
+          appBar: AppBar(
+            title: const Text('Locket', style: TextStyle(color: AppColors.textPrimary)),
+            backgroundColor: AppColors.backgroundLight,
+            elevation: 1,
+            actions: [
+              IconButton(
+                icon: const Icon(Icons.group_add_outlined, color: AppColors.textPrimary),
+                onPressed: () async {
+                  await Navigator.pushNamed(context, '/locket_manage_friends');
+                  if (context.mounted) {
+                    viewModel.refreshLocketData();
+                  }
+                },
               ),
-            );
-          }
+            ],
+          ),
+          body: _buildBody(friends, photos, currentUserId, myLatestPhoto),
+          floatingActionButton: FloatingActionButton(
+            onPressed: () => viewModel.pickAndUploadLocket(),
+            backgroundColor: AppColors.primary,
+            foregroundColor: Colors.white,
+            child: const Icon(Icons.camera_alt),
+          ),
+        );
+      },
+    );
+  }
 
-          if (friends.isNotEmpty && photos.isEmpty) {
-            return Center(
-                child: Padding(
-                  padding: const EdgeInsets.all(24.0),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Icon(Icons.camera_enhance_outlined, size: 80, color: Colors.grey),
-                      const SizedBox(height: 16),
-                      const Text(
-                        'Bắt đầu Locket ngay!',
-                        style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-                        textAlign: TextAlign.center,
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        'Hãy là người đầu tiên chia sẻ khoảnh khắc của bạn với ${friends.length} người bạn thân.',
-                        style: const TextStyle(fontSize: 16, color: Colors.grey),
-                        textAlign: TextAlign.center,
-                      ),
-                    ],
-                  ),
-                ),
-              );
-          }
-
-          return Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: GridView.builder(
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 2,
-                crossAxisSpacing: 8,
-                mainAxisSpacing: 8,
-                childAspectRatio: 0.75,
+  Widget _buildBody(
+    List friends,
+    Map<String, LocketPhoto> photos,
+    String currentUserId,
+    LocketPhoto? myLatestPhoto,
+  ) {
+    // Không có bạn bè
+    if (friends.isEmpty) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.people_outline, size: 80, color: Colors.grey),
+              const SizedBox(height: 16),
+              const Text(
+                'Không gian Locket của bạn',
+                style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+                textAlign: TextAlign.center,
               ),
-              itemCount: friends.length + 1,
-              itemBuilder: (context, index) {
-                if (index == 0) {
-                  // NÚT XEM LỊCH SỬ CỦA BẠN
-                  return GestureDetector(
-                    onTap: () {
-                      Navigator.pushNamed(context, '/my_locket_history');
-                    },
-                    child: LocketFriendWidget(
-                      name: "Bạn (Xem lịch sử)",
-                      avatarUrl: myAvatar,
-                      photo: myLatestPhoto,
-                    ),
-                  );
-                }
-                
-                final friend = friends[index - 1];
-                final photo = photos[friend.id];
-                final friendAvatar = (friend.avatar.isNotEmpty) ? friend.avatar.first : null;
-
-                // NÚT XEM ẢNH CỦA BẠN BÈ
-                return GestureDetector(
-                  onTap: () {
-                    if (photo != null) {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => FullScreenLocketView(photo: photo, userName: friend.name),
-                        ),
-                      );
+              const SizedBox(height: 8),
+              const Text(
+                'Thêm bạn bè thân thiết để bắt đầu chia sẻ khoảnh khắc.',
+                style: TextStyle(fontSize: 16, color: Colors.grey),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 20),
+              Builder(
+                builder: (context) => ElevatedButton.icon(
+                  icon: const Icon(Icons.group_add),
+                  label: const Text('Quản lý bạn bè'),
+                  onPressed: () async {
+                    await Navigator.pushNamed(context, '/locket_manage_friends');
+                    if (context.mounted) {
+                      context.read<LocketViewModel>().refreshLocketData();
                     }
                   },
-                  child: LocketFriendWidget(
-                    name: friend.name,
-                    avatarUrl: friendAvatar,
-                    photo: photo,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    foregroundColor: Colors.white,
+                  ),
+                ),
+              )
+            ],
+          ),
+        ),
+      );
+    }
+
+    // Có bạn bè nhưng chưa có ảnh
+    if (friends.isNotEmpty && photos.isEmpty) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.camera_enhance_outlined, size: 80, color: Colors.grey),
+              const SizedBox(height: 16),
+              const Text(
+                'Bắt đầu Locket ngay!',
+                style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Hãy là người đầu tiên chia sẻ khoảnh khắc của bạn với ${friends.length} người bạn thân.',
+                style: const TextStyle(fontSize: 16, color: Colors.grey),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    // Hiển thị grid
+    return Padding(
+      padding: const EdgeInsets.all(8.0),
+      child: GridView.builder(
+        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 2,
+          crossAxisSpacing: 8,
+          mainAxisSpacing: 8,
+          childAspectRatio: 0.75,
+        ),
+        itemCount: friends.length + 1,
+        itemBuilder: (context, index) {
+          if (index == 0) {
+            // Ô của chính mình
+            return GestureDetector(
+              onTap: () {
+                Navigator.pushNamed(context, '/my_locket_history');
+              },
+              child: LocketFriendWidget(
+                name: "Bạn (Xem lịch sử)",
+                avatarUrl: null, // Có thể lấy từ UserService nếu cần
+                photo: myLatestPhoto,
+              ),
+            );
+          }
+
+          final friend = friends[index - 1];
+          final photo = photos[friend.id];
+          final friendAvatar = (friend.avatar.isNotEmpty) ? friend.avatar.first : null;
+
+          return GestureDetector(
+            onTap: () {
+              if (photo != null) {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => FullScreenLocketView(
+                      photo: photo,
+                      userName: friend.name,
+                    ),
                   ),
                 );
-              },
+              }
+            },
+            child: LocketFriendWidget(
+              name: friend.name,
+              avatarUrl: friendAvatar,
+              photo: photo,
             ),
           );
         },
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          locketViewModel.pickAndUploadLocket(currentUser.id);
-        },
-        backgroundColor: AppColors.primary,
-        foregroundColor: Colors.white,
-        child: const Icon(Icons.camera_alt),
       ),
     );
   }
@@ -279,8 +296,8 @@ class LocketFriendWidget extends StatelessWidget {
               image: DecorationImage(
                 image: displayImage,
                 fit: BoxFit.cover,
-                colorFilter: photo == null 
-                    ? ColorFilter.mode(Colors.black.withOpacity(0.3), BlendMode.darken) 
+                colorFilter: photo == null
+                    ? ColorFilter.mode(Colors.black.withOpacity(0.3), BlendMode.darken)
                     : null,
               ),
             ),

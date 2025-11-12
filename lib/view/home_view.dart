@@ -1,4 +1,5 @@
 
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:provider/provider.dart';
@@ -13,17 +14,12 @@ import 'package:mangxahoi/services/video_cache_manager.dart';
 import 'package:mangxahoi/view/locket/locket_view.dart'; 
 import 'package:mangxahoi/view/notification_view.dart'; 
 import 'package:mangxahoi/services/call_service.dart';
-import 'package:mangxahoi/model/model_user.dart'; // Import UserModel
-
-// --- IMPORT MỚI CHO STORY ---
+import 'package:mangxahoi/model/model_user.dart';
 import 'package:mangxahoi/model/model_story.dart';
 import 'package:mangxahoi/authanet/firestore_listener.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:mangxahoi/view/story/story_viewer_screen.dart';
-// Thêm vào phần import của home_view.dart
 import 'package:mangxahoi/view/group_chat/qr_scanner_view.dart';
-// -----------------
-
 
 class HomeView extends StatelessWidget {
   const HomeView({super.key});
@@ -48,29 +44,12 @@ class _HomeViewContentState extends State<_HomeViewContent> {
   int _selectedIndex = 0;
   final ScrollController _scrollController = ScrollController();
   bool _isVisible = true;
-  bool _isPostsLoading = false;
+  bool _hasInitializedServices = false;
 
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) { 
-        final userService = context.read<UserService>(); 
-        context.read<CallService>().init(userService); 
-        
-        // --- THÊM DÒNG NÀY ---
-        // Bắt đầu lắng nghe story
-        context.read<HomeViewModel>().listenToStories(context);
-        // --------------------
-      }
-    });
     _scrollController.addListener(_handleScroll);
-    
-    _scrollController.addListener(() {
-      if (_scrollController.position.pixels >= _scrollController.position.maxScrollExtent - 300) {
-        context.read<HomeViewModel>().fetchMorePosts(context);
-      }
-    });
   }
 
   @override
@@ -89,84 +68,48 @@ class _HomeViewContentState extends State<_HomeViewContent> {
     } else if (direction == ScrollDirection.forward && !_isVisible) {
       setState(() => _isVisible = true);
     }
+
+    // Pagination: Tải thêm bài viết khi scroll gần cuối
+    if (_scrollController.hasClients &&
+        _scrollController.position.pixels >= 
+        _scrollController.position.maxScrollExtent - 300) {
+      context.read<HomeViewModel>().fetchMorePosts(context);
+    }
   }
 
   void _onTabTapped(int index) {
-    if (index == 0 && _selectedIndex == 0) {
+    if (index == 0 && _selectedIndex == 0 && _scrollController.hasClients) {
       _scrollController.animateTo(
         0.0,
         duration: const Duration(milliseconds: 300),
         curve: Curves.easeOut,
       );
     }
+    
     setState(() {
       _selectedIndex = index;
       if (index != 0) {
         _isVisible = false; 
       } else {
-        _isVisible = _scrollController.hasClients ? _scrollController.position.pixels < kToolbarHeight : true;
+        _isVisible = _scrollController.hasClients 
+            ? _scrollController.position.pixels < kToolbarHeight 
+            : true;
       }
     });
   }
 
-  // --- WIDGET TẠO BÀI VIẾT (MỚI) ---
-  Widget _buildCreatePostSection(BuildContext context, UserModel? currentUser) {
-     return Container(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-      color: Colors.white, // Nền trắng
-      child: Row(
-        children: [
-          CircleAvatar(
-            radius: 24,
-            backgroundImage: (currentUser?.avatar.isNotEmpty ?? false)
-                ? NetworkImage(currentUser!.avatar.first)
-                : null,
-            child: (currentUser?.avatar.isEmpty ?? true)
-                ? const Icon(Icons.person, size: 24)
-                : null,
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: GestureDetector(
-              onTap: () => Navigator.pushNamed(context, '/create_post', arguments: currentUser),
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                decoration: BoxDecoration(
-                  color: Colors.white, // Nền trắng
-                  borderRadius: BorderRadius.circular(30),
-                  border: Border.all(color: Colors.grey[300]!) // Thêm viền
-                ),
-                child: const Text(
-                  'Bạn đang nghĩ gì?',
-                  style: TextStyle(color: Colors.black54, fontSize: 16),
-                ),
-              ),
-            ),
-          ),
-          IconButton(
-            onPressed: () => Navigator.pushNamed(context, '/create_post', arguments: currentUser), 
-            icon: Icon(Icons.photo_library, color: Colors.green[400], size: 28),
-          ),
-        ],
-      ),
-    );
-  }
-  // ---------------------------------------------
-  
-  // --- WIDGET DANH SÁCH STORY (MỚI) ---
+  // --- WIDGET DANH SÁCH STORY ---
   Widget _buildStories(BuildContext context, HomeViewModel vm, UserModel? currentUser) {
     final storiesByUser = vm.stories;
     
-    // Tạo danh sách ID theo thứ tự: 1. Chính bạn, 2. Bạn bè
     final List<String> orderedUserIds = [currentUser?.id ?? ''];
     orderedUserIds.addAll(
       storiesByUser.keys.where((id) => id != currentUser?.id)
     );
     
-    // Lọc ra các ID rỗng hoặc không có story
     final validUserIds = orderedUserIds
       .where((id) => id.isNotEmpty && storiesByUser.containsKey(id))
-      .toSet() // Loại bỏ trùng lặp
+      .toSet()
       .toList();
 
     return Container(
@@ -175,20 +118,16 @@ class _HomeViewContentState extends State<_HomeViewContent> {
       padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
       child: ListView.builder(
         scrollDirection: Axis.horizontal,
-        // +1 cho nút "Tạo Story"
         itemCount: validUserIds.length + 1,
         itemBuilder: (context, index) {
-          
           if (index == 0) {
             return _buildCreateStoryCard(context, currentUser);
           }
 
-          // Story item (index - 1 vì index 0 là nút tạo)
           final userId = validUserIds[index - 1];
           final userStories = storiesByUser[userId] ?? [];
           if (userStories.isEmpty) return const SizedBox.shrink();
           
-          // Lấy story mới nhất của user đó để làm ảnh bìa
           final latestStory = userStories.first; 
           final author = context.read<FirestoreListener>().getUserById(latestStory.authorId);
 
@@ -198,13 +137,10 @@ class _HomeViewContentState extends State<_HomeViewContent> {
     );
   }
 
-  // --- WIDGET NÚT TẠO STORY (MỚI) ---
+  // --- WIDGET NÚT TẠO STORY ---
   Widget _buildCreateStoryCard(BuildContext context, UserModel? currentUser) {
     return GestureDetector(
-      onTap: () {
-        // Điều hướng đến trang tạo story mới
-        Navigator.pushNamed(context, '/create_story');
-      },
+      onTap: () => Navigator.pushNamed(context, '/create_story'),
       child: Container(
         width: 110,
         margin: const EdgeInsets.symmetric(horizontal: 4),
@@ -216,14 +152,13 @@ class _HomeViewContentState extends State<_HomeViewContent> {
         child: Stack(
           fit: StackFit.expand,
           children: [
-            // Ảnh avatar của user
             ClipRRect(
               borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
               child: (currentUser?.avatar.isNotEmpty ?? false)
                   ? CachedNetworkImage(
                       imageUrl: currentUser!.avatar.first,
                       fit: BoxFit.cover,
-                      height: 110, // Nửa trên
+                      height: 110,
                     )
                   : Container(
                       height: 110,
@@ -231,12 +166,11 @@ class _HomeViewContentState extends State<_HomeViewContent> {
                       child: const Icon(Icons.person, size: 40, color: Colors.grey),
                     ),
             ),
-            // Nửa dưới
             Positioned(
               bottom: 0,
               left: 0,
               right: 0,
-              height: 80, // Nửa dưới
+              height: 80,
               child: Container(
                 decoration: const BoxDecoration(
                   color: Colors.white,
@@ -251,9 +185,8 @@ class _HomeViewContentState extends State<_HomeViewContent> {
                 ),
               ),
             ),
-            // Nút dấu cộng
             Positioned(
-              bottom: 30, // Nằm giữa 2 phần
+              bottom: 30,
               left: 35,
               right: 35,
               child: Container(
@@ -273,17 +206,16 @@ class _HomeViewContentState extends State<_HomeViewContent> {
     );
   }
 
-  // --- WIDGET THẺ STORY (MỚI) ---
+  // --- WIDGET THẺ STORY ---
   Widget _buildStoryCard(BuildContext context, StoryModel story, UserModel? author, List<StoryModel> userStories) {
     return GestureDetector(
       onTap: () {
-        // Điều hướng đến trang xem story
         Navigator.push(
           context,
           MaterialPageRoute(
             builder: (_) => StoryViewerScreen(
-              stories: userStories, // Chỉ truyền story của user này
-              initialIndex: 0, // Bắt đầu từ story mới nhất
+              stories: userStories,
+              initialIndex: 0,
             ),
           ),
         );
@@ -300,7 +232,6 @@ class _HomeViewContentState extends State<_HomeViewContent> {
           child: Stack(
             fit: StackFit.expand,
             children: [
-              // Ảnh bìa của story
               if (story.mediaType == 'image' || story.mediaType == 'video')
                 CachedNetworkImage(
                   imageUrl: story.mediaUrl,
@@ -308,10 +239,10 @@ class _HomeViewContentState extends State<_HomeViewContent> {
                   errorWidget: (c, u, e) => Container(color: Colors.grey),
                 )
               else
-                Container( // Story text
+                Container(
                   color: story.backgroundColor.isNotEmpty 
-                       ? Color(int.parse(story.backgroundColor.split('(0x')[1].split(')')[0], radix: 16)) 
-                       : Colors.blue,
+                      ? Color(int.parse(story.backgroundColor.split('(0x')[1].split(')')[0], radix: 16)) 
+                      : Colors.blue,
                   child: Center(
                     child: Padding(
                       padding: const EdgeInsets.all(8.0),
@@ -325,8 +256,6 @@ class _HomeViewContentState extends State<_HomeViewContent> {
                     ),
                   ),
                 ),
-
-              // Lớp phủ tối
               Container(
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
@@ -336,8 +265,6 @@ class _HomeViewContentState extends State<_HomeViewContent> {
                   ),
                 ),
               ),
-
-              // Avatar tác giả
               Positioned(
                 top: 8,
                 left: 8,
@@ -357,8 +284,6 @@ class _HomeViewContentState extends State<_HomeViewContent> {
                   ),
                 ),
               ),
-
-              // Tên tác giả
               Positioned(
                 bottom: 8,
                 left: 8,
@@ -381,59 +306,87 @@ class _HomeViewContentState extends State<_HomeViewContent> {
       ),
     );
   }
-  // --- KẾT THÚC CÁC HÀM STORY ---
 
+  // --- BODY TRANG CHỦ ---
   Widget _buildHomePageBody(BuildContext context) {
     final homeViewModel = context.watch<HomeViewModel>();
-    final userService = context.watch<UserService>();
+    final userService = context.watch<UserService>(); 
     final currentUser = userService.currentUser;
-
-    // Lấy chiều cao màn hình để tính cacheExtent
     final double screenHeight = MediaQuery.of(context).size.height;
 
-    if (userService.isLoading || currentUser == null) {
-      return const Center(child: CircularProgressIndicator());
+    // Check currentUser - đơn giản và hiệu quả
+    if (currentUser == null) {
+      print('⏳ [HomeView] Đang đợi currentUser...');
+      return const Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            CircularProgressIndicator(),
+            SizedBox(height: 16),
+            Text('Đang tải thông tin người dùng...'),
+          ],
+        ),
+      );
     }
     
-    if (!homeViewModel.isLoading && homeViewModel.posts.isEmpty && !_isPostsLoading) {
-      _isPostsLoading = true; 
+    print('✅ [HomeView] CurrentUser đã sẵn sàng: ${currentUser.name}');
+    
+    // Logic khởi tạo dịch vụ (CHỈ CHẠY 1 LẦN)
+    if (!_hasInitializedServices) {
+      _hasInitializedServices = true;
       
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        context.read<HomeViewModel>().fetchInitialPosts(context).then((_) {
-          if (mounted) {
-            _isPostsLoading = false;
-          }
-        });
+        if (!mounted) return;
+        
+        print("🚀 [HomeView] Khởi tạo dịch vụ...");
+        
+        // 1. Khởi tạo CallService
+        try {
+          context.read<CallService>().init(userService);
+          print("✅ [HomeView] CallService đã khởi tạo");
+        } catch (e) {
+          print("❌ [HomeView] Lỗi khởi tạo CallService: $e");
+        }
+        
+        // 2. Khởi tạo Story Listeners
+        try {
+          context.read<HomeViewModel>().listenToStories(context);
+          print("✅ [HomeView] Story listeners đã khởi tạo");
+        } catch (e) {
+          print("❌ [HomeView] Lỗi khởi tạo story listeners: $e");
+        }
+        
+        // 3. Tải bài viết ban đầu (CHỈ NẾU CHƯA CÓ)
+        if (homeViewModel.posts.isEmpty && !homeViewModel.isLoading) {
+          print("🚀 [HomeView] Đang tải bài viết ban đầu...");
+          context.read<HomeViewModel>().fetchInitialPosts(context);
+        }
       });
     }
 
     final currentUserId = currentUser.id;
     final posts = homeViewModel.posts;
 
-    // --- SỬA ĐỔI BODY ĐỂ DÙNG CUSTOMSCROLLVIEW ---
     return RefreshIndicator(
       onRefresh: () => context.read<HomeViewModel>().refreshPosts(context),
-      child: CustomScrollView( // Đổi ListView thành CustomScrollView
+      child: CustomScrollView(
         controller: _scrollController,
         cacheExtent: screenHeight * 1.5,
         slivers: [
-          // Thêm 3 mục này vào đầu
           SliverToBoxAdapter(
-              child: SizedBox(height: 90), // Giữ khoảng cách thay cho CreatePostSection
-            ),
-          // Phân cách
+            child: SizedBox(height: 90),
+          ),
           SliverToBoxAdapter(
             child: Container(
-              height: 200, // Chiều cao của story bar
+              height: 200,
               color: Colors.white,
               child: _buildStories(context, homeViewModel, currentUser),
             ),
           ),
           SliverToBoxAdapter(
-            child: Container(height: 8, color: AppColors.background), // Phân cách
+            child: Container(height: 8, color: AppColors.background),
           ),
 
-          // Hiển thị bài viết
           if (homeViewModel.isLoading && posts.isEmpty)
             const SliverToBoxAdapter(
               child: Center(
@@ -462,7 +415,6 @@ class _HomeViewContentState extends State<_HomeViewContent> {
               ),
             ),
 
-          // Widget loading
           if (homeViewModel.hasMore)
             SliverToBoxAdapter(
               child: const Padding(
@@ -473,10 +425,9 @@ class _HomeViewContentState extends State<_HomeViewContent> {
         ],
       ),
     );
-    // --- KẾT THÚC SỬA ĐỔI BODY ---
   }
 
-    Widget _buildDrawerItem({
+  Widget _buildDrawerItem({
     required IconData icon,
     required String text,
     required VoidCallback onTap,
@@ -501,16 +452,14 @@ class _HomeViewContentState extends State<_HomeViewContent> {
 
   @override
   Widget build(BuildContext context) {
-    final homeViewModel = context.read<HomeViewModel>();
     final isHomePage = _selectedIndex == 0;
     final showUI = !isHomePage || _isVisible;
 
-    // *** DANH SÁCH PAGES ĐÃ CẬP NHẬT ***
     final List<Widget> pages = [
       _buildHomePageBody(context),
       const FriendsView(),
       const VideoFeedView(),
-      const LocketView(), // <--- THAY ĐỔI
+      const LocketView(),
       const ProfileView(),
     ];
 
@@ -522,7 +471,11 @@ class _HomeViewContentState extends State<_HomeViewContent> {
               preferredSize: const Size.fromHeight(kToolbarHeight),
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 200),
-                transform: Matrix4.translationValues(0, showUI ? 0 : -(kToolbarHeight + MediaQuery.of(context).padding.top), 0),
+                transform: Matrix4.translationValues(
+                  0, 
+                  showUI ? 0 : -(kToolbarHeight + MediaQuery.of(context).padding.top), 
+                  0
+                ),
                 child: Consumer<UserService>(
                   builder: (context, userService, child) => AppBar(
                     leading: Builder(
@@ -551,19 +504,18 @@ class _HomeViewContentState extends State<_HomeViewContent> {
                     centerTitle: true,
                     backgroundColor: AppColors.backgroundLight.withOpacity(0.95),
                     elevation: 1,
-                    // *** ACTIONS ĐÃ CẬP NHẬT ***
                     actions: [
                       _buildCircularIconButton(
                         icon: Icons.search,
                         onPressed: () => Navigator.pushNamed(context, '/search'),
                       ),
-                      _buildCircularIconButton( // <--- NÚT THÔNG BÁO
+                      _buildCircularIconButton(
                         icon: Icons.notifications_outlined,
                         onPressed: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(builder: (context) => const NotificationView()),
-                            );
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (context) => const NotificationView()),
+                          );
                         },
                       ),
                       _buildCircularIconButton(
@@ -604,9 +556,15 @@ class _HomeViewContentState extends State<_HomeViewContent> {
                           ? const Icon(Icons.person, size: 40, color: AppColors.primary) : null,
                     ),
                     const SizedBox(height: 12),
-                    Text(userService.currentUser?.name ?? 'Đang tải...', style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+                    Text(
+                      userService.currentUser?.name ?? 'Đang tải...', 
+                      style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)
+                    ),
                     const SizedBox(height: 4),
-                    Text(userService.currentUser?.email ?? '', style: const TextStyle(color: Colors.white70, fontSize: 14)),
+                    Text(
+                      userService.currentUser?.email ?? '', 
+                      style: const TextStyle(color: Colors.white70, fontSize: 14)
+                    ),
                   ],
                 ),
               ),
@@ -619,7 +577,6 @@ class _HomeViewContentState extends State<_HomeViewContent> {
                   ),
                   child: Column(
                     children: [
-                      // Trong Drawer, thêm mục menu mới
                       _buildDrawerItem(
                         icon: Icons.qr_code_scanner,
                         text: 'Quét mã QR',
@@ -627,9 +584,7 @@ class _HomeViewContentState extends State<_HomeViewContent> {
                           Navigator.pop(context);
                           Navigator.push(
                             context,
-                            MaterialPageRoute(
-                              builder: (_) => const QRScannerView(),
-                            ),
+                            MaterialPageRoute(builder: (_) => const QRScannerView()),
                           );
                         },
                       ),
@@ -695,40 +650,38 @@ class _HomeViewContentState extends State<_HomeViewContent> {
                   ),
                   child: Column(
                     children: [
-                        _buildDrawerItem(
-                          icon: Icons.delete_outline,
-                          text: 'Thùng rác (Bài viết)',
-                          onTap: () {
-                            Navigator.pop(context);
-                            Navigator.pushNamed(context, '/trash');
-                          },
-                        ),
-                        // === THÊM MỤC NÀY ===
-                        _buildDrawerItem(
-                          icon: Icons.delete_sweep_outlined, // Icon khác
-                          text: 'Thùng rác Locket',
-                          onTap: () {
-                            Navigator.pop(context);
-                            Navigator.pushNamed(context, '/locket_trash');
-                          },
-                        ),
-                        // ======================
-                        _buildDrawerItem(
-                          icon: Icons.block,
-                          text: 'Danh sách chặn',
-                          onTap: () {
-                            Navigator.pop(context);
-                            Navigator.pushNamed(context, '/blocked_list');
-                          },
-                        ),
-                        _buildDrawerItem(
-                          icon: Icons.notifications_active_outlined,
-                          text: 'Cài đặt thông báo',
-                          onTap: () {
-                            Navigator.pop(context);
-                            Navigator.pushNamed(context, '/notification_settings');
-                          },
-                        ),
+                      _buildDrawerItem(
+                        icon: Icons.delete_outline,
+                        text: 'Thùng rác (Bài viết)',
+                        onTap: () {
+                          Navigator.pop(context);
+                          Navigator.pushNamed(context, '/trash');
+                        },
+                      ),
+                      _buildDrawerItem(
+                        icon: Icons.delete_sweep_outlined,
+                        text: 'Thùng rác Locket',
+                        onTap: () {
+                          Navigator.pop(context);
+                          Navigator.pushNamed(context, '/locket_trash');
+                        },
+                      ),
+                      _buildDrawerItem(
+                        icon: Icons.block,
+                        text: 'Danh sách chặn',
+                        onTap: () {
+                          Navigator.pop(context);
+                          Navigator.pushNamed(context, '/blocked_list');
+                        },
+                      ),
+                      _buildDrawerItem(
+                        icon: Icons.notifications_active_outlined,
+                        text: 'Cài đặt thông báo',
+                        onTap: () {
+                          Navigator.pop(context);
+                          Navigator.pushNamed(context, '/notification_settings');
+                        },
+                      ),
                     ],
                   ),
                 ),
@@ -740,6 +693,7 @@ class _HomeViewContentState extends State<_HomeViewContent> {
                   icon: Icons.logout,
                   text: 'Đăng xuất',
                   onTap: () {
+                    final homeViewModel = context.read<HomeViewModel>();
                     context.read<VideoCacheManager>().pauseAllVideos();
                     homeViewModel.signOut(context);
                   },
@@ -758,7 +712,11 @@ class _HomeViewContentState extends State<_HomeViewContent> {
                 child: FloatingActionButton(
                   onPressed: () async {
                     if (userService.currentUser != null) {
-                      await Navigator.pushNamed(context, '/create_post', arguments: userService.currentUser);
+                      await Navigator.pushNamed(
+                        context, 
+                        '/create_post', 
+                        arguments: userService.currentUser
+                      );
                       if (mounted) {
                         context.read<HomeViewModel>().refreshPosts(context);
                       }
@@ -775,7 +733,6 @@ class _HomeViewContentState extends State<_HomeViewContent> {
         index: _selectedIndex,
         children: pages,
       ),
-      // *** BOTTOMNAVBAR ĐÃ CẬP NHẬT ***
       bottomNavigationBar: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
         height: showUI ? 85.0 : 0.0,
@@ -804,7 +761,7 @@ class _HomeViewContentState extends State<_HomeViewContent> {
                     BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Trang chủ'),
                     BottomNavigationBarItem(icon: Icon(Icons.people), label: 'Bạn bè'),
                     BottomNavigationBarItem(icon: Icon(Icons.ondemand_video), label: 'Video'),
-                    BottomNavigationBarItem(icon: Icon(Icons.lock_outline), label: 'Locket'), // <--- THAY ĐỔI
+                    BottomNavigationBarItem(icon: Icon(Icons.lock_outline), label: 'Locket'),
                     BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Cá nhân'),
                   ],
                   currentIndex: _selectedIndex,
@@ -820,7 +777,10 @@ class _HomeViewContentState extends State<_HomeViewContent> {
     );
   }
 
-  Widget _buildCircularIconButton({required IconData icon, required VoidCallback onPressed}) {
+  Widget _buildCircularIconButton({
+    required IconData icon, 
+    required VoidCallback onPressed
+  }) {
     return Container(
       margin: const EdgeInsets.all(6),
       decoration: const BoxDecoration(

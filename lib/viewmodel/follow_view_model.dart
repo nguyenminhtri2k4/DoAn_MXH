@@ -6,14 +6,69 @@ import 'package:mangxahoi/request/follow_request.dart';
 import 'package:mangxahoi/request/user_request.dart';
 
 class FollowViewModel extends ChangeNotifier {
-  final String userId; // Đây là Document ID của người đang được xem
+  final String userId; // Document ID của người đang được xem
   final FollowRequest _followRequest = FollowRequest();
   final UserRequest _userRequest = UserRequest();
 
-  // Cache Document ID của người dùng hiện tại để không phải fetch lại liên tục
   String? _currentUserDocId;
+  String? get currentUserDocId => _currentUserDocId; // ✅ Expose để UI có thể check
 
-  FollowViewModel({required this.userId});
+  // ✅ THÊM: Trạng thái loading
+  bool _isInitializing = true;
+  bool get isInitializing => _isInitializing;
+
+  FollowViewModel({required this.userId}) {
+    _init(); // ✅ Tự động init như GroupsViewModel
+  }
+
+  // ✅ THÊM: Hàm init tự động
+  void _init() async {
+    print('🔧 [FollowViewModel] Bắt đầu khởi tạo cho userId: $userId');
+    _isInitializing = true;
+    notifyListeners();
+
+    try {
+      await _loadCurrentUserDocId();
+    } catch (e) {
+      print('❌ [FollowViewModel] Lỗi khi init: $e');
+    } finally {
+      _isInitializing = false;
+      notifyListeners();
+      print('✅ [FollowViewModel] Khởi tạo hoàn tất. currentUserDocId: $_currentUserDocId');
+    }
+  }
+
+  // ✅ SỬA: Đổi tên và public để có thể reload
+  Future<void> _loadCurrentUserDocId() async {
+    final authUser = FirebaseAuth.instance.currentUser;
+    if (authUser == null) {
+      print('⚠️ [FollowViewModel] Chưa đăng nhập Firebase Auth');
+      return;
+    }
+
+    try {
+      print('🔍 [FollowViewModel] Đang tìm Document ID cho UID: ${authUser.uid}');
+      final userModel = await _userRequest.getUserByUid(authUser.uid);
+      
+      if (userModel != null) {
+        _currentUserDocId = userModel.id;
+        print('✅ [FollowViewModel] Đã lấy Document ID: $_currentUserDocId');
+      } else {
+        print('⚠️ [FollowViewModel] Không tìm thấy user trong Firestore');
+      }
+    } catch (e) {
+      print('❌ [FollowViewModel] Lỗi khi lấy Document ID: $e');
+    }
+  }
+
+  // ✅ Giữ nguyên - nhưng không cần cache vì đã load trong init
+  Future<String?> _getCurrentUserDocId() async {
+    if (_currentUserDocId != null) return _currentUserDocId;
+    
+    // Nếu chưa có, load lại
+    await _loadCurrentUserDocId();
+    return _currentUserDocId;
+  }
 
   Stream<List<UserModel>> get followersStream => _followRequest
       .getFollowers(userId)
@@ -25,43 +80,27 @@ class FollowViewModel extends ChangeNotifier {
 
   Future<List<UserModel>> _getUsersDetails(List<String> userIds) async {
     if (userIds.isEmpty) return [];
+    
     List<UserModel> users = [];
     for (var id in userIds) {
-      final user = await _userRequest.getUserData(id);
-      if (user != null) {
-        users.add(user);
+      try {
+        final user = await _userRequest.getUserData(id);
+        if (user != null) {
+          users.add(user);
+        }
+      } catch (e) {
+        print('⚠️ [FollowViewModel] Lỗi khi lấy thông tin user $id: $e');
       }
     }
     return users;
   }
 
-  // --- HÀM MỚI ĐỂ LẤY ĐÚNG ID (DOCUMENT ID) ---
-  
-  Future<String?> _getCurrentUserDocId() async {
-    // Nếu đã có ID trong cache thì trả về luôn
-    if (_currentUserDocId != null) return _currentUserDocId;
-
-    final authUser = FirebaseAuth.instance.currentUser;
-    if (authUser == null) return null;
-
-    try {
-      // Lấy thông tin User từ Firestore dựa trên UID để tìm ra Document ID thực sự
-      final userModel = await _userRequest.getUserByUid(authUser.uid);
-      if (userModel != null) {
-        _currentUserDocId = userModel.id; // Lưu lại Document ID
-        return _currentUserDocId;
-      }
-    } catch (e) {
-      debugPrint("Lỗi khi lấy Document ID người dùng hiện tại: $e");
-    }
-    return null;
-  }
-
-  // --- CÁC HÀM XỬ LÝ FOLLOW (ĐÃ CẬP NHẬT DÙNG DOC ID) ---
-
   Future<bool> isFollowing(String targetUserId) async {
     final currentDocId = await _getCurrentUserDocId();
-    if (currentDocId == null) return false;
+    if (currentDocId == null) {
+      print('⚠️ [FollowViewModel] isFollowing: currentDocId = null');
+      return false;
+    }
     if (currentDocId == targetUserId) return false;
     
     return _followRequest.isFollowing(currentDocId, targetUserId);
@@ -69,16 +108,24 @@ class FollowViewModel extends ChangeNotifier {
 
   Future<void> followUser(String targetUserId) async {
     final currentDocId = await _getCurrentUserDocId();
-    if (currentDocId == null) return;
+    if (currentDocId == null) {
+      print('⚠️ [FollowViewModel] followUser: currentDocId = null, không thể follow');
+      return;
+    }
     
+    print('🔄 [FollowViewModel] Follow user: $currentDocId -> $targetUserId');
     await _followRequest.followUser(currentDocId, targetUserId);
     notifyListeners();
   }
 
   Future<void> unfollowUser(String targetUserId) async {
     final currentDocId = await _getCurrentUserDocId();
-    if (currentDocId == null) return;
+    if (currentDocId == null) {
+      print('⚠️ [FollowViewModel] unfollowUser: currentDocId = null, không thể unfollow');
+      return;
+    }
 
+    print('🔄 [FollowViewModel] Unfollow user: $currentDocId -> $targetUserId');
     await _followRequest.unfollowUser(currentDocId, targetUserId);
     notifyListeners();
   }

@@ -6,15 +6,17 @@ import 'package:firebase_auth/firebase_auth.dart';
 
 class UserRequest {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-
   final FirestoreService _firestoreService = FirestoreService();
-
   final String? _currentAuthUid = FirebaseAuth.instance.currentUser?.uid; 
 
   /// Lấy thông tin người dùng theo Document ID
   Future<UserModel?> getUserData(String docId) async {
     try {
-      final user = await _firestoreService.getUserData(docId);
+      // ✅ Thêm timeout
+      final user = await _firestoreService
+          .getUserData(docId)
+          .timeout(const Duration(seconds: 15));
+          
       if (user != null) {
         print('✅ Đã lấy thông tin user: ${user.name}');
       } else {
@@ -27,26 +29,39 @@ class UserRequest {
     }
   }
 
-  /// 📥 Lấy thông tin người dùng theo UID (Firebase Auth UID)
-  Future<UserModel?> getUserByUid(String uid) async {
+  /// ✅ Lấy thông tin người dùng theo UID với retry & timeout
+  Future<UserModel?> getUserByUid(String uid, {int maxRetries = 5}) async {
+    print('🔍 [UserRequest] getUserByUid called with UID: $uid');
+    
     try {
-      final user = await _firestoreService.getUserDataByAuthUid(uid);
+      print('🔍 [UserRequest] Calling FirestoreService.getUserDataByAuthUid...');
+      
+      // ✅ Gọi với retry logic & timeout
+      final user = await _firestoreService
+          .getUserDataByAuthUid(uid, maxRetries: maxRetries)
+          .timeout(const Duration(seconds: 30)); // Timeout tổng
+      
       if (user != null) {
-        print('✅ Đã lấy thông tin user: ${user.name}');
+        print('✅ [UserRequest] SUCCESS: Found user: ${user.name}');
+        print('🔍 [UserRequest] User document ID: ${user.id}');
+        print('🔍 [UserRequest] User auth UID: ${user.uid}');
       } else {
-        print('⚠️ Không tìm thấy user với UID: $uid');
+        print('❌ [UserRequest] FAILED: No user found with UID: $uid');
+        print('🔍 [UserRequest] This means Firestore query returned empty after retries');
       }
       return user;
     } catch (e) {
-      print('❌ Lỗi khi lấy user theo uid: $e');
+      print('❌ [UserRequest] ERROR: $e');
       return null;
     }
   }
 
-  /// 💾 Cập nhật thông tin người dùng
+  /// Cập nhật thông tin người dùng
   Future<void> updateUser(UserModel user) async {
     try {
-      await _firestoreService.updateUser(user);
+      await _firestoreService
+          .updateUser(user)
+          .timeout(const Duration(seconds: 15));
       print('✅ Cập nhật thông tin user thành công');
     } catch (e) {
       print('❌ Lỗi khi cập nhật thông tin user: $e');
@@ -54,10 +69,13 @@ class UserRequest {
     }
   }
 
-  /// 🧑‍💻 Thêm mới user (nếu chưa có)
+  /// Thêm mới user
   Future<String> addUser(UserModel user) async {
     try {
-      final docRef = await _firestore.collection('users').add(user.toMap());
+      final docRef = await _firestore
+          .collection('users')
+          .add(user.toMap())
+          .timeout(const Duration(seconds: 15));
       print('✅ Thêm user mới với id: ${docRef.id}');
       return docRef.id;
     } catch (e) {
@@ -66,10 +84,14 @@ class UserRequest {
     }
   }
 
-  /// 🗑️ Xóa user (chỉ dành cho admin)
+  /// Xóa user
   Future<void> deleteUser(String docId) async {
     try {
-      await _firestore.collection('users').doc(docId).delete();
+      await _firestore
+          .collection('users')
+          .doc(docId)
+          .delete()
+          .timeout(const Duration(seconds: 10));
       print('✅ Xóa user thành công');
     } catch (e) {
       print('❌ Lỗi khi xóa user: $e');
@@ -77,20 +99,19 @@ class UserRequest {
     }
   }
   
-  // ===> HÀM MỚI ĐỂ TẢI TẤT CẢ USER LÀM CACHE <===
-  /// 📥 Tải danh sách lớn người dùng vào bộ nhớ cache (cho tìm kiếm Client-Side)
+  /// Tải danh sách user cho cache
   Future<List<UserModel>> getAllUsersForCache({int limit = 1000}) async {
     try {
       final querySnapshot = await _firestore
           .collection('User')
-          .limit(limit) 
-          .get();
+          .limit(limit)
+          .get()
+          .timeout(const Duration(seconds: 30)); // ✅ Timeout cho query lớn
       
       final List<UserModel> users = querySnapshot.docs
           .map((doc) => UserModel.fromFirestore(doc))
           .toList();
       
-      // Lọc ra user hiện tại
       if (_currentAuthUid != null) {
         users.removeWhere((user) => user.uid == _currentAuthUid);
       }
@@ -102,5 +123,4 @@ class UserRequest {
       rethrow;
     }
   }
-
 }

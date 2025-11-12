@@ -59,60 +59,7 @@ class UserModel {
     List<String>? locketFriends, 
   }) : locketFriends = locketFriends ?? []; 
 
-  // factory UserModel.fromFirestore(DocumentSnapshot doc) {
-  //   final data = doc.data() as Map<String, dynamic>;
-
-  //   int parseCount(dynamic value) {
-  //     if (value is int) return value;
-  //     if (value is String) return int.tryParse(value) ?? 0;
-  //     if (value is List && value.isNotEmpty) {
-  //       final lastElement = value.last;
-  //       if (lastElement is int) return lastElement;
-  //       if (lastElement is String) return int.tryParse(lastElement) ?? 0;
-  //     }
-  //     return 0;
-  //   }
-
-  //   List<String> parseStringList(dynamic value) {
-  //     if (value is List) {
-  //       return value.map((e) => e.toString()).toList();
-  //     }
-  //     return [];
-  //   }
-
-  //   return UserModel(
-  //     id: doc.id,
-  //     uid: data['uid'] ?? '',
-  //     name: data['name'] ?? '',
-  //     email: data['email'] ?? '',
-  //     password: data['password'] ?? '',
-  //     phone: data['phone'] ?? '',
-  //     bio: data['bio'] ?? 'No',
-  //     gender: data['gender'] ?? '',
-  //     liveAt: data['liveAt'] ?? '',
-  //     comeFrom: data['comeFrom'] ?? '',
-  //     role: data['role'] ?? 'user',
-  //     relationship: data['relationship'] ?? '',
-  //     statusAccount: data['statusAccount'] ?? data['statusAccont'] ?? 'active',
-  //     backgroundImageUrl: data['backgroundImageUrl'] ?? '', 
-  //     avatar: parseStringList(data['avatar']),
-  //     friends: parseStringList(data['friends']),
-  //     locketFriends: parseStringList(data['locketFriends']), 
-  //     groups: parseStringList(data['groups']),
-  //     posterList: parseStringList(data['posterList']),
-  //     followerCount: parseCount(data['followerCount']),
-  //     followingCount: parseCount(data['followingCount']),
-  //     createAt: (data['createAt'] as Timestamp).toDate(),
-  //     dateOfBirth: data['dateOfBirth'] != null
-  //         ? (data['dateOfBirth'] as Timestamp).toDate()
-  //         : null,
-  //     lastActive: data['lastActive'] != null
-  //         ? (data['lastActive'] as Timestamp).toDate()
-  //         : null,
-  //     notificationSettings:
-  //         Map<String, bool>.from(data['notificationSettings'] ?? {}),
-  //   );
-  // }
+  
   factory UserModel.fromFirestore(DocumentSnapshot doc) {
     // 1. Ép kiểu an toàn cho data. Nếu null thì gán bằng Map rỗng để tránh crash ngay lập tức.
     final data = (doc.data() as Map<String, dynamic>?) ?? {};
