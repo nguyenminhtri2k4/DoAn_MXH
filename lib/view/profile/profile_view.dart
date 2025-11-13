@@ -57,11 +57,83 @@ class _ProfileContent extends StatelessWidget {
   }
 
   Widget _buildHeader(BuildContext context, ProfileViewModel vm) {
+    // Nếu đã chặn hoặc bị chặn, hiển thị phần hạn chế
+    if (vm.isBlocked || vm.isBlockedByOther) {
+      return Container(
+        color: AppColors.backgroundLight,
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            // Ảnh nền đơn giản (gradient)
+            Positioned(
+              top: 0,
+              left: 0,
+              right: 0,
+              height: 200,
+              child: Container(
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [Colors.grey, Colors.blueGrey],
+                  ),
+                ),
+              ),
+            ),
+            // Avatar mặc định
+            Positioned(
+              top: 130,
+              child: CircleAvatar(
+                radius: 64,
+                backgroundColor: Colors.white,
+                child: CircleAvatar(
+                  radius: 60,
+                  backgroundColor: Colors.grey.shade300,
+                  child: const Icon(
+                    Icons.person,
+                    size: 60,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+            ),
+            // Hiển thị tên
+            Positioned(
+              top: 265,
+              left: 16,
+              right: 16,
+              child: Text(
+                vm.user!.name,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.textPrimary,
+                ),
+              ),
+            ),
+            // Nút tương ứng
+            Positioned(
+              bottom: 8,
+              left: 16,
+              right: 16,
+              child:
+                  vm.isBlockedByOther
+                      ? _buildBlockedByOtherButton(context)
+                      : _buildBlockedButton(context, vm),
+            ),
+          ],
+        ),
+      );
+    }
+
+    // Hiển thị đầy đủ khi chưa chặn
     return Container(
       color: AppColors.backgroundLight,
       child: Stack(
         alignment: Alignment.center,
         children: [
+          // Ảnh nền
           Positioned(
             top: 0,
             left: 0,
@@ -91,6 +163,7 @@ class _ProfileContent extends StatelessWidget {
               ),
             ),
           ),
+          // Avatar
           Positioned(
             top: 130,
             child: CircleAvatar(
@@ -109,8 +182,11 @@ class _ProfileContent extends StatelessWidget {
               ),
             ),
           ),
+          // Tên và tiểu sử
           Positioned(
             top: 265,
+            left: 16,
+            right: 16,
             child: Column(
               children: [
                 Text(
@@ -123,19 +199,25 @@ class _ProfileContent extends StatelessWidget {
                 ),
                 const SizedBox(height: 4),
                 if (vm.user!.bio.isNotEmpty && vm.user!.bio != "No")
-                  Text(
-                    vm.user!.bio,
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      fontSize: 16,
-                      color: AppColors.textSecondary,
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                    child: Text(
+                      vm.user!.bio,
+                      textAlign: TextAlign.center,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 15,
+                        color: AppColors.textSecondary,
+                      ),
                     ),
                   ),
               ],
             ),
           ),
+          // Nút hành động
           Positioned(
-            top: 320,
+            bottom: 8,
             left: 16,
             right: 16,
             child: _buildActionButtons(context, vm),
@@ -148,83 +230,383 @@ class _ProfileContent extends StatelessWidget {
   Widget _buildActionButtons(BuildContext context, ProfileViewModel vm) {
     if (vm.isCurrentUserProfile) return const SizedBox.shrink();
 
-    Widget friendButton;
     final friendshipStatus = vm.friendshipStatus;
-
-    switch (friendshipStatus) {
-      case 'friends':
-        friendButton = _FriendMenuButton(
-          onUnfriend: () => vm.unfriend(),
-          onBlock: () => vm.blockUser(),
-        );
-        break;
-      case 'pending_sent':
-        friendButton = ElevatedButton.icon(
-          icon: const Icon(Icons.update),
-          label: const Text('Đã gửi lời mời'),
-          onPressed: null,
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.grey.shade300,
-            foregroundColor: Colors.black87,
-          ),
-        );
-        break;
-      case 'pending_received':
-        friendButton = ElevatedButton.icon(
-          icon: const Icon(Icons.group_add, color: Colors.white),
-          label: const Text('Phản hồi'),
-          onPressed: () => Navigator.pushNamed(context, '/friends'),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: AppColors.primary,
-            foregroundColor: Colors.white,
-          ),
-        );
-        break;
-      case 'none':
-      default:
-        friendButton = _AddFriendMenuButton(
-          onAddFriend: () => vm.sendFriendRequest(),
-          onBlock: () => vm.blockUser(),
-        );
-    }
+    final isBlocked = vm.isBlocked;
 
     return Row(
       children: [
-        Expanded(child: friendButton),
-        const SizedBox(width: 8),
         Expanded(
-          child: ElevatedButton.icon(
-            icon: const Icon(Icons.message, color: Colors.white),
-            label: const Text('Nhắn tin'),
-            onPressed: () async {
-              final currentUser =
-                  vm.isCurrentUserProfile
-                      ? vm.user
-                      : await UserRequest().getUserByUid(
-                        FirebaseAuth.instance.currentUser!.uid,
-                      );
+          child:
+              isBlocked
+                  ? _buildBlockedButton(context, vm)
+                  : _buildFriendButton(context, vm, friendshipStatus),
+        ),
+        if (!isBlocked) ...[
+          const SizedBox(width: 8),
+          Expanded(child: _buildMessageButton(context, vm)),
+        ],
+      ],
+    );
+  }
 
-              if (currentUser != null && vm.user != null) {
-                final chatId = await ChatRequest().getOrCreatePrivateChat(
-                  currentUser.id,
-                  vm.user!.id,
+  Widget _buildBlockedByOtherButton(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.red.shade50,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.red.shade200, width: 1),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.block, color: Colors.red.shade700, size: 20),
+            const SizedBox(width: 8),
+            Text(
+              'Đã bị chặn',
+              style: TextStyle(
+                color: Colors.red.shade700,
+                fontSize: 15,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildBlockedButton(BuildContext context, ProfileViewModel vm) {
+    return _buildMenuButton(
+      icon: Icons.block,
+      label: 'Đã chặn',
+      backgroundColor: Colors.red.shade50,
+      textColor: Colors.red.shade700,
+      onTap: () => _showUnblockMenu(context, vm),
+    );
+  }
+
+  Widget _buildFriendButton(
+    BuildContext context,
+    ProfileViewModel vm,
+    String friendshipStatus,
+  ) {
+    switch (friendshipStatus) {
+      case 'friends':
+        return _buildMenuButton(
+          icon: Icons.how_to_reg,
+          label: 'Bạn bè',
+          backgroundColor: Colors.grey.shade300,
+          textColor: Colors.black87,
+          onTap: () => _showFriendsMenu(context, vm),
+        );
+
+      case 'pending_sent':
+        return _buildMenuButton(
+          icon: Icons.update,
+          label: 'Đã gửi lời mời',
+          backgroundColor: Colors.grey.shade300,
+          textColor: Colors.black87,
+          onTap: () => _showPendingSentMenu(context, vm),
+        );
+
+      case 'pending_received':
+        return _buildMenuButton(
+          icon: Icons.group_add,
+          label: 'Phản hồi',
+          backgroundColor: AppColors.primary,
+          textColor: Colors.white,
+          onTap: () => Navigator.pushNamed(context, '/friends'),
+        );
+
+      case 'none':
+      default:
+        return _buildMenuButton(
+          icon: Icons.person_add,
+          label: 'Thêm bạn bè',
+          backgroundColor: AppColors.primary,
+          textColor: Colors.white,
+          onTap: () => _showAddFriendMenu(context, vm),
+        );
+    }
+  }
+
+  Widget _buildMessageButton(BuildContext context, ProfileViewModel vm) {
+    return _buildMenuButton(
+      icon: Icons.message,
+      label: 'Nhắn tin',
+      backgroundColor: AppColors.primary,
+      textColor: Colors.white,
+      onTap: () async {
+        final currentUser =
+            vm.isCurrentUserProfile
+                ? vm.user
+                : await UserRequest().getUserByUid(
+                  FirebaseAuth.instance.currentUser!.uid,
                 );
-                if (context.mounted) {
-                  Navigator.pushNamed(
-                    context,
-                    '/chat',
-                    arguments: {'chatId': chatId, 'chatName': vm.user!.name},
-                  );
-                }
-              }
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primary,
-              foregroundColor: Colors.white,
+
+        if (currentUser != null && vm.user != null) {
+          final chatId = await ChatRequest().getOrCreatePrivateChat(
+            currentUser.id,
+            vm.user!.id,
+          );
+          if (context.mounted) {
+            Navigator.pushNamed(
+              context,
+              '/chat',
+              arguments: {'chatId': chatId, 'chatName': vm.user!.name},
+            );
+          }
+        }
+      },
+    );
+  }
+
+  Widget _buildMenuButton({
+    required IconData icon,
+    required String label,
+    required Color backgroundColor,
+    required Color textColor,
+    required VoidCallback onTap,
+  }) {
+    return Container(
+      decoration: BoxDecoration(
+        color: backgroundColor,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(8),
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(icon, color: textColor, size: 20),
+                const SizedBox(width: 8),
+                Text(
+                  label,
+                  style: TextStyle(
+                    color: textColor,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
             ),
           ),
         ),
-      ],
+      ),
+    );
+  }
+
+  void _showUnblockMenu(BuildContext context, ProfileViewModel vm) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder:
+          (context) => SafeArea(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const SizedBox(height: 8),
+                Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade300,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                _buildMenuItem(
+                  icon: Icons.check_circle,
+                  label: 'Hủy chặn người dùng',
+                  iconColor: Colors.green,
+                  backgroundColor: Colors.green.shade50.withOpacity(0.5),
+                  onTap: () async {
+                    Navigator.pop(context);
+                    await vm.unblockUser();
+                    // Reload profile sau khi hủy chặn
+                    await vm.loadProfile(userId: vm.user?.id);
+                  },
+                ),
+                const SizedBox(height: 16),
+              ],
+            ),
+          ),
+    );
+  }
+
+  void _showFriendsMenu(BuildContext context, ProfileViewModel vm) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder:
+          (context) => SafeArea(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const SizedBox(height: 8),
+                Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade300,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                _buildMenuItem(
+                  icon: Icons.person_remove,
+                  label: 'Hủy kết bạn',
+                  iconColor: Colors.red,
+                  backgroundColor: Colors.red.shade50.withOpacity(0.5),
+                  onTap: () {
+                    Navigator.pop(context);
+                    vm.unfriend();
+                  },
+                ),
+                const Divider(height: 1),
+                _buildMenuItem(
+                  icon: Icons.block,
+                  label: 'Chặn',
+                  iconColor: Colors.black87,
+                  backgroundColor: Colors.grey.shade200.withOpacity(0.5),
+                  onTap: () async {
+                    Navigator.pop(context);
+                    await vm.blockUser();
+                    // Reload profile sau khi chặn
+                    await vm.loadProfile(userId: vm.user?.id);
+                  },
+                ),
+                const SizedBox(height: 16),
+              ],
+            ),
+          ),
+    );
+  }
+
+  void _showPendingSentMenu(BuildContext context, ProfileViewModel vm) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder:
+          (context) => SafeArea(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const SizedBox(height: 8),
+                Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade300,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                _buildMenuItem(
+                  icon: Icons.person_remove,
+                  label: 'Hủy yêu cầu kết bạn',
+                  iconColor: Colors.red,
+                  backgroundColor: Colors.red.shade50.withOpacity(0.5),
+                  onTap: () {
+                    Navigator.pop(context);
+                    // TODO: Implement cancelFriendRequest in ViewModel
+                    // vm.cancelFriendRequest();
+                    print('Cancel friend request tapped');
+                  },
+                ),
+                const SizedBox(height: 16),
+              ],
+            ),
+          ),
+    );
+  }
+
+  void _showAddFriendMenu(BuildContext context, ProfileViewModel vm) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder:
+          (context) => SafeArea(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const SizedBox(height: 8),
+                Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade300,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                _buildMenuItem(
+                  icon: Icons.person_add,
+                  label: 'Gửi lời mời kết bạn',
+                  iconColor: Colors.blue,
+                  backgroundColor: Colors.blue.shade50.withOpacity(0.5),
+                  onTap: () {
+                    Navigator.pop(context);
+                    vm.sendFriendRequest();
+                  },
+                ),
+                const Divider(height: 1),
+                _buildMenuItem(
+                  icon: Icons.block,
+                  label: 'Chặn',
+                  iconColor: Colors.black87,
+                  backgroundColor: Colors.grey.shade200.withOpacity(0.5),
+                  onTap: () async {
+                    Navigator.pop(context);
+                    await vm.blockUser();
+                    // Reload profile sau khi chặn
+                    await vm.loadProfile(userId: vm.user?.id);
+                  },
+                ),
+                const SizedBox(height: 16),
+              ],
+            ),
+          ),
+    );
+  }
+
+  Widget _buildMenuItem({
+    required IconData icon,
+    required String label,
+    required Color iconColor,
+    required Color backgroundColor,
+    required VoidCallback onTap,
+  }) {
+    return ListTile(
+      leading: Container(
+        padding: const EdgeInsets.all(10),
+        decoration: BoxDecoration(
+          color: backgroundColor,
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Icon(icon, color: iconColor, size: 22),
+      ),
+      title: Text(label),
+      onTap: onTap,
     );
   }
 
@@ -330,6 +712,11 @@ class _ProfileContent extends StatelessWidget {
 
     final isCurrentUser = vm.isCurrentUserProfile;
 
+    // Nếu đã chặn hoặc bị chặn, hiển thị màn hình trống
+    if (vm.isBlocked || vm.isBlockedByOther) {
+      return Container(color: AppColors.background);
+    }
+
     return Container(
       color: AppColors.background,
       child: StreamBuilder<List<PostModel>>(
@@ -349,7 +736,6 @@ class _ProfileContent extends StatelessWidget {
             children: [
               _buildInfoSection(context, vm),
               if (isCurrentUser) _buildCreatePostSection(context, vm),
-
               if (posts.isNotEmpty)
                 const Padding(
                   padding: EdgeInsets.fromLTRB(16, 16, 16, 8),
@@ -358,13 +744,14 @@ class _ProfileContent extends StatelessWidget {
                     style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                   ),
                 ),
-
-              ...posts.map(
-                (post) => PostWidget(
-                  post: post,
-                  currentUserDocId: vm.currentUserData!.id,
-                ),
-              ),
+              ...posts
+                  .map(
+                    (post) => PostWidget(
+                      post: post,
+                      currentUserDocId: vm.currentUserData!.id,
+                    ),
+                  )
+                  .toList(),
             ],
           );
         },
@@ -456,203 +843,6 @@ class _ProfileContent extends StatelessWidget {
         label,
         style: const TextStyle(color: AppColors.textSecondary),
       ),
-    );
-  }
-}
-
-// Widget cho nút Bạn bè với dropdown menu
-class _FriendMenuButton extends StatelessWidget {
-  final VoidCallback onUnfriend;
-  final VoidCallback onBlock;
-
-  const _FriendMenuButton({required this.onUnfriend, required this.onBlock});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.grey.shade300,
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          borderRadius: BorderRadius.circular(8),
-          onTap: () {
-            _showMenuSheet(context);
-          },
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: const [
-                Icon(Icons.how_to_reg, color: Colors.black87, size: 20),
-                SizedBox(width: 8),
-                Text(
-                  'Bạn bè',
-                  style: TextStyle(
-                    color: Colors.black87,
-                    fontSize: 15,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  void _showMenuSheet(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-      ),
-      builder:
-          (context) => SafeArea(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const SizedBox(height: 8),
-                Container(
-                  width: 40,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: Colors.grey.shade300,
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                ListTile(
-                  leading: const Icon(
-                    Icons.person_remove,
-                    color: Colors.black87,
-                  ),
-                  title: const Text('Hủy kết bạn'),
-                  onTap: () {
-                    Navigator.pop(context);
-                    onUnfriend();
-                  },
-                ),
-                const Divider(height: 1),
-                ListTile(
-                  leading: const Icon(Icons.block, color: Colors.red),
-                  title: const Text(
-                    'Chặn',
-                    style: TextStyle(color: Colors.red),
-                  ),
-                  onTap: () {
-                    Navigator.pop(context);
-                    onBlock();
-                  },
-                ),
-                const SizedBox(height: 16),
-              ],
-            ),
-          ),
-    );
-  }
-}
-
-// Widget cho nút Thêm bạn bè với dropdown menu
-class _AddFriendMenuButton extends StatelessWidget {
-  final VoidCallback onAddFriend;
-  final VoidCallback onBlock;
-
-  const _AddFriendMenuButton({
-    required this.onAddFriend,
-    required this.onBlock,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: AppColors.primary,
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          borderRadius: BorderRadius.circular(8),
-          onTap: () {
-            _showMenuSheet(context);
-          },
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: const [
-                Icon(Icons.person_add, color: Colors.white, size: 20),
-                SizedBox(width: 8),
-                Text(
-                  'Thêm bạn bè',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 15,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  void _showMenuSheet(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-      ),
-      builder:
-          (context) => SafeArea(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const SizedBox(height: 8),
-                Container(
-                  width: 40,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: Colors.grey.shade300,
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                ListTile(
-                  leading: const Icon(
-                    Icons.person_add,
-                    color: AppColors.primary,
-                  ),
-                  title: const Text('Gửi lời mời kết bạn'),
-                  onTap: () {
-                    Navigator.pop(context);
-                    onAddFriend();
-                  },
-                ),
-                const Divider(height: 1),
-                ListTile(
-                  leading: const Icon(Icons.block, color: Colors.red),
-                  title: const Text(
-                    'Chặn',
-                    style: TextStyle(color: Colors.red),
-                  ),
-                  onTap: () {
-                    Navigator.pop(context);
-                    onBlock();
-                  },
-                ),
-                const SizedBox(height: 16),
-              ],
-            ),
-          ),
     );
   }
 }
