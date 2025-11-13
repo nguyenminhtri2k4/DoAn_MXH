@@ -58,6 +58,7 @@ flutter:
     - assets/sounds/endcall.mp3
     - assets/reactions/
     - assets/reactions/angry.png
+    - assets/icon/
     
 
 # ⚙️ Cấu hình icon ứng dụng

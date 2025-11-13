@@ -466,69 +466,135 @@ class _HomeViewContentState extends State<_HomeViewContent> {
     return Scaffold(
       backgroundColor: AppColors.background,
       extendBodyBehindAppBar: isHomePage,
+      // appBar: isHomePage
+      //     ? PreferredSize(
+      //         preferredSize: const Size.fromHeight(kToolbarHeight),
+      //         child: AnimatedContainer(
+      //           duration: const Duration(milliseconds: 200),
+      //           transform: Matrix4.translationValues(
+      //             0, 
+      //             showUI ? 0 : -(kToolbarHeight + MediaQuery.of(context).padding.top), 
+      //             0
+      //           ),
+      //           child: Consumer<UserService>(
+      //             builder: (context, userService, child) => AppBar(
+      //               leading: Builder(
+      //                 builder: (context) => Padding(
+      //                   padding: const EdgeInsets.all(8.0),
+      //                   child: GestureDetector(
+      //                     onTap: () => Scaffold.of(context).openDrawer(),
+      //                     child: CircleAvatar(
+      //                       backgroundImage: userService.currentUser?.avatar.isNotEmpty == true
+      //                           ? NetworkImage(userService.currentUser!.avatar.first)
+      //                           : null,
+      //                       child: userService.currentUser?.avatar.isEmpty ?? true
+      //                           ? const Icon(Icons.person, size: 20)
+      //                           : null,
+      //                     ),
+      //                   ),
+      //                 ),
+      //               ),
+      //               title: AppColors.logosybau.isNotEmpty
+      //                   ? Image.asset(
+      //                       AppColors.logosybau,
+      //                       height: 400,
+      //                       fit: BoxFit.contain,
+      //                     )
+      //                   : const Text('Mạng Xã Hội'),
+      //               centerTitle: true,
+      //               backgroundColor: AppColors.backgroundLight.withOpacity(0.95),
+      //               elevation: 1,
+      //               actions: [
+      //                   _buildCircularAssetButton(
+      //                     assetPath: 'assets/icon/search.png', // <-- Thay đổi
+      //                     onPressed: () => Navigator.pushNamed(context, '/search'),
+      //                   ),
+      //                   _buildCircularAssetButton(
+      //                     assetPath: 'assets/icon/ring.png', // <-- Thay đổi (cho notification)
+      //                     onPressed: () {
+      //                       Navigator.push(
+      //                         context,
+      //                         MaterialPageRoute(builder: (context) => const NotificationView()),
+      //                       );
+      //                     },
+      //                   ),
+      //                   _buildCircularAssetButton(
+      //                     assetPath: 'assets/icon/message.png', // <-- Thay đổi
+      //                     onPressed: () => Navigator.pushNamed(context, '/messages'),
+      //                   ),
+      //                   const SizedBox(width: 8),
+      //                 ],
+      //             ),
+      //           ),
+      //         ),
+      //       )
+      //     : null,
       appBar: isHomePage
-          ? PreferredSize(
-              preferredSize: const Size.fromHeight(kToolbarHeight),
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 200),
-                transform: Matrix4.translationValues(
-                  0, 
-                  showUI ? 0 : -(kToolbarHeight + MediaQuery.of(context).padding.top), 
-                  0
-                ),
-                child: Consumer<UserService>(
-                  builder: (context, userService, child) => AppBar(
-                    leading: Builder(
-                      builder: (context) => Padding(
-                        padding: const EdgeInsets.all(8.0),
-                        child: GestureDetector(
-                          onTap: () => Scaffold.of(context).openDrawer(),
-                          child: CircleAvatar(
-                            backgroundImage: userService.currentUser?.avatar.isNotEmpty == true
-                                ? NetworkImage(userService.currentUser!.avatar.first)
-                                : null,
-                            child: userService.currentUser?.avatar.isEmpty ?? true
-                                ? const Icon(Icons.person, size: 20)
-                                : null,
-                          ),
-                        ),
-                      ),
+    ? PreferredSize(
+        preferredSize: const Size.fromHeight(kToolbarHeight),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          transform: Matrix4.translationValues(
+            0, 
+            showUI ? 0 : -(kToolbarHeight + MediaQuery.of(context).padding.top), 
+            0
+          ),
+          child: Consumer<UserService>(
+            builder: (context, userService, child) => AppBar(
+              leading: Builder(
+                builder: (context) => Padding(
+                  padding: const EdgeInsets.all(8.0),
+                  child: GestureDetector(
+                    onTap: () => Scaffold.of(context).openDrawer(),
+                    child: CircleAvatar(
+                      backgroundImage: userService.currentUser?.avatar.isNotEmpty == true
+                          ? NetworkImage(userService.currentUser!.avatar.first)
+                          : null,
+                      child: userService.currentUser?.avatar.isEmpty ?? true
+                          ? const Icon(Icons.person, size: 20)
+                          : null,
                     ),
-                    title: AppColors.logosybau.isNotEmpty
-                        ? Image.asset(
-                            AppColors.logosybau,
-                            height: 300,
-                            fit: BoxFit.contain,
-                          )
-                        : const Text('Mạng Xã Hội'),
-                    centerTitle: true,
-                    backgroundColor: AppColors.backgroundLight.withOpacity(0.95),
-                    elevation: 1,
-                    actions: [
-                      _buildCircularIconButton(
-                        icon: Icons.search,
-                        onPressed: () => Navigator.pushNamed(context, '/search'),
-                      ),
-                      _buildCircularIconButton(
-                        icon: Icons.notifications_outlined,
-                        onPressed: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(builder: (context) => const NotificationView()),
-                          );
-                        },
-                      ),
-                      _buildCircularIconButton(
-                        icon: Icons.message_outlined,
-                        onPressed: () => Navigator.pushNamed(context, '/messages'),
-                      ),
-                      const SizedBox(width: 8),
-                    ],
                   ),
                 ),
               ),
-            )
-          : null,
+              title: AppColors.logosybau.isNotEmpty
+                  ? Transform.translate(
+                      offset: const Offset(-40, 0), // Di chuyển sang trái 80px (điều chỉnh con số)
+                      child: Image.asset(
+                        AppColors.logosybau,
+                        height: 400,
+                        fit: BoxFit.contain,
+                      ),
+                    )
+                  : const Text('Mạng Xã Hội'),
+              centerTitle: true,
+              backgroundColor: AppColors.backgroundLight.withOpacity(0.95),
+              elevation: 1,
+              actions: [
+                _buildCircularAssetButton(
+                  assetPath: 'assets/icon/search.png',
+                  onPressed: () => Navigator.pushNamed(context, '/search'),
+                ),
+                _buildCircularAssetButton(
+                  assetPath: 'assets/icon/ring.png',
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => const NotificationView()),
+                    );
+                  },
+                ),
+                _buildCircularAssetButton(
+                  assetPath: 'assets/icon/message.png',
+                  onPressed: () => Navigator.pushNamed(context, '/messages'),
+                ),
+                const SizedBox(width: 8),
+              ],
+            ),
+          ),
+        ),
+      )
+    : null,
       drawer: Consumer<UserService>(
         builder: (context, userService, child) => Drawer(
           backgroundColor: AppColors.background,
@@ -789,6 +855,27 @@ class _HomeViewContentState extends State<_HomeViewContent> {
       ),
       child: IconButton(
         icon: Icon(icon, size: 24, color: AppColors.textPrimary),
+        onPressed: onPressed,
+      ),
+    );
+  }
+
+  Widget _buildCircularAssetButton({
+    required String assetPath, 
+    required VoidCallback onPressed
+  }) {
+    return Container(
+      margin: const EdgeInsets.all(0),
+      // decoration: const BoxDecoration(
+      //   color: AppColors.backgroundDark,
+      //   shape: BoxShape.circle,
+      // ),
+      child: IconButton(
+        icon: Image.asset(
+          assetPath,
+          width: 35, // Giữ kích thước 24x24 như Icon cũ
+          height: 35,
+        ),
         onPressed: onPressed,
       ),
     );
