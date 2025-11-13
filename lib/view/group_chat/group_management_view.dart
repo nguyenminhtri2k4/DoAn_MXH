@@ -1,4 +1,3 @@
-
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:mangxahoi/viewmodel/group_management_viewmodel.dart';
@@ -8,24 +7,25 @@ import 'package:mangxahoi/constant/app_colors.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:mangxahoi/view/group_chat/add_members_view.dart';
 import 'package:mangxahoi/services/user_service.dart';
-import 'package:intl/intl.dart'; // Import để định dạng ngày
-// Thêm vào phần import của group_management_view.dart
+import 'package:intl/intl.dart';
 import 'package:mangxahoi/view/group_chat/group_qr_code_view.dart';
 
 class GroupManagementView extends StatelessWidget {
   final String groupId;
 
-  const GroupManagementView({Key? key, required this.groupId}) : super(key: key);
+  const GroupManagementView({Key? key, required this.groupId})
+    : super(key: key);
 
   @override
   Widget build(BuildContext context) {
     final String? currentUserId = context.watch<UserService>().currentUser?.id;
 
     return ChangeNotifierProvider(
-      create: (_) => GroupManagementViewModel(
-        groupId: groupId,
-        currentUserId: currentUserId,
-      ),
+      create:
+          (_) => GroupManagementViewModel(
+            groupId: groupId,
+            currentUserId: currentUserId,
+          ),
       child: const _GroupManagementContent(),
     );
   }
@@ -39,9 +39,7 @@ class _GroupManagementContent extends StatelessWidget {
     final vm = context.watch<GroupManagementViewModel>();
 
     if (vm.isLoading) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      );
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
     if (vm.group == null) {
@@ -92,21 +90,21 @@ class _GroupManagementContent extends StatelessWidget {
           children: [
             vm.group!.coverImage.isNotEmpty
                 ? CachedNetworkImage(
-                    imageUrl: vm.group!.coverImage,
-                    fit: BoxFit.cover,
-                  )
+                  imageUrl: vm.group!.coverImage,
+                  fit: BoxFit.cover,
+                )
                 : Container(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [
-                          AppColors.primary,
-                          AppColors.primary.withOpacity(0.7)
-                        ],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        AppColors.primary,
+                        AppColors.primary.withOpacity(0.7),
+                      ],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
                     ),
                   ),
+                ),
             Container(
               decoration: BoxDecoration(
                 gradient: LinearGradient(
@@ -181,15 +179,17 @@ class _GroupManagementContent extends StatelessWidget {
                     shape: BoxShape.circle,
                   ),
                   child: IconButton(
-                    icon: Icon(Icons.edit_outlined, color: AppColors.primary, size: 20),
+                    icon: Icon(
+                      Icons.edit_outlined,
+                      color: AppColors.primary,
+                      size: 20,
+                    ),
                     onPressed: () => _showEditGroupNameDialog(context, vm),
                   ),
                 ),
             ],
           ),
-          
           const SizedBox(height: 12),
-          
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -197,22 +197,26 @@ class _GroupManagementContent extends StatelessWidget {
                 child: Text(
                   vm.group!.description.isNotEmpty
                       ? vm.group!.description
-                      : (vm.canEdit ? 'Thêm mô tả cho nhóm...' : 'Nhóm này chưa có mô tả.'),
+                      : (vm.canEdit
+                          ? 'Thêm mô tả cho nhóm...'
+                          : 'Nhóm này chưa có mô tả.'),
                   style: TextStyle(
                     fontSize: 14,
-                    color: vm.group!.description.isNotEmpty 
-                        ? Colors.grey[600] 
-                        : Colors.grey[400],
+                    color:
+                        vm.group!.description.isNotEmpty
+                            ? Colors.grey[600]
+                            : Colors.grey[400],
                     height: 1.4,
-                    fontStyle: vm.group!.description.isNotEmpty
-                        ? FontStyle.normal
-                        : FontStyle.italic,
+                    fontStyle:
+                        vm.group!.description.isNotEmpty
+                            ? FontStyle.normal
+                            : FontStyle.italic,
                   ),
                 ),
               ),
               if (vm.canEdit)
                 Container(
-                  width: 48, 
+                  width: 48,
                   height: 48,
                   margin: const EdgeInsets.only(left: 8.0),
                   decoration: BoxDecoration(
@@ -220,13 +224,17 @@ class _GroupManagementContent extends StatelessWidget {
                     shape: BoxShape.circle,
                   ),
                   child: IconButton(
-                    icon: Icon(Icons.description_outlined, color: AppColors.primary, size: 20),
-                    onPressed: () => _showEditGroupDescriptionDialog(context, vm), 
+                    icon: Icon(
+                      Icons.description_outlined,
+                      color: AppColors.primary,
+                      size: 20,
+                    ),
+                    onPressed:
+                        () => _showEditGroupDescriptionDialog(context, vm),
                   ),
                 ),
             ],
           ),
-
           const SizedBox(height: 20),
           Container(
             padding: const EdgeInsets.all(16),
@@ -234,12 +242,12 @@ class _GroupManagementContent extends StatelessWidget {
               color: Colors.grey[50],
               borderRadius: BorderRadius.circular(12),
             ),
-            child: Column( 
+            child: Column(
               children: [
-                Row( 
+                Row(
                   mainAxisAlignment: MainAxisAlignment.spaceAround,
                   children: [
-                    Expanded( 
+                    Expanded(
                       child: _buildInfoItem(
                         Icons.people_outline,
                         '${vm.members.length}',
@@ -248,7 +256,7 @@ class _GroupManagementContent extends StatelessWidget {
                       ),
                     ),
                     Container(width: 1, height: 40, color: Colors.grey[300]),
-                    Expanded( 
+                    Expanded(
                       child: _buildInfoItem(
                         vm.isPrivate ? Icons.lock_outline : Icons.public,
                         vm.isPrivate ? 'Riêng tư' : 'Công khai',
@@ -258,11 +266,10 @@ class _GroupManagementContent extends StatelessWidget {
                     ),
                   ],
                 ),
-                
                 if (vm.group?.createdAt != null) ...[
                   Padding(
                     padding: const EdgeInsets.symmetric(vertical: 12.0),
-                    child: Divider(height: 1, color: Colors.grey[300]), 
+                    child: Divider(height: 1, color: Colors.grey[300]),
                   ),
                   _buildInfoItem(
                     Icons.calendar_today_outlined,
@@ -270,7 +277,7 @@ class _GroupManagementContent extends StatelessWidget {
                     'Ngày tạo',
                     Colors.purple,
                   ),
-                ]
+                ],
               ],
             ),
           ),
@@ -279,7 +286,12 @@ class _GroupManagementContent extends StatelessWidget {
     );
   }
 
-  Widget _buildInfoItem(IconData icon, String value, String label, Color color) {
+  Widget _buildInfoItem(
+    IconData icon,
+    String value,
+    String label,
+    Color color,
+  ) {
     return Column(
       children: [
         Container(
@@ -299,57 +311,57 @@ class _GroupManagementContent extends StatelessWidget {
             color: color,
           ),
         ),
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: 12,
-            color: Colors.grey[600],
-          ),
-        ),
+        Text(label, style: TextStyle(fontSize: 12, color: Colors.grey[600])),
       ],
     );
   }
 
-  Widget _buildActionButtons(BuildContext context, GroupManagementViewModel vm) {
+  Widget _buildActionButtons(
+    BuildContext context,
+    GroupManagementViewModel vm,
+  ) {
     final bool isMember = vm.group!.members.contains(vm.currentUserId);
 
-    // Nếu không phải là thành viên, không hiển thị bất kỳ nút nào
     if (!isMember) {
-      return const SizedBox.shrink(); // Trả về một widget rỗng
+      return const SizedBox.shrink();
     }
+
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16),
       child: Row(
         children: [
-         Expanded(
-          child: _buildActionButton(
-            icon: Icons.qr_code,
-            label: 'Mã QR',
-            gradient: LinearGradient(
-              colors: [Colors.purple[400]!, Colors.purple[600]!],
-            ),
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => GroupQRCodeView(
-                    group: vm.group!,
-                    // SỬA LẠI DÒNG NÀY
-                    currentUserName: vm.currentUser?.name ?? 'Người dùng',
+          Expanded(
+            child: _buildActionButton(
+              icon: Icons.qr_code,
+              label: 'Mã QR',
+              gradient: LinearGradient(
+                colors: [Colors.purple[400]!, Colors.purple[600]!],
+              ),
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder:
+                        (context) => GroupQRCodeView(
+                          group: vm.group!,
+                          currentUserName: vm.currentUser?.name ?? 'Người dùng',
+                        ),
                   ),
-                ),
-              );
-            },
+                );
+              },
+            ),
           ),
-        ),
-        const SizedBox(width: 12),
+          const SizedBox(width: 12),
           if (vm.canInviteMembers)
             Expanded(
               child: _buildActionButton(
                 icon: Icons.person_add_outlined,
                 label: 'Thêm thành viên',
                 gradient: LinearGradient(
-                  colors: [AppColors.primary, AppColors.primary.withOpacity(0.8)],
+                  colors: [
+                    AppColors.primary,
+                    AppColors.primary.withOpacity(0.8),
+                  ],
                 ),
                 onPressed: () {
                   Navigator.push(
@@ -361,19 +373,6 @@ class _GroupManagementContent extends StatelessWidget {
                 },
               ),
             ),
-          // if (vm.canInviteMembers) const SizedBox(width: 12),
-          // Expanded(
-          //   child: _buildActionButton(
-          //     icon: Icons.notifications_outlined,
-          //     label: 'Thông báo',
-          //     gradient: LinearGradient(
-          //       colors: [Colors.orange[400]!, Colors.orange[600]!],
-          //     ),
-          //     onPressed: () {
-          //       // TODO: Implement notification settings
-          //     },
-          //   ),
-          // ),
         ],
       ),
     );
@@ -425,7 +424,10 @@ class _GroupManagementContent extends StatelessWidget {
     );
   }
 
-  Widget _buildSettingsSection(BuildContext context, GroupManagementViewModel vm) {
+  Widget _buildSettingsSection(
+    BuildContext context,
+    GroupManagementViewModel vm,
+  ) {
     if (!vm.isOwner) return const SizedBox.shrink();
 
     return Container(
@@ -469,9 +471,10 @@ class _GroupManagementContent extends StatelessWidget {
             icon: Icons.message_outlined,
             iconColor: Colors.blue,
             title: 'Ai có thể nhắn tin',
-            subtitle: vm.messagingPermission == 'all'
-                ? 'Tất cả thành viên'
-                : vm.messagingPermission == 'managers'
+            subtitle:
+                vm.messagingPermission == 'all'
+                    ? 'Tất cả thành viên'
+                    : vm.messagingPermission == 'managers'
                     ? 'Chỉ quản lý'
                     : 'Chỉ chủ nhóm',
             trailing: Container(
@@ -480,7 +483,11 @@ class _GroupManagementContent extends StatelessWidget {
                 shape: BoxShape.circle,
               ),
               child: IconButton(
-                icon: Icon(Icons.edit_outlined, size: 18, color: AppColors.primary),
+                icon: Icon(
+                  Icons.edit_outlined,
+                  size: 18,
+                  color: AppColors.primary,
+                ),
                 onPressed: () => _showMessagingPermissionDialog(context, vm),
               ),
             ),
@@ -521,24 +528,25 @@ class _GroupManagementContent extends StatelessWidget {
         padding: const EdgeInsets.only(top: 4),
         child: Text(
           subtitle,
-          style: TextStyle(
-            fontSize: 13,
-            color: Colors.grey[600],
-          ),
+          style: TextStyle(fontSize: 13, color: Colors.grey[600]),
         ),
       ),
-      trailing: trailing ??
+      trailing:
+          trailing ??
           (value != null
               ? Switch(
-                  value: value,
-                  onChanged: onChanged,
-                  activeColor: AppColors.primary,
-                )
+                value: value,
+                onChanged: onChanged,
+                activeColor: AppColors.primary,
+              )
               : null),
     );
   }
 
-  Widget _buildMembersSection(BuildContext context, GroupManagementViewModel vm) {
+  Widget _buildMembersSection(
+    BuildContext context,
+    GroupManagementViewModel vm,
+  ) {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16),
       decoration: BoxDecoration(
@@ -612,9 +620,10 @@ class _GroupManagementContent extends StatelessWidget {
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               border: Border.all(
-                color: isOwner 
-                    ? Colors.amber.withOpacity(0.3)
-                    : isManager
+                color:
+                    isOwner
+                        ? Colors.amber.withOpacity(0.3)
+                        : isManager
                         ? AppColors.primary.withOpacity(0.3)
                         : Colors.transparent,
                 width: 2,
@@ -622,12 +631,11 @@ class _GroupManagementContent extends StatelessWidget {
             ),
             child: CircleAvatar(
               radius: 24,
-              backgroundImage: member.avatar.isNotEmpty
-                  ? NetworkImage(member.avatar.first)
-                  : null,
-              child: member.avatar.isEmpty
-                  ? const Icon(Icons.person)
-                  : null,
+              backgroundImage:
+                  member.avatar.isNotEmpty
+                      ? NetworkImage(member.avatar.first)
+                      : null,
+              child: member.avatar.isEmpty ? const Icon(Icons.person) : null,
             ),
           ),
           if (isOwner)
@@ -647,11 +655,7 @@ class _GroupManagementContent extends StatelessWidget {
                     ),
                   ],
                 ),
-                child: const Icon(
-                  Icons.star,
-                  size: 12,
-                  color: Colors.white,
-                ),
+                child: const Icon(Icons.star, size: 12, color: Colors.white),
               ),
             ),
           if (!isOwner && isManager)
@@ -671,11 +675,7 @@ class _GroupManagementContent extends StatelessWidget {
                     ),
                   ],
                 ),
-                child: const Icon(
-                  Icons.shield,
-                  size: 12,
-                  color: Colors.white,
-                ),
+                child: const Icon(Icons.shield, size: 12, color: Colors.white),
               ),
             ),
         ],
@@ -717,82 +717,36 @@ class _GroupManagementContent extends StatelessWidget {
           isOwner
               ? 'Chủ nhóm'
               : isManager
-                  ? 'Quản lý'
-                  : 'Thành viên',
+              ? 'Quản lý'
+              : 'Thành viên',
           style: TextStyle(
             fontSize: 13,
-            color: isOwner
-                ? Colors.amber[700]
-                : isManager
+            color:
+                isOwner
+                    ? Colors.amber[700]
+                    : isManager
                     ? AppColors.primary
                     : Colors.grey[600],
-            fontWeight: isOwner || isManager ? FontWeight.w500 : FontWeight.normal,
+            fontWeight:
+                isOwner || isManager ? FontWeight.w500 : FontWeight.normal,
           ),
         ),
       ),
-      trailing: vm.canManageMembers && member.id != vm.currentUserId
-          ? Container(
-              decoration: BoxDecoration(
-                color: Colors.grey[100],
-                shape: BoxShape.circle,
-              ),
-              child: PopupMenuButton(
+      trailing:
+          vm.canManageMembers && member.id != vm.currentUserId
+              ? IconButton(
                 icon: Icon(Icons.more_vert, size: 20, color: Colors.grey[700]),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                itemBuilder: (context) => [
-                  if (vm.isOwner && !isManager)
-                    PopupMenuItem(
-                      child: Row(
-                        children: [
-                          Icon(Icons.shield_outlined, size: 20, color: AppColors.primary),
-                          const SizedBox(width: 12),
-                          const Text('Cấp quyền quản lý'),
-                        ],
-                      ),
-                      onTap: () => vm.promoteToManager(member.id),
+                onPressed:
+                    () => _showMemberOptionsSheet(
+                      context,
+                      vm,
+                      member,
+                      isOwner,
+                      isManager,
+                      isMuted,
                     ),
-                  if (vm.isOwner && isManager && !isOwner)
-                    PopupMenuItem(
-                      child: const Row(
-                        children: [
-                          Icon(Icons.remove_circle_outline, size: 20, color: Colors.orange),
-                          SizedBox(width: 12),
-                          Text('Gỡ quyền quản lý'),
-                        ],
-                      ),
-                      onTap: () => vm.demoteFromManager(member.id),
-                    ),
-                  PopupMenuItem(
-                    child: Row(
-                      children: [
-                        Icon(
-                          isMuted ? Icons.volume_up_outlined : Icons.volume_off_outlined,
-                          size: 20,
-                          color: isMuted ? Colors.green : Colors.grey[700],
-                        ),
-                        const SizedBox(width: 12),
-                        Text(isMuted ? 'Bỏ tắt tiếng' : 'Tắt tiếng'),
-                      ],
-                    ),
-                    onTap: () => vm.toggleMuteMember(member.id),
-                  ),
-                  if (!isOwner)
-                    PopupMenuItem(
-                      child: const Row(
-                        children: [
-                          Icon(Icons.person_remove_outlined, size: 20, color: Colors.red),
-                          SizedBox(width: 12),
-                          Text('Xóa khỏi nhóm', style: TextStyle(color: Colors.red)),
-                        ],
-                      ),
-                      onTap: () => _confirmRemoveMember(context, vm, member),
-                    ),
-                ],
-              ),
-            )
-          : null,
+              )
+              : null,
     );
   }
 
@@ -833,14 +787,21 @@ class _GroupManagementContent extends StatelessWidget {
           ),
           Divider(height: 1, color: Colors.red.withOpacity(0.2)),
           ListTile(
-            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 16,
+              vertical: 8,
+            ),
             leading: Container(
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
                 color: Colors.red.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(10),
               ),
-              child: const Icon(Icons.delete_forever_outlined, color: Colors.red, size: 22),
+              child: const Icon(
+                Icons.delete_forever_outlined,
+                color: Colors.red,
+                size: 22,
+              ),
             ),
             title: const Text(
               'Giải tán nhóm',
@@ -864,168 +825,593 @@ class _GroupManagementContent extends StatelessWidget {
     );
   }
 
-  // --- SỬA ĐỔI DIALOG TÊN NHÓM ---
   void _showEditGroupNameDialog(
-      BuildContext context, GroupManagementViewModel vm) {
+    BuildContext context,
+    GroupManagementViewModel vm,
+  ) {
     final controller = TextEditingController(text: vm.group!.name);
-    final formKey = GlobalKey<FormState>(); // Thêm key để validation
+    final formKey = GlobalKey<FormState>();
 
-    showDialog(
+    showModalBottomSheet(
       context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('Đổi tên nhóm'),
-        content: Form( // Bọc trong Form
-          key: formKey,
-          child: TextFormField( // Đổi thành TextFormField
-            controller: controller,
-            autofocus: true,
-            validator: (value) { // Thêm validation
-              if (value == null || value.trim().isEmpty) {
-                return 'Tên không được để trống';
-              }
-              return null;
-            },
-            decoration: InputDecoration(
-              hintText: 'Nhập tên nhóm mới',
-              filled: true, // Thêm màu nền
-              fillColor: Colors.grey[100],
-              border: OutlineInputBorder( // Xóa viền
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide.none,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder:
+          (context) => Padding(
+            padding: EdgeInsets.only(
+              bottom: MediaQuery.of(context).viewInsets.bottom,
+            ),
+            child: SingleChildScrollView(
+              child: Container(
+                decoration: const BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+                ),
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text(
+                          'Đổi tên nhóm',
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.close),
+                          onPressed: () => Navigator.pop(context),
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 20),
+                    Form(
+                      key: formKey,
+                      child: TextFormField(
+                        controller: controller,
+                        autofocus: true,
+                        validator: (value) {
+                          if (value == null || value.trim().isEmpty) {
+                            return 'Tên không được để trống';
+                          }
+                          return null;
+                        },
+                        decoration: InputDecoration(
+                          hintText: 'Nhập tên nhóm mới',
+                          filled: true,
+                          fillColor: Colors.grey[100],
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide.none,
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide.none,
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide(
+                              color: AppColors.primary,
+                              width: 2,
+                            ),
+                          ),
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 12,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: ElevatedButton(
+                            onPressed: () => Navigator.pop(context),
+                            style: ElevatedButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              backgroundColor: const Color(0xFFFEE2E2),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              elevation: 0,
+                            ),
+                            child: const Text(
+                              'Hủy',
+                              style: TextStyle(
+                                color: Color(0xFFEF4444),
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: ElevatedButton(
+                            onPressed: () {
+                              if (formKey.currentState!.validate()) {
+                                vm.updateGroupName(controller.text.trim());
+                                Navigator.pop(context);
+                              }
+                            },
+                            style: ElevatedButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              backgroundColor: AppColors.primary,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              elevation: 0,
+                            ),
+                            child: const Text(
+                              'Lưu',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
-              enabledBorder: OutlineInputBorder( // Xóa viền khi enabled
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide.none,
-              ),
-              focusedBorder: OutlineInputBorder( // Chỉ hiện viền khi focus
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(color: AppColors.primary, width: 2),
-              ),
-              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             ),
           ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text('Hủy', style: TextStyle(color: Colors.grey[700])),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              // Kiểm tra validation trước khi lưu
-              if (formKey.currentState!.validate()) {
-                vm.updateGroupName(controller.text.trim());
-                Navigator.pop(context);
-              }
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primary,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-            ),
-            child: const Text('Lưu'),
-          ),
-        ],
-      ),
     );
   }
-  // --- KẾT THÚC SỬA ĐỔI ---
 
-  // --- SỬA ĐỔI DIALOG MÔ TẢ ---
   void _showEditGroupDescriptionDialog(
-      BuildContext context, GroupManagementViewModel vm) {
+    BuildContext context,
+    GroupManagementViewModel vm,
+  ) {
     final controller = TextEditingController(text: vm.group!.description);
-    showDialog(
+
+    showModalBottomSheet(
       context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('Sửa mô tả nhóm'),
-        content: TextFormField( // Đổi thành TextFormField
-          controller: controller,
-          autofocus: true,
-          maxLines: 5, 
-          minLines: 3,
-          decoration: InputDecoration(
-            hintText: 'Nhập mô tả cho nhóm...',
-            filled: true, // Thêm màu nền
-            fillColor: Colors.grey[100],
-            border: OutlineInputBorder( // Xóa viền
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide.none,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder:
+          (context) => Padding(
+            padding: EdgeInsets.only(
+              bottom: MediaQuery.of(context).viewInsets.bottom,
             ),
-            enabledBorder: OutlineInputBorder( // Xóa viền khi enabled
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide.none,
+            child: SingleChildScrollView(
+              child: Container(
+                decoration: const BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+                ),
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text(
+                          'Sửa mô tả nhóm',
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.close),
+                          onPressed: () => Navigator.pop(context),
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 20),
+                    TextFormField(
+                      controller: controller,
+                      autofocus: true,
+                      maxLines: 5,
+                      minLines: 3,
+                      decoration: InputDecoration(
+                        hintText: 'Nhập mô tả cho nhóm...',
+                        filled: true,
+                        fillColor: Colors.grey[100],
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide.none,
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide.none,
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(
+                            color: AppColors.primary,
+                            width: 2,
+                          ),
+                        ),
+                        contentPadding: const EdgeInsets.all(16),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: ElevatedButton(
+                            onPressed: () => Navigator.pop(context),
+                            style: ElevatedButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              backgroundColor: const Color(0xFFFEE2E2),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              elevation: 0,
+                            ),
+                            child: const Text(
+                              'Hủy',
+                              style: TextStyle(
+                                color: Color(0xFFEF4444),
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: ElevatedButton(
+                            onPressed: () {
+                              vm.updateGroupDescription(controller.text.trim());
+                              Navigator.pop(context);
+                            },
+                            style: ElevatedButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              backgroundColor: AppColors.primary,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              elevation: 0,
+                            ),
+                            child: const Text(
+                              'Lưu',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
             ),
-            focusedBorder: OutlineInputBorder( // Chỉ hiện viền khi focus
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: AppColors.primary, width: 2),
-            ),
-            contentPadding: const EdgeInsets.all(16), // Thêm padding
           ),
+    );
+  }
+
+  void _showMemberOptionsSheet(
+    BuildContext context,
+    GroupManagementViewModel vm,
+    UserModel member,
+    bool isOwner,
+    bool isManager,
+    bool isMuted,
+  ) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder:
+          (context) => SingleChildScrollView(
+            child: Container(
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const SizedBox(height: 12),
+                  Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: Colors.grey[300],
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    child: Row(
+                      children: [
+                        CircleAvatar(
+                          radius: 24,
+                          backgroundImage:
+                              member.avatar.isNotEmpty
+                                  ? NetworkImage(member.avatar.first)
+                                  : null,
+                          child:
+                              member.avatar.isEmpty
+                                  ? const Icon(Icons.person)
+                                  : null,
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                member.name,
+                                style: const TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              Text(
+                                isOwner
+                                    ? 'Chủ nhóm'
+                                    : isManager
+                                    ? 'Quản lý'
+                                    : 'Thành viên',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  color: Colors.grey[600],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  Divider(height: 1, color: Colors.grey[300]),
+                  const SizedBox(height: 20),
+                  if (vm.isOwner && !isManager)
+                    _buildOptionTile(
+                      icon: Icons.shield_outlined,
+                      iconColor: AppColors.primary,
+                      title: 'Cấp quyền quản lý',
+                      subtitle: 'Cho phép quản lý nhóm và thành viên',
+                      onTap: () {
+                        Navigator.pop(context);
+                        vm.promoteToManager(member.id);
+                      },
+                    ),
+                  if (vm.isOwner && isManager && !isOwner)
+                    _buildOptionTile(
+                      icon: Icons.remove_circle_outline,
+                      iconColor: Colors.orange,
+                      title: 'Gỡ quyền quản lý',
+                      subtitle: 'Hạ xuống thành viên thông thường',
+                      onTap: () {
+                        Navigator.pop(context);
+                        vm.demoteFromManager(member.id);
+                      },
+                    ),
+                  _buildOptionTile(
+                    icon:
+                        isMuted
+                            ? Icons.volume_up_outlined
+                            : Icons.volume_off_outlined,
+                    iconColor: isMuted ? Colors.green : Colors.grey[700]!,
+                    title: isMuted ? 'Bỏ tắt tiếng' : 'Tắt tiếng',
+                    subtitle:
+                        isMuted
+                            ? 'Cho phép gửi tin nhắn trở lại'
+                            : 'Ngăn không cho gửi tin nhắn',
+                    onTap: () {
+                      Navigator.pop(context);
+                      vm.toggleMuteMember(member.id);
+                    },
+                  ),
+                  if (!isOwner)
+                    _buildOptionTile(
+                      icon: Icons.person_remove_outlined,
+                      iconColor: Colors.red,
+                      title: 'Xóa khỏi nhóm',
+                      subtitle: 'Thành viên sẽ bị xóa vĩnh viễn',
+                      onTap: () {
+                        Navigator.pop(context);
+                        _confirmRemoveMember(context, vm, member);
+                      },
+                    ),
+                  const SizedBox(height: 20),
+                ],
+              ),
+            ),
+          ),
+    );
+  }
+
+  Widget _buildOptionTile({
+    required IconData icon,
+    required Color iconColor,
+    required String title,
+    required String subtitle,
+    required VoidCallback onTap,
+  }) {
+    return ListTile(
+      onTap: onTap,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+      leading: Container(
+        padding: const EdgeInsets.all(10),
+        decoration: BoxDecoration(
+          color: iconColor.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(10),
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text('Hủy', style: TextStyle(color: Colors.grey[700])),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              vm.updateGroupDescription(controller.text.trim()); 
-              Navigator.pop(context);
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primary,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-            ),
-            child: const Text('Lưu'),
-          ),
-        ],
+        child: Icon(icon, color: iconColor, size: 24),
+      ),
+      title: Text(
+        title,
+        style: TextStyle(
+          fontSize: 16,
+          fontWeight: FontWeight.w600,
+          color: iconColor == Colors.red ? Colors.red : Colors.black87,
+        ),
+      ),
+      subtitle: Padding(
+        padding: const EdgeInsets.only(top: 4),
+        child: Text(
+          subtitle,
+          style: TextStyle(fontSize: 13, color: Colors.grey[600]),
+        ),
       ),
     );
   }
-  // --- KẾT THÚC SỬA ĐỔI ---
 
   void _showMessagingPermissionDialog(
-      BuildContext context, GroupManagementViewModel vm) {
-    showDialog(
+    BuildContext context,
+    GroupManagementViewModel vm,
+  ) {
+    showModalBottomSheet(
       context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('Ai có thể nhắn tin?'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder:
+          (context) => SingleChildScrollView(
+            child: Container(
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+              ),
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        'Ai có thể nhắn tin?',
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.close),
+                        onPressed: () => Navigator.pop(context),
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  _buildPermissionOption(
+                    context,
+                    vm,
+                    'all',
+                    'Tất cả thành viên',
+                    'Mọi thành viên trong nhóm có thể gửi tin nhắn',
+                    Icons.people_outline,
+                  ),
+                  const SizedBox(height: 12),
+                  _buildPermissionOption(
+                    context,
+                    vm,
+                    'managers',
+                    'Chỉ quản lý',
+                    'Chỉ quản lý và chủ nhóm có thể gửi tin nhắn',
+                    Icons.shield_outlined,
+                  ),
+                  const SizedBox(height: 12),
+                  _buildPermissionOption(
+                    context,
+                    vm,
+                    'owner',
+                    'Chỉ chủ nhóm',
+                    'Chỉ có chủ nhóm mới có thể gửi tin nhắn',
+                    Icons.star_outline,
+                  ),
+                  const SizedBox(height: 8),
+                ],
+              ),
+            ),
+          ),
+    );
+  }
+
+  Widget _buildPermissionOption(
+    BuildContext context,
+    GroupManagementViewModel vm,
+    String value,
+    String title,
+    String description,
+    IconData icon,
+  ) {
+    final isSelected = vm.messagingPermission == value;
+
+    return InkWell(
+      onTap: () {
+        vm.updateMessagingPermission(value);
+        Navigator.pop(context);
+      },
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color:
+              isSelected ? AppColors.primary.withOpacity(0.1) : Colors.grey[50],
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: isSelected ? AppColors.primary : Colors.grey[200]!,
+            width: isSelected ? 2 : 1,
+          ),
+        ),
+        child: Row(
           children: [
-            RadioListTile<String>(
-              title: const Text('Tất cả thành viên'),
-              value: 'all',
-              groupValue: vm.messagingPermission,
-              activeColor: AppColors.primary,
-              onChanged: (value) {
-                if (value != null) vm.updateMessagingPermission(value);
-                Navigator.pop(context);
-              },
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color:
+                    isSelected
+                        ? AppColors.primary.withOpacity(0.2)
+                        : Colors.grey[200],
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(
+                icon,
+                color: isSelected ? AppColors.primary : Colors.grey[600],
+                size: 24,
+              ),
             ),
-            RadioListTile<String>(
-              title: const Text('Chỉ quản lý'),
-              value: 'managers',
-              groupValue: vm.messagingPermission,
-              activeColor: AppColors.primary,
-              onChanged: (value) {
-                if (value != null) vm.updateMessagingPermission(value);
-                Navigator.pop(context);
-              },
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: isSelected ? AppColors.primary : Colors.black87,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    description,
+                    style: TextStyle(fontSize: 13, color: Colors.grey[600]),
+                  ),
+                ],
+              ),
             ),
-            RadioListTile<String>(
-              title: const Text('Chỉ chủ nhóm'),
-              value: 'owner',
-              groupValue: vm.messagingPermission,
-              activeColor: AppColors.primary,
-              onChanged: (value) {
-                if (value != null) vm.updateMessagingPermission(value);
-                Navigator.pop(context);
-              },
-            ),
+            if (isSelected)
+              Icon(Icons.check_circle, color: AppColors.primary, size: 24),
           ],
         ),
       ),
@@ -1033,69 +1419,81 @@ class _GroupManagementContent extends StatelessWidget {
   }
 
   void _confirmRemoveMember(
-      BuildContext context, GroupManagementViewModel vm, UserModel member) {
+    BuildContext context,
+    GroupManagementViewModel vm,
+    UserModel member,
+  ) {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('Xóa thành viên'),
-        content: Text('Bạn có chắc muốn xóa ${member.name} khỏi nhóm?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text('Hủy', style: TextStyle(color: Colors.grey[700])),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              vm.removeMember(member.id);
-              Navigator.pop(context);
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+      builder:
+          (context) => AlertDialog(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
             ),
-            child: const Text('Xóa'),
+            title: const Text('Xóa thành viên'),
+            content: Text('Bạn có chắc muốn xóa ${member.name} khỏi nhóm?'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: Text('Hủy', style: TextStyle(color: Colors.grey[700])),
+              ),
+              ElevatedButton(
+                onPressed: () {
+                  vm.removeMember(member.id);
+                  Navigator.pop(context);
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.red,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+                child: const Text('Xóa'),
+              ),
+            ],
           ),
-        ],
-      ),
     );
   }
 
-  void _confirmDisbandGroup(
-      BuildContext context, GroupManagementViewModel vm) {
+  void _confirmDisbandGroup(BuildContext context, GroupManagementViewModel vm) {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Row(
-          children: [
-            Icon(Icons.warning_amber_rounded, color: Colors.red),
-            SizedBox(width: 8),
-            Text('Giải tán nhóm'),
-          ],
-        ),
-        content: const Text(
-          'Bạn có chắc chắn muốn giải tán nhóm này? Tất cả dữ liệu sẽ bị xóa vĩnh viễn.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text('Hủy', style: TextStyle(color: Colors.grey[700])),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              vm.disbandGroup();
-              Navigator.pop(context);
-              Navigator.pop(context); // Return to previous screen
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+      builder:
+          (context) => AlertDialog(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
             ),
-            child: const Text('Giải tán'),
+            title: const Row(
+              children: [
+                Icon(Icons.warning_amber_rounded, color: Colors.red),
+                SizedBox(width: 8),
+                Text('Giải tán nhóm'),
+              ],
+            ),
+            content: const Text(
+              'Bạn có chắc chắn muốn giải tán nhóm này? Tất cả dữ liệu sẽ bị xóa vĩnh viễn.',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: Text('Hủy', style: TextStyle(color: Colors.grey[700])),
+              ),
+              ElevatedButton(
+                onPressed: () {
+                  vm.disbandGroup();
+                  Navigator.pop(context);
+                  Navigator.pop(context);
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.red,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+                child: const Text('Giải tán'),
+              ),
+            ],
           ),
-        ],
-      ),
     );
   }
 }
