@@ -111,6 +111,8 @@ class _ProfileContent extends StatelessWidget {
           ),
           Positioned(
             top: 265,
+            left: 16,
+            right: 16,
             child: Column(
               children: [
                 Text(
@@ -123,19 +125,24 @@ class _ProfileContent extends StatelessWidget {
                 ),
                 const SizedBox(height: 4),
                 if (vm.user!.bio.isNotEmpty && vm.user!.bio != "No")
-                  Text(
-                    vm.user!.bio,
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      fontSize: 16,
-                      color: AppColors.textSecondary,
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                    child: Text(
+                      vm.user!.bio,
+                      textAlign: TextAlign.center,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 15,
+                        color: AppColors.textSecondary,
+                      ),
                     ),
                   ),
               ],
             ),
           ),
           Positioned(
-            top: 320,
+            bottom: 8,
             left: 16,
             right: 16,
             child: _buildActionButtons(context, vm),
@@ -159,24 +166,64 @@ class _ProfileContent extends StatelessWidget {
         );
         break;
       case 'pending_sent':
-        friendButton = ElevatedButton.icon(
-          icon: const Icon(Icons.update),
-          label: const Text('Đã gửi lời mời'),
-          onPressed: null,
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.grey.shade300,
-            foregroundColor: Colors.black87,
+        friendButton = Container(
+          decoration: BoxDecoration(
+            color: Colors.grey.shade300,
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: const [
+                Icon(Icons.update, color: Colors.black87, size: 20),
+                SizedBox(width: 8),
+                Text(
+                  'Đã gửi lời mời',
+                  style: TextStyle(
+                    color: Colors.black87,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
           ),
         );
         break;
       case 'pending_received':
-        friendButton = ElevatedButton.icon(
-          icon: const Icon(Icons.group_add, color: Colors.white),
-          label: const Text('Phản hồi'),
-          onPressed: () => Navigator.pushNamed(context, '/friends'),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: AppColors.primary,
-            foregroundColor: Colors.white,
+        friendButton = Container(
+          decoration: BoxDecoration(
+            color: AppColors.primary,
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              borderRadius: BorderRadius.circular(8),
+              onTap: () => Navigator.pushNamed(context, '/friends'),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 12,
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: const [
+                    Icon(Icons.group_add, color: Colors.white, size: 20),
+                    SizedBox(width: 8),
+                    Text(
+                      'Phản hồi',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
           ),
         );
         break;
@@ -193,34 +240,62 @@ class _ProfileContent extends StatelessWidget {
         Expanded(child: friendButton),
         const SizedBox(width: 8),
         Expanded(
-          child: ElevatedButton.icon(
-            icon: const Icon(Icons.message, color: Colors.white),
-            label: const Text('Nhắn tin'),
-            onPressed: () async {
-              final currentUser =
-                  vm.isCurrentUserProfile
-                      ? vm.user
-                      : await UserRequest().getUserByUid(
-                        FirebaseAuth.instance.currentUser!.uid,
-                      );
+          child: Container(
+            decoration: BoxDecoration(
+              color: AppColors.primary,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Material(
+              color: Colors.transparent,
+              child: InkWell(
+                borderRadius: BorderRadius.circular(8),
+                onTap: () async {
+                  final currentUser =
+                      vm.isCurrentUserProfile
+                          ? vm.user
+                          : await UserRequest().getUserByUid(
+                            FirebaseAuth.instance.currentUser!.uid,
+                          );
 
-              if (currentUser != null && vm.user != null) {
-                final chatId = await ChatRequest().getOrCreatePrivateChat(
-                  currentUser.id,
-                  vm.user!.id,
-                );
-                if (context.mounted) {
-                  Navigator.pushNamed(
-                    context,
-                    '/chat',
-                    arguments: {'chatId': chatId, 'chatName': vm.user!.name},
-                  );
-                }
-              }
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primary,
-              foregroundColor: Colors.white,
+                  if (currentUser != null && vm.user != null) {
+                    final chatId = await ChatRequest().getOrCreatePrivateChat(
+                      currentUser.id,
+                      vm.user!.id,
+                    );
+                    if (context.mounted) {
+                      Navigator.pushNamed(
+                        context,
+                        '/chat',
+                        arguments: {
+                          'chatId': chatId,
+                          'chatName': vm.user!.name,
+                        },
+                      );
+                    }
+                  }
+                },
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 12,
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: const [
+                      Icon(Icons.message, color: Colors.white, size: 20),
+                      SizedBox(width: 8),
+                      Text(
+                        'Nhắn tin',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
             ),
           ),
         ),
@@ -359,12 +434,14 @@ class _ProfileContent extends StatelessWidget {
                   ),
                 ),
 
-              ...posts.map(
-                (post) => PostWidget(
-                  post: post,
-                  currentUserDocId: vm.currentUserData!.id,
-                ),
-              ),
+              ...posts
+                  .map(
+                    (post) => PostWidget(
+                      post: post,
+                      currentUserDocId: vm.currentUserData!.id,
+                    ),
+                  )
+                  .toList(),
             ],
           );
         },
@@ -527,9 +604,17 @@ class _FriendMenuButton extends StatelessWidget {
                 ),
                 const SizedBox(height: 16),
                 ListTile(
-                  leading: const Icon(
-                    Icons.person_remove,
-                    color: Colors.black87,
+                  leading: Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade200.withOpacity(0.5),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Icon(
+                      Icons.person_remove,
+                      color: Colors.black87,
+                      size: 22,
+                    ),
                   ),
                   title: const Text('Hủy kết bạn'),
                   onTap: () {
@@ -539,11 +624,19 @@ class _FriendMenuButton extends StatelessWidget {
                 ),
                 const Divider(height: 1),
                 ListTile(
-                  leading: const Icon(Icons.block, color: Colors.red),
-                  title: const Text(
-                    'Chặn',
-                    style: TextStyle(color: Colors.red),
+                  leading: Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade200.withOpacity(0.5),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Icon(
+                      Icons.block,
+                      color: Colors.black87,
+                      size: 22,
+                    ),
                   ),
+                  title: const Text('Chặn'),
                   onTap: () {
                     Navigator.pop(context);
                     onBlock();
@@ -627,9 +720,17 @@ class _AddFriendMenuButton extends StatelessWidget {
                 ),
                 const SizedBox(height: 16),
                 ListTile(
-                  leading: const Icon(
-                    Icons.person_add,
-                    color: AppColors.primary,
+                  leading: Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: Colors.blue.shade50.withOpacity(0.5),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Icon(
+                      Icons.person_add,
+                      color: Colors.blue,
+                      size: 22,
+                    ),
                   ),
                   title: const Text('Gửi lời mời kết bạn'),
                   onTap: () {
@@ -639,11 +740,19 @@ class _AddFriendMenuButton extends StatelessWidget {
                 ),
                 const Divider(height: 1),
                 ListTile(
-                  leading: const Icon(Icons.block, color: Colors.red),
-                  title: const Text(
-                    'Chặn',
-                    style: TextStyle(color: Colors.red),
+                  leading: Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade200.withOpacity(0.5),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Icon(
+                      Icons.block,
+                      color: Colors.black87,
+                      size: 22,
+                    ),
                   ),
+                  title: const Text('Chặn'),
                   onTap: () {
                     Navigator.pop(context);
                     onBlock();
