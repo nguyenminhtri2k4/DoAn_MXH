@@ -1,3 +1,4 @@
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:mangxahoi/model/model_user.dart';
@@ -11,6 +12,9 @@ class FirestoreListener extends ChangeNotifier {
   Map<String, UserModel> _usersByAuthUid = {};
   Map<String, GroupModel> _groupsByDocId = {};
   Map<String, MediaModel> _mediaByDocId = {};
+
+  // *** THÊM DÒNG NÀY ĐỂ SỬA LỖI ***
+  Map<String, GroupModel> get groupsMap => _groupsByDocId;
 
   String? _errorMessage;
 
