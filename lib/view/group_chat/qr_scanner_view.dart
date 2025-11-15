@@ -27,7 +27,7 @@ class _QRScannerViewState extends State<QRScannerView> {
     BarcodeCapture capture,
   ) async {
     if (isProcessing) return;
-    
+
     final List<Barcode> barcodes = capture.barcodes;
     if (barcodes.isEmpty) return;
 
@@ -42,7 +42,7 @@ class _QRScannerViewState extends State<QRScannerView> {
 
       // Kiểm tra hết hạn
       if (qrData.isExpired) {
-        _showErrorDialog(context, 'Mã QR đã hết hạn');
+        _showErrorBottomSheet(context, 'Mã QR đã hết hạn');
         setState(() => isProcessing = false);
         return;
       }
@@ -50,157 +50,401 @@ class _QRScannerViewState extends State<QRScannerView> {
       // Tạm dừng camera
       await cameraController.stop();
 
-      // Hiển thị dialog xác nhận
+      // Hiển thị bottom sheet xác nhận
       if (mounted) {
-        _showJoinConfirmDialog(context, qrData);
+        _showJoinConfirmBottomSheet(context, qrData);
       }
     } catch (e) {
-      _showErrorDialog(context, 'Mã QR không hợp lệ');
+      _showErrorBottomSheet(context, 'Mã QR không hợp lệ');
       setState(() => isProcessing = false);
     }
   }
 
-  void _showJoinConfirmDialog(BuildContext context, QRInviteData qrData) {
-    showDialog(
+  void _showJoinConfirmBottomSheet(BuildContext context, QRInviteData qrData) {
+    showModalBottomSheet(
       context: context,
-      barrierDismissible: false,
-      builder: (dialogContext) => ChangeNotifierProvider(
-        create: (_) => QRScannerViewModel(),
-        child: Consumer<QRScannerViewModel>(
-          builder: (context, vm, child) {
-            return AlertDialog(
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(20),
-              ),
-              title: Row(
-                children: [
-                  Icon(Icons.group_add, color: AppColors.primary),
-                  const SizedBox(width: 12),
-                  const Text('Tham gia nhóm'),
-                ],
-              ),
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    qrData.groupName,
-                    style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Được mời bởi: ${qrData.inviterName}',
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Colors.grey[600],
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  if (vm.isJoining)
-                    const Center(
-                      child: Padding(
-                        padding: EdgeInsets.all(16.0),
-                        child: CircularProgressIndicator(),
-                      ),
-                    ),
-                  if (vm.errorMessage != null)
-                    Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: Colors.red[50],
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Row(
+      isDismissible: false,
+      enableDrag: false,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder:
+          (bottomSheetContext) => ChangeNotifierProvider(
+            create: (_) => QRScannerViewModel(),
+            child: Consumer<QRScannerViewModel>(
+              builder: (context, vm, child) {
+                return Padding(
+                  padding: const EdgeInsets.all(20),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // Header
+                      Row(
                         children: [
-                          Icon(Icons.error_outline, color: Colors.red[700]),
+                          Icon(
+                            Icons.group_add,
+                            color: AppColors.primary,
+                            size: 24,
+                          ),
                           const SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                              vm.errorMessage!,
-                              style: TextStyle(color: Colors.red[700]),
+                          const Text(
+                            'Tham gia nhóm',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.black87,
                             ),
                           ),
                         ],
                       ),
-                    ),
-                ],
-              ),
-              actions: vm.isJoining
-                  ? []
-                  : [
-                      TextButton(
-                        onPressed: () {
-                          Navigator.pop(dialogContext);
-                          cameraController.start();
-                          setState(() => isProcessing = false);
-                        },
-                        child: const Text('Hủy'),
-                      ),
-                      ElevatedButton(
-                        onPressed: () async {
-                          final success = await vm.joinGroup(
-                            context,
-                            qrData.groupId,
-                          );
-                          
-                          if (success && mounted) {
-                            Navigator.pop(dialogContext); // Đóng dialog
-                            Navigator.pop(context); // Đóng scanner
-                            
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text(
-                                  'Đã tham gia nhóm "${qrData.groupName}"',
-                                ),
-                                backgroundColor: Colors.green,
-                              ),
-                            );
-                          }
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.primary,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
+                      const SizedBox(height: 16),
+
+                      // Group info container
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: AppColors.primary.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: AppColors.primary.withOpacity(0.3),
+                            width: 1,
                           ),
                         ),
-                        child: const Text('Tham gia'),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              qrData.groupName,
+                              style: const TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.black87,
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                            Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(6),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: Icon(
+                                    Icons.person,
+                                    color: AppColors.primary,
+                                    size: 16,
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      const Text(
+                                        'Được mời bởi',
+                                        style: TextStyle(
+                                          fontSize: 11,
+                                          color: Colors.black54,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        qrData.inviterName,
+                                        style: const TextStyle(
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.w600,
+                                          color: Colors.black87,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
                       ),
+                      const SizedBox(height: 16),
+
+                      // Loading or error state
+                      if (vm.isJoining)
+                        Container(
+                          padding: const EdgeInsets.all(16),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: AppColors.primary,
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              const Text(
+                                'Đang tham gia...',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  color: Colors.black87,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+
+                      if (vm.errorMessage != null)
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.red[50],
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.error_outline,
+                                color: Colors.red[700],
+                                size: 20,
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  vm.errorMessage!,
+                                  style: TextStyle(
+                                    color: Colors.red[700],
+                                    fontSize: 13,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+
+                      if (!vm.isJoining) const SizedBox(height: 4),
+
+                      // Action buttons
+                      if (!vm.isJoining)
+                        Row(
+                          children: [
+                            Expanded(
+                              child: TextButton(
+                                onPressed: () {
+                                  Navigator.pop(bottomSheetContext);
+                                  cameraController.start();
+                                  setState(() => isProcessing = false);
+                                },
+                                style: TextButton.styleFrom(
+                                  backgroundColor: Colors.red.shade50,
+                                  foregroundColor: Colors.red.shade600,
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 12,
+                                  ),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                ),
+                                child: const Text(
+                                  'Hủy',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 15,
+                                  ),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: ElevatedButton(
+                                onPressed: () async {
+                                  final success = await vm.joinGroup(
+                                    context,
+                                    qrData.groupId,
+                                  );
+
+                                  if (success && mounted) {
+                                    Navigator.pop(
+                                      bottomSheetContext,
+                                    ); // Đóng bottom sheet
+                                    Navigator.pop(context); // Đóng scanner
+
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: Row(
+                                          children: [
+                                            const Icon(
+                                              Icons.check_circle,
+                                              color: Colors.white,
+                                            ),
+                                            const SizedBox(width: 12),
+                                            Expanded(
+                                              child: Text(
+                                                'Đã tham gia nhóm "${qrData.groupName}"',
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                        backgroundColor: Colors.green.shade600,
+                                        behavior: SnackBarBehavior.floating,
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(
+                                            8,
+                                          ),
+                                        ),
+                                        duration: const Duration(seconds: 2),
+                                      ),
+                                    );
+                                  }
+                                },
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: AppColors.primary,
+                                  foregroundColor: Colors.white,
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 12,
+                                  ),
+                                  elevation: 0,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                ),
+                                child: const Text(
+                                  'Tham gia',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 15,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+
+                      SizedBox(height: MediaQuery.of(context).padding.bottom),
                     ],
-            );
-          },
-        ),
-      ),
+                  ),
+                );
+              },
+            ),
+          ),
     );
   }
 
-  void _showErrorDialog(BuildContext context, String message) {
-    showDialog(
+  void _showErrorBottomSheet(BuildContext context, String message) {
+    showModalBottomSheet(
       context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-        ),
-        title: const Row(
-          children: [
-            Icon(Icons.error_outline, color: Colors.red),
-            SizedBox(width: 12),
-            Text('Lỗi'),
-          ],
-        ),
-        content: Text(message),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              setState(() => isProcessing = false);
-            },
-            child: const Text('Đóng'),
-          ),
-        ],
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
+      builder:
+          (bottomSheetContext) => Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Header
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Row(
+                      children: [
+                        Icon(Icons.error_outline, color: Colors.red, size: 24),
+                        SizedBox(width: 8),
+                        Text(
+                          'Lỗi',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.black87,
+                          ),
+                        ),
+                      ],
+                    ),
+                    IconButton(
+                      onPressed: () {
+                        Navigator.pop(bottomSheetContext);
+                        setState(() => isProcessing = false);
+                      },
+                      icon: const Icon(Icons.close),
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
+                      iconSize: 24,
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+
+                // Error message
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.red.shade50,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: Colors.red.shade100,
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(
+                          Icons.warning_rounded,
+                          color: Colors.red.shade700,
+                          size: 24,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          message,
+                          style: TextStyle(
+                            color: Colors.red.shade900,
+                            fontSize: 14,
+                            height: 1.4,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 20),
+
+                // Close button
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: () {
+                      Navigator.pop(bottomSheetContext);
+                      setState(() => isProcessing = false);
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.red.shade600,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                    child: const Text(
+                      'Đóng',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 15,
+                      ),
+                    ),
+                  ),
+                ),
+
+                SizedBox(height: MediaQuery.of(context).padding.bottom),
+              ],
+            ),
+          ),
     );
   }
 
@@ -239,10 +483,10 @@ class _QRScannerViewState extends State<QRScannerView> {
             controller: cameraController,
             onDetect: (capture) => _handleQRDetection(context, capture),
           ),
-          
+
           // Overlay với khung quét
           _buildScannerOverlay(),
-          
+
           // Hướng dẫn
           Positioned(
             bottom: 100,
@@ -260,10 +504,7 @@ class _QRScannerViewState extends State<QRScannerView> {
                 ),
                 child: const Text(
                   'Đưa mã QR vào khung hình',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 16,
-                  ),
+                  style: TextStyle(color: Colors.white, fontSize: 16),
                   textAlign: TextAlign.center,
                 ),
               ),
@@ -276,18 +517,13 @@ class _QRScannerViewState extends State<QRScannerView> {
 
   Widget _buildScannerOverlay() {
     return Container(
-      decoration: BoxDecoration(
-        color: Colors.black.withOpacity(0.5),
-      ),
+      decoration: BoxDecoration(color: Colors.black.withOpacity(0.5)),
       child: Center(
         child: Container(
           width: 280,
           height: 280,
           decoration: BoxDecoration(
-            border: Border.all(
-              color: AppColors.primary,
-              width: 3,
-            ),
+            border: Border.all(color: AppColors.primary, width: 3),
             borderRadius: BorderRadius.circular(20),
           ),
           child: Stack(

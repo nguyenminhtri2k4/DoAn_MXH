@@ -1,4 +1,3 @@
-
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:mangxahoi/viewmodel/blocked_list_view_model.dart';
@@ -38,10 +37,7 @@ class _BlockedListContent extends StatelessWidget {
         elevation: 0,
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(1),
-          child: Container(
-            height: 1,
-            color: Colors.grey.shade200,
-          ),
+          child: Container(height: 1, color: Colors.grey.shade200),
         ),
       ),
       body: StreamBuilder<List<String>>(
@@ -56,14 +52,18 @@ class _BlockedListContent extends StatelessWidget {
                   const SizedBox(height: 16),
                   Text(
                     'Đang tải...',
-                    style: TextStyle(color: AppColors.textSecondary, fontSize: 14),
+                    style: TextStyle(
+                      color: AppColors.textSecondary,
+                      fontSize: 14,
+                    ),
                   ),
                 ],
               ),
             );
           }
-          
-          if (snapshot.connectionState == ConnectionState.waiting && !snapshot.hasData) {
+
+          if (snapshot.connectionState == ConnectionState.waiting &&
+              !snapshot.hasData) {
             return Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -72,19 +72,26 @@ class _BlockedListContent extends StatelessWidget {
                   const SizedBox(height: 16),
                   Text(
                     'Đang tải...',
-                    style: TextStyle(color: AppColors.textSecondary, fontSize: 14),
+                    style: TextStyle(
+                      color: AppColors.textSecondary,
+                      fontSize: 14,
+                    ),
                   ),
                 ],
               ),
             );
           }
-          
+
           if (snapshot.hasError) {
             return Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.error_outline, size: 64, color: Colors.red.shade300),
+                  Icon(
+                    Icons.error_outline,
+                    size: 64,
+                    color: Colors.red.shade300,
+                  ),
                   const SizedBox(height: 16),
                   Text(
                     'Đã xảy ra lỗi',
@@ -107,7 +114,7 @@ class _BlockedListContent extends StatelessWidget {
               ),
             );
           }
-          
+
           if (!snapshot.hasData || snapshot.data!.isEmpty) {
             return Center(
               child: Column(
@@ -159,21 +166,29 @@ class _BlockedListContent extends StatelessWidget {
           }
 
           final blockedIds = snapshot.data!;
-          final blockedUsers = blockedIds
-              .map((id) => listener.getUserById(id))
-              .where((user) => user != null)
-              .cast<UserModel>()
-              .toList();
+          final blockedUsers =
+              blockedIds
+                  .map((id) => listener.getUserById(id))
+                  .where((user) => user != null)
+                  .cast<UserModel>()
+                  .toList();
 
           return Column(
             children: [
               // Header with count
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 12,
+                ),
                 color: AppColors.backgroundLight,
                 child: Row(
                   children: [
-                    Icon(Icons.people_outline, size: 20, color: AppColors.textSecondary),
+                    Icon(
+                      Icons.people_outline,
+                      size: 20,
+                      color: AppColors.textSecondary,
+                    ),
                     const SizedBox(width: 8),
                     Text(
                       '${blockedUsers.length} người bị chặn',
@@ -186,17 +201,21 @@ class _BlockedListContent extends StatelessWidget {
                   ],
                 ),
               ),
-              
+
               // Blocked users list
               Expanded(
                 child: ListView.builder(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 8,
+                  ),
                   itemCount: blockedUsers.length,
                   itemBuilder: (context, index) {
                     final user = blockedUsers[index];
-                    final avatarImage = user.avatar.isNotEmpty 
-                        ? NetworkImage(user.avatar.first) 
-                        : null;
+                    final avatarImage =
+                        user.avatar.isNotEmpty
+                            ? NetworkImage(user.avatar.first)
+                            : null;
 
                     return Container(
                       margin: const EdgeInsets.symmetric(vertical: 4),
@@ -233,16 +252,17 @@ class _BlockedListContent extends StatelessWidget {
                                       radius: 28,
                                       backgroundImage: avatarImage,
                                       backgroundColor: Colors.grey.shade200,
-                                      child: avatarImage == null
-                                          ? Text(
-                                              user.name[0].toUpperCase(),
-                                              style: const TextStyle(
-                                                fontSize: 20,
-                                                fontWeight: FontWeight.bold,
-                                                color: Colors.black54,
-                                              ),
-                                            )
-                                          : null,
+                                      child:
+                                          avatarImage == null
+                                              ? Text(
+                                                user.name[0].toUpperCase(),
+                                                style: const TextStyle(
+                                                  fontSize: 20,
+                                                  fontWeight: FontWeight.bold,
+                                                  color: Colors.black54,
+                                                ),
+                                              )
+                                              : null,
                                     ),
                                   ),
                                   Positioned(
@@ -253,7 +273,10 @@ class _BlockedListContent extends StatelessWidget {
                                       decoration: BoxDecoration(
                                         color: Colors.red.shade600,
                                         shape: BoxShape.circle,
-                                        border: Border.all(color: Colors.white, width: 2),
+                                        border: Border.all(
+                                          color: Colors.white,
+                                          width: 2,
+                                        ),
                                       ),
                                       child: const Icon(
                                         Icons.block,
@@ -265,7 +288,7 @@ class _BlockedListContent extends StatelessWidget {
                                 ],
                               ),
                               const SizedBox(width: 12),
-                              
+
                               // User info
                               Expanded(
                                 child: Column(
@@ -306,65 +329,221 @@ class _BlockedListContent extends StatelessWidget {
                                   ],
                                 ),
                               ),
-                              
+
                               // Unblock button
                               TextButton.icon(
                                 onPressed: () async {
-                                  // Show confirmation dialog
-                                  final confirmed = await showDialog<bool>(
+                                  // Show bottom sheet confirmation - NEW DESIGN
+                                  final confirmed = await showModalBottomSheet<
+                                    bool
+                                  >(
                                     context: context,
-                                    builder: (context) => AlertDialog(
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(16),
+                                    shape: const RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.vertical(
+                                        top: Radius.circular(20),
                                       ),
-                                      title: const Text(
-                                        'Bỏ chặn người dùng',
-                                        style: TextStyle(fontWeight: FontWeight.w600),
-                                      ),
-                                      content: Text(
-                                        'Bạn có chắc chắn muốn bỏ chặn ${user.name}?',
-                                      ),
-                                      actions: [
-                                        TextButton(
-                                          onPressed: () => Navigator.pop(context, false),
-                                          child: Text(
-                                            'Hủy',
-                                            style: TextStyle(color: AppColors.textSecondary),
-                                          ),
-                                        ),
-                                        ElevatedButton(
-                                          onPressed: () => Navigator.pop(context, true),
-                                          style: ElevatedButton.styleFrom(
-                                            backgroundColor: AppColors.primary,
-                                            foregroundColor: Colors.white,
-                                            shape: RoundedRectangleBorder(
-                                              borderRadius: BorderRadius.circular(8),
-                                            ),
-                                          ),
-                                          child: const Text('Bỏ chặn'),
-                                        ),
-                                      ],
                                     ),
+                                    builder:
+                                        (context) => Padding(
+                                          padding: const EdgeInsets.all(20),
+                                          child: Column(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              // Header with close button
+                                              // Row(
+                                              //   mainAxisAlignment:
+                                              //       MainAxisAlignment
+                                              //           .spaceBetween,
+                                              //   children: [
+                                              //     const Text(
+                                              //       'Bỏ chặn người dùng',
+                                              //       style: TextStyle(
+                                              //         fontSize: 18,
+                                              //         fontWeight:
+                                              //             FontWeight.w600,
+                                              //         color: Colors.black87,
+                                              //       ),
+                                              //     ),
+                                              //     IconButton(
+                                              //       onPressed:
+                                              //           () => Navigator.pop(
+                                              //             context,
+                                              //             false,
+                                              //           ),
+                                              //       icon: const Icon(
+                                              //         Icons.close,
+                                              //       ),
+                                              //       padding: EdgeInsets.zero,
+                                              //       constraints:
+                                              //           const BoxConstraints(),
+                                              //       iconSize: 24,
+                                              //     ),
+                                              //   ],
+                                              // ),
+                                              const SizedBox(height: 16),
+
+                                              // Warning message with red background
+                                              Container(
+                                                padding: const EdgeInsets.all(
+                                                  16,
+                                                ),
+                                                decoration: BoxDecoration(
+                                                  color: Colors.red.shade50,
+                                                  borderRadius:
+                                                      BorderRadius.circular(12),
+                                                ),
+                                                child: Row(
+                                                  children: [
+                                                    Container(
+                                                      padding:
+                                                          const EdgeInsets.all(
+                                                            8,
+                                                          ),
+                                                      decoration: BoxDecoration(
+                                                        color:
+                                                            Colors.red.shade100,
+                                                        shape: BoxShape.circle,
+                                                      ),
+                                                      child: Icon(
+                                                        Icons.warning_rounded,
+                                                        color:
+                                                            Colors.red.shade700,
+                                                        size: 24,
+                                                      ),
+                                                    ),
+                                                    const SizedBox(width: 12),
+                                                    Expanded(
+                                                      child: Text(
+                                                        'Bạn có chắc muốn bỏ chặn ${user.name}?',
+                                                        style: TextStyle(
+                                                          color:
+                                                              Colors
+                                                                  .red
+                                                                  .shade900,
+                                                          fontSize: 14,
+                                                          height: 1.4,
+                                                        ),
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                              ),
+                                              const SizedBox(height: 20),
+
+                                              // Action buttons
+                                              Row(
+                                                children: [
+                                                  Expanded(
+                                                    child: TextButton(
+                                                      onPressed:
+                                                          () => Navigator.pop(
+                                                            context,
+                                                            false,
+                                                          ),
+                                                      style: TextButton.styleFrom(
+                                                        backgroundColor:
+                                                            Colors
+                                                                .grey
+                                                                .shade200,
+                                                        foregroundColor:
+                                                            Colors.black87,
+                                                        padding:
+                                                            const EdgeInsets.symmetric(
+                                                              vertical: 12,
+                                                            ),
+                                                        shape: RoundedRectangleBorder(
+                                                          borderRadius:
+                                                              BorderRadius.circular(
+                                                                8,
+                                                              ),
+                                                        ),
+                                                      ),
+                                                      child: const Text(
+                                                        'Hủy',
+                                                        style: TextStyle(
+                                                          fontWeight:
+                                                              FontWeight.w600,
+                                                          fontSize: 15,
+                                                        ),
+                                                      ),
+                                                    ),
+                                                  ),
+                                                  const SizedBox(width: 12),
+                                                  Expanded(
+                                                    child: ElevatedButton(
+                                                      onPressed:
+                                                          () => Navigator.pop(
+                                                            context,
+                                                            true,
+                                                          ),
+                                                      style: ElevatedButton.styleFrom(
+                                                        backgroundColor:
+                                                            Colors.red.shade600,
+                                                        foregroundColor:
+                                                            Colors.white,
+                                                        padding:
+                                                            const EdgeInsets.symmetric(
+                                                              vertical: 12,
+                                                            ),
+                                                        elevation: 0,
+                                                        shape: RoundedRectangleBorder(
+                                                          borderRadius:
+                                                              BorderRadius.circular(
+                                                                8,
+                                                              ),
+                                                        ),
+                                                      ),
+                                                      child: const Text(
+                                                        'Bỏ chặn',
+                                                        style: TextStyle(
+                                                          fontWeight:
+                                                              FontWeight.w600,
+                                                          fontSize: 15,
+                                                        ),
+                                                      ),
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                              SizedBox(
+                                                height:
+                                                    MediaQuery.of(
+                                                      context,
+                                                    ).padding.bottom,
+                                              ),
+                                            ],
+                                          ),
+                                        ),
                                   );
 
                                   if (confirmed == true) {
                                     await vm.unblockUser(user.id);
                                     if (context.mounted) {
-                                      ScaffoldMessenger.of(context).showSnackBar(
+                                      ScaffoldMessenger.of(
+                                        context,
+                                      ).showSnackBar(
                                         SnackBar(
                                           content: Row(
                                             children: [
-                                              const Icon(Icons.check_circle, color: Colors.white),
+                                              const Icon(
+                                                Icons.check_circle,
+                                                color: Colors.white,
+                                              ),
                                               const SizedBox(width: 12),
                                               Expanded(
-                                                child: Text('Đã bỏ chặn ${user.name}'),
+                                                child: Text(
+                                                  'Đã bỏ chặn ${user.name}',
+                                                ),
                                               ),
                                             ],
                                           ),
-                                          backgroundColor: Colors.green.shade600,
+                                          backgroundColor:
+                                              Colors.green.shade600,
                                           behavior: SnackBarBehavior.floating,
                                           shape: RoundedRectangleBorder(
-                                            borderRadius: BorderRadius.circular(8),
+                                            borderRadius: BorderRadius.circular(
+                                              8,
+                                            ),
                                           ),
                                           duration: const Duration(seconds: 2),
                                         ),
@@ -372,14 +551,18 @@ class _BlockedListContent extends StatelessWidget {
                                     }
                                   }
                                 },
-                                icon: const Icon(Icons.check_circle_outline, size: 18),
+                                icon: const Icon(
+                                  Icons.check_circle_outline,
+                                  size: 18,
+                                ),
                                 label: const Text(
                                   'Bỏ chặn',
                                   style: TextStyle(fontWeight: FontWeight.w600),
                                 ),
                                 style: TextButton.styleFrom(
                                   foregroundColor: AppColors.primary,
-                                  backgroundColor: AppColors.primary.withOpacity(0.1),
+                                  backgroundColor: AppColors.primary
+                                      .withOpacity(0.1),
                                   padding: const EdgeInsets.symmetric(
                                     horizontal: 16,
                                     vertical: 8,

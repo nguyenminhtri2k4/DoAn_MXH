@@ -13,8 +13,7 @@ import 'package:mangxahoi/view/group_chat/group_qr_code_view.dart';
 class GroupManagementView extends StatelessWidget {
   final String groupId;
 
-  const GroupManagementView({Key? key, required this.groupId})
-    : super(key: key);
+  const GroupManagementView({super.key, required this.groupId});
 
   @override
   Widget build(BuildContext context) {
@@ -537,7 +536,7 @@ class _GroupManagementContent extends StatelessWidget {
               ? Switch(
                 value: value,
                 onChanged: onChanged,
-                activeColor: AppColors.primary,
+                activeThumbColor: AppColors.primary,
               )
               : null),
     );
@@ -1423,34 +1422,131 @@ class _GroupManagementContent extends StatelessWidget {
     GroupManagementViewModel vm,
     UserModel member,
   ) {
-    showDialog(
+    showModalBottomSheet(
       context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
       builder:
-          (context) => AlertDialog(
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
+          (context) => Container(
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
             ),
-            title: const Text('Xóa thành viên'),
-            content: Text('Bạn có chắc muốn xóa ${member.name} khỏi nhóm?'),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: Text('Hủy', style: TextStyle(color: Colors.grey[700])),
-              ),
-              ElevatedButton(
-                onPressed: () {
-                  vm.removeMember(member.id);
-                  Navigator.pop(context);
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.red,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Row(
+                //   mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                //   children: [
+                //     const Text(
+                //       'Xóa thành viên',
+                //       style: TextStyle(
+                //         fontSize: 20,
+                //         fontWeight: FontWeight.bold,
+                //       ),
+                //     ),
+                //     IconButton(
+                //       icon: const Icon(Icons.close),
+                //       onPressed: () => Navigator.pop(context),
+                //       padding: EdgeInsets.zero,
+                //       constraints: const BoxConstraints(),
+                //     ),
+                //   ],
+                // ),
+                const SizedBox(height: 16),
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.red.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: Colors.red.withOpacity(0.3),
+                      width: 1,
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: Colors.red.withOpacity(0.2),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.warning_amber_rounded,
+                          color: Colors.red,
+                          size: 24,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          'Bạn có chắc muốn xóa ${member.name} khỏi nhóm?',
+                          style: const TextStyle(
+                            fontSize: 14,
+                            color: Color(0xFF1A1A1A),
+                            height: 1.4,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-                child: const Text('Xóa'),
-              ),
-            ],
+                const SizedBox(height: 20),
+                Row(
+                  children: [
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: () => Navigator.pop(context),
+                        style: ElevatedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          backgroundColor: Colors.grey[200],
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          elevation: 0,
+                        ),
+                        child: Text(
+                          'Hủy',
+                          style: TextStyle(
+                            color: Colors.grey[700],
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: () {
+                          vm.removeMember(member.id);
+                          Navigator.pop(context);
+                        },
+                        style: ElevatedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          backgroundColor: Colors.red,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          elevation: 0,
+                        ),
+                        child: const Text(
+                          'Xóa',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
     );
   }
