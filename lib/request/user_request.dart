@@ -2,12 +2,13 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:mangxahoi/model/model_user.dart';
 import 'package:mangxahoi/authanet/firestore_service.dart';
-import 'package:firebase_auth/firebase_auth.dart'; 
+import 'package:firebase_auth/firebase_auth.dart';
 
 class UserRequest {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FirestoreService _firestoreService = FirestoreService();
-  final String? _currentAuthUid = FirebaseAuth.instance.currentUser?.uid; 
+  final String? _currentAuthUid = FirebaseAuth.instance.currentUser?.uid;
+  final String _collectionName = 'User'; // <-- Chuẩn hóa tên collection
 
   /// Lấy thông tin người dùng theo Document ID
   Future<UserModel?> getUserData(String docId) async {
@@ -16,7 +17,7 @@ class UserRequest {
       final user = await _firestoreService
           .getUserData(docId)
           .timeout(const Duration(seconds: 15));
-          
+
       if (user != null) {
         print('✅ Đã lấy thông tin user: ${user.name}');
       } else {
@@ -32,22 +33,23 @@ class UserRequest {
   /// ✅ Lấy thông tin người dùng theo UID với retry & timeout
   Future<UserModel?> getUserByUid(String uid, {int maxRetries = 5}) async {
     print('🔍 [UserRequest] getUserByUid called with UID: $uid');
-    
+
     try {
       print('🔍 [UserRequest] Calling FirestoreService.getUserDataByAuthUid...');
-      
+
       // ✅ Gọi với retry logic & timeout
       final user = await _firestoreService
           .getUserDataByAuthUid(uid, maxRetries: maxRetries)
           .timeout(const Duration(seconds: 30)); // Timeout tổng
-      
+
       if (user != null) {
         print('✅ [UserRequest] SUCCESS: Found user: ${user.name}');
         print('🔍 [UserRequest] User document ID: ${user.id}');
         print('🔍 [UserRequest] User auth UID: ${user.uid}');
       } else {
         print('❌ [UserRequest] FAILED: No user found with UID: $uid');
-        print('🔍 [UserRequest] This means Firestore query returned empty after retries');
+        print(
+            '🔍 [UserRequest] This means Firestore query returned empty after retries');
       }
       return user;
     } catch (e) {
@@ -73,7 +75,7 @@ class UserRequest {
   Future<String> addUser(UserModel user) async {
     try {
       final docRef = await _firestore
-          .collection('users')
+          .collection(_collectionName) // <-- SỬA: Dùng tên collection chuẩn
           .add(user.toMap())
           .timeout(const Duration(seconds: 15));
       print('✅ Thêm user mới với id: ${docRef.id}');
@@ -88,7 +90,7 @@ class UserRequest {
   Future<void> deleteUser(String docId) async {
     try {
       await _firestore
-          .collection('users')
+          .collection(_collectionName) // <-- SỬA: Dùng tên collection chuẩn
           .doc(docId)
           .delete()
           .timeout(const Duration(seconds: 10));
@@ -98,20 +100,20 @@ class UserRequest {
       rethrow;
     }
   }
-  
+
   /// Tải danh sách user cho cache
   Future<List<UserModel>> getAllUsersForCache({int limit = 1000}) async {
     try {
       final querySnapshot = await _firestore
-          .collection('User')
+          .collection(_collectionName) // <-- SỬA: Dùng tên collection chuẩn
           .limit(limit)
           .get()
           .timeout(const Duration(seconds: 30)); // ✅ Timeout cho query lớn
-      
+
       final List<UserModel> users = querySnapshot.docs
           .map((doc) => UserModel.fromFirestore(doc))
           .toList();
-      
+
       if (_currentAuthUid != null) {
         users.removeWhere((user) => user.uid == _currentAuthUid);
       }
@@ -122,5 +124,72 @@ class UserRequest {
       print('❌ Lỗi khi tải user cache: $e');
       rethrow;
     }
+  }
+
+  // ==================== PHƯƠNG THỨC MỚI ====================
+
+  /// Lấy thông tin nhiều người dùng bằng danh sách ID (dạng Future)
+  Future<List<UserModel>> getUsersByIds(List<String> userIds) async {
+    if (userIds.isEmpty) return [];
+
+    List<UserModel> users = [];
+    try {
+      // Chia thành các batch 10 ID (giới hạn của Firestore 'whereIn')
+      for (int i = 0; i < userIds.length; i += 10) {
+        final batchIds = userIds.skip(i).take(10).toList();
+        if (batchIds.isNotEmpty) {
+          final snapshot = await _firestore
+              .collection(_collectionName)
+              .where(FieldPath.documentId, whereIn: batchIds)
+              .get();
+
+          users.addAll(snapshot.docs
+              .map((doc) => UserModel.fromFirestore(doc))
+              .toList());
+        }
+      }
+      // Sắp xếp lại theo thứ tự ID gốc
+      final userMap = {for (var user in users) user.id: user};
+      return userIds
+          .map((id) => userMap[id])
+          .where((user) => user != null)
+          .cast<UserModel>()
+          .toList();
+    } catch (e) {
+      print('❌ Lỗi khi lấy danh sách người dùng: $e');
+      return [];
+    }
+  }
+
+  /// Lấy thông tin nhiều người dùng bằng danh sách ID (dạng Stream)
+  /// LƯU Ý: Do giới hạn của `whereIn`, stream này chỉ lấy batch 10 user đầu tiên.
+  /// Đây là giải pháp phù hợp để xem trước (preview) 9 bạn bè trên profile.
+  Stream<List<UserModel>> getUsersByIdsStream(List<String> userIds) {
+    if (userIds.isEmpty) {
+      return Stream.value([]);
+    }
+
+    // Chỉ lấy 10 ID đầu tiên cho stream
+    final batchIds = userIds.take(10).toList();
+
+    return _firestore
+        .collection(_collectionName)
+        .where(FieldPath.documentId, whereIn: batchIds)
+        .snapshots()
+        .map((snapshot) {
+      final userMap = {
+        for (var doc in snapshot.docs)
+          doc.id: UserModel.fromFirestore(doc)
+      };
+      // Sắp xếp lại kết quả theo thứ tự của batchIds
+      return batchIds
+          .map((id) => userMap[id])
+          .where((user) => user != null)
+          .cast<UserModel>()
+          .toList();
+    }).handleError((error) {
+      print('❌ Lỗi stream danh sách người dùng: $error');
+      return [];
+    });
   }
 }
