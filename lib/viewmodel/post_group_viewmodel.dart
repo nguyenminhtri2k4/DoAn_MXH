@@ -1,35 +1,3 @@
-// import 'package:flutter/material.dart';
-// import 'package:firebase_auth/firebase_auth.dart';
-// import 'package:mangxahoi/model/model_group.dart';
-// import 'package:mangxahoi/model/model_post.dart';
-// import 'package:mangxahoi/model/model_user.dart';
-// import 'package:mangxahoi/request/post_request.dart';
-// import 'package:mangxahoi/request/user_request.dart';
-
-// class PostGroupViewModel extends ChangeNotifier {
-//   final PostRequest _postRequest = PostRequest();
-//   final UserRequest _userRequest = UserRequest();
-//   final FirebaseAuth _auth = FirebaseAuth.instance;
-
-//   final GroupModel group;
-//   UserModel? currentUserData;
-//   Stream<List<PostModel>>? postsStream;
-//   bool isLoading = true;
-
-//   PostGroupViewModel({required this.group}) {
-//     _initialize();
-//   }
-
-//   void _initialize() async {
-//     final firebaseUser = _auth.currentUser;
-//     if (firebaseUser != null) {
-//       currentUserData = await _userRequest.getUserByUid(firebaseUser.uid);
-//     }
-//     postsStream = _postRequest.getPostsByGroupId(group.id);
-//     isLoading = false;
-//     notifyListeners();
-//   }
-// }
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:mangxahoi/model/model_group.dart';
@@ -48,6 +16,7 @@ class PostGroupViewModel extends ChangeNotifier {
   Stream<List<PostModel>>? postsStream;
   bool isLoading = true;
   bool hasAccess = false; // Kiểm tra quyền truy cập
+  bool isMember = false; // Kiểm tra xem có phải thành viên không
 
   PostGroupViewModel({required this.group}) {
     _initialize();
@@ -61,6 +30,10 @@ class PostGroupViewModel extends ChangeNotifier {
         
         // Kiểm tra quyền truy cập
         if (currentUserData != null) {
+          // Kiểm tra có phải thành viên không
+          isMember = group.members.contains(currentUserData!.id);
+          
+          // hasAccess: kiểm tra quyền xem bài viết
           hasAccess = _checkAccess();
           
           if (hasAccess) {
@@ -84,7 +57,7 @@ class PostGroupViewModel extends ChangeNotifier {
   bool _checkAccess() {
     if (currentUserData == null) return false;
     
-    // Nếu nhóm công khai (status != 'private'), ai cũng xem được
+    // Nếu nhóm công khai (status != 'private'), ai cũng xem được bài viết
     if (group.status != 'private') {
       return true;
     }
@@ -95,7 +68,6 @@ class PostGroupViewModel extends ChangeNotifier {
 
   /// Getter để UI kiểm tra
   bool get isPrivateGroup => group.status == 'private';
-  bool get isMember => currentUserData != null && group.members.contains(currentUserData!.id);
   
   /// Kiểm tra xem user có phải là chủ nhóm không
   bool get isOwner => currentUserData != null && group.ownerId == currentUserData!.id;
