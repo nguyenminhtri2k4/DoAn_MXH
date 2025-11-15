@@ -1,3 +1,4 @@
+
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:mangxahoi/request/login_request.dart';
@@ -88,6 +89,31 @@ class LoginViewModel extends ChangeNotifier {
       return false;
     }
   }
+  
+  // *** BẮT ĐẦU CODE MỚI ***
+  /// Gửi email đặt lại mật khẩu
+  Future<bool> sendPasswordResetEmail(String email) async {
+    if (_isLoading) return false;
+    
+    _isLoading = true;
+    _errorMessage = null;
+    _safeNotify();
+
+    try {
+      await _loginRequest.sendPasswordResetEmail(email);
+      _isLoading = false;
+      _safeNotify();
+      return true;
+    } catch (e) {
+      if (_isDisposed) return false;
+      _isLoading = false;
+      // Lỗi đã được xử lý bởi LoginRequest
+      _errorMessage = e.toString();
+      _safeNotify();
+      return false;
+    }
+  }
+  // *** KẾT THÚC CODE MỚI ***
 
   String _parseFirebaseError(FirebaseAuthException e) {
     switch (e.code) {

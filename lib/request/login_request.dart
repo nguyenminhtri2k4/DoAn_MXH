@@ -104,6 +104,25 @@ class LoginRequest {
       rethrow;
     }
   }
+  
+  // *** BẮT ĐẦU CODE MỚI ***
+  // Gửi email đặt lại mật khẩu
+  Future<void> sendPasswordResetEmail(String email) async {
+    try {
+      print('📬 Đang gửi email đặt lại mật khẩu tới: $email');
+      await _auth.sendPasswordResetEmail(email: email.trim());
+      print('✅ Gửi email thành công');
+    } on FirebaseAuthException catch (e) {
+      print('❌ Lỗi gửi email đặt lại mật khẩu: ${e.code} - ${e.message}');
+      // Ném lỗi đã được xử lý để ViewModel bắt
+      throw _handleAuthException(e);
+    } catch (e) {
+      print('❌ Lỗi không xác định khi gửi email: $e');
+      rethrow;
+    }
+  }
+  // *** KẾT THÚC CODE MỚI ***
+
 
   // Xử lý Firebase Auth exceptions - Cải tiến
   String _handleAuthException(FirebaseAuthException e) {
