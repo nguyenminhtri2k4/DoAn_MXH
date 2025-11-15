@@ -70,101 +70,101 @@ class _PostGroupViewContent extends StatelessWidget {
                       onPressed: () => Navigator.pop(context),
                     ),
                     
-                    actions: [
-  if (vm.hasAccess) ...[
-    Container(
-      margin: const EdgeInsets.only(right: 8),
-      decoration: BoxDecoration(
-        color: Colors.white.withOpacity(innerBoxIsScrolled ? 0 : 0.9),
-        shape: BoxShape.circle,
-        boxShadow: innerBoxIsScrolled ? [] : [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.2),
-            blurRadius: 8,
-          ),
-        ],
-      ),
-      child: IconButton(
-        icon: const Icon(Icons.search, size: 22),
-        tooltip: 'Tìm kiếm',
-        onPressed: () {
-          // TODO: Implement search
-        },
-      ),
-    ),
-    Container(
-      margin: const EdgeInsets.only(right: 12),
-      decoration: BoxDecoration(
-        color: Colors.white.withOpacity(innerBoxIsScrolled ? 0 : 0.9),
-        shape: BoxShape.circle,
-        boxShadow: innerBoxIsScrolled ? [] : [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.2),
-            blurRadius: 8,
-          ),
-        ],
-      ),
-      child: PopupMenuButton(
-        icon: const Icon(Icons.more_horiz, size: 22),
-        tooltip: 'Tùy chọn',
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
-        itemBuilder: (context) => [
-          PopupMenuItem(
-            child: const Row(
-              children: [
-                Icon(Icons.person_add_outlined, size: 20),
-                SizedBox(width: 12),
-                Text('Thêm thành viên'),
-              ],
-            ),
-            onTap: () {
-              Future.delayed(Duration.zero, () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => AddMembersView(groupId: vm.group.id),
-                  ),
-                );
-              });
-            },
-          ),
-          PopupMenuItem(
-            child: const Row(
-              children: [
-                Icon(Icons.info_outline, size: 20),
-                SizedBox(width: 12),
-                Text('Thông tin nhóm'),
-              ],
-            ),
-            onTap: () {
-              Future.delayed(Duration.zero, () {
-                Navigator.pushNamed(
-                  context,
-                  '/group_management',
-                  arguments: vm.group.id,
-                );
-              });
-            },
-          ),
-          PopupMenuItem(
-            child: const Row(
-              children: [
-                Icon(Icons.notifications_outlined, size: 20),
-                SizedBox(width: 12),
-                Text('Cài đặt thông báo'),
-              ],
-            ),
-            onTap: () {
-              // TODO: Notification settings
-            },
-          ),
-        ],
-      ),
-    ),
-  ],
-],
+                    actions: vm.isMember
+                        ? [
+                            Container(
+                              margin: const EdgeInsets.only(right: 8),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withOpacity(innerBoxIsScrolled ? 0 : 0.9),
+                                shape: BoxShape.circle,
+                                boxShadow: innerBoxIsScrolled ? [] : [
+                                  BoxShadow(
+                                    color: Colors.black.withOpacity(0.2),
+                                    blurRadius: 8,
+                                  ),
+                                ],
+                              ),
+                              child: IconButton(
+                                icon: const Icon(Icons.search, size: 22),
+                                tooltip: 'Tìm kiếm',
+                                onPressed: () {
+                                  // TODO: Implement search
+                                },
+                              ),
+                            ),
+                            Container(
+                              margin: const EdgeInsets.only(right: 12),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withOpacity(innerBoxIsScrolled ? 0 : 0.9),
+                                shape: BoxShape.circle,
+                                boxShadow: innerBoxIsScrolled ? [] : [
+                                  BoxShadow(
+                                    color: Colors.black.withOpacity(0.2),
+                                    blurRadius: 8,
+                                  ),
+                                ],
+                              ),
+                              child: PopupMenuButton(
+                                icon: const Icon(Icons.more_horiz, size: 22),
+                                tooltip: 'Tùy chọn',
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                itemBuilder: (context) => [
+                                  PopupMenuItem(
+                                    child: const Row(
+                                      children: [
+                                        Icon(Icons.person_add_outlined, size: 20),
+                                        SizedBox(width: 12),
+                                        Text('Thêm thành viên'),
+                                      ],
+                                    ),
+                                    onTap: () {
+                                      Future.delayed(Duration.zero, () {
+                                        Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (_) => AddMembersView(groupId: vm.group.id),
+                                          ),
+                                        );
+                                      });
+                                    },
+                                  ),
+                                  PopupMenuItem(
+                                    child: const Row(
+                                      children: [
+                                        Icon(Icons.info_outline, size: 20),
+                                        SizedBox(width: 12),
+                                        Text('Thông tin nhóm'),
+                                      ],
+                                    ),
+                                    onTap: () {
+                                      Future.delayed(Duration.zero, () {
+                                        Navigator.pushNamed(
+                                          context,
+                                          '/group_management',
+                                          arguments: vm.group.id,
+                                        );
+                                      });
+                                    },
+                                  ),
+                                  PopupMenuItem(
+                                    child: const Row(
+                                      children: [
+                                        Icon(Icons.notifications_outlined, size: 20),
+                                        SizedBox(width: 12),
+                                        Text('Cài đặt thông báo'),
+                                      ],
+                                    ),
+                                    onTap: () {
+                                      // TODO: Notification settings
+                                    },
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ]
+                        : [],
 
                     flexibleSpace: FlexibleSpaceBar(
                       centerTitle: false,
