@@ -1,109 +1,64 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:mangxahoi/viewmodel/trash_view_model.dart';
+import 'package:mangxahoi/model/model_post.dart';
 import 'package:mangxahoi/constant/app_colors.dart';
-import 'package:mangxahoi/model/model_locket_photo.dart';
-import 'package:mangxahoi/request/locket_request.dart';
 import 'package:mangxahoi/services/user_service.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 
-// ViewModel cho thùng rác Locket
-class LocketTrashViewModel extends ChangeNotifier {
-  final LocketRequest _locketRequest = LocketRequest();
-  Stream<List<LocketPhoto>>? _deletedPhotosStream;
-  bool _isLoading = true;
-
-  Stream<List<LocketPhoto>>? get deletedPhotosStream => _deletedPhotosStream;
-  bool get isLoading => _isLoading;
-
-  Future<void> fetchDeletedPhotos(String userId) async {
-    _isLoading = true;
-    notifyListeners();
-    try {
-      _deletedPhotosStream = _locketRequest.getDeletedLocketPhotos(userId);
-    } catch (e) {
-      print("Lỗi tải Locket đã xóa: $e");
-    }
-    _isLoading = false;
-    notifyListeners();
-  }
-
-  Future<void> restorePhoto(String photoId) async {
-    try {
-      await _locketRequest.restoreLocketPhoto(photoId);
-      // StreamBuilder sẽ tự cập nhật
-    } catch (e) {
-      print("Lỗi khôi phục Locket: $e");
-      rethrow;
-    }
-  }
-
-  Future<void> deletePermanently(String photoId, String imageUrl) async {
-    try {
-      // Truyền cả imageUrl để xóa trên Storage
-      await _locketRequest.deleteLocketPhotoPermanently(photoId, imageUrl);
-      // StreamBuilder sẽ tự cập nhật
-    } catch (e) {
-      print("Lỗi xóa vĩnh viễn Locket: $e");
-      rethrow;
-    }
-  }
-}
-
-// Giao diện thùng rác Locket
-class LocketTrashView extends StatelessWidget {
-  const LocketTrashView({super.key});
+class PostTrashView extends StatelessWidget {
+  const PostTrashView({super.key});
 
   @override
   Widget build(BuildContext context) {
     final currentUserId = context.read<UserService>().currentUser?.id;
 
     if (currentUserId == null) {
-      return const Center(child: Text('Không tìm thấy người dùng.'));
+      return Scaffold(
+        appBar: AppBar(title: const Text('Thùng rác Bài viết')),
+        body: const Center(child: Text('Không tìm thấy người dùng.')),
+      );
     }
 
     return ChangeNotifierProvider(
-      create: (_) => LocketTrashViewModel()..fetchDeletedPhotos(currentUserId),
-      child: const _LocketTrashContent(),
+      create: (_) => TrashViewModel(),
+      child: const _PostTrashContent(),
     );
   }
 }
 
-class _LocketTrashContent extends StatefulWidget {
-  const _LocketTrashContent();
+class _PostTrashContent extends StatefulWidget {
+  const _PostTrashContent();
 
   @override
-  State<_LocketTrashContent> createState() => _LocketTrashContentState();
+  State<_PostTrashContent> createState() => _PostTrashContentState();
 }
 
-class _LocketTrashContentState extends State<_LocketTrashContent> {
-  final Set<String> _selectedLocketIds = {};
+class _PostTrashContentState extends State<_PostTrashContent> {
+  final Set<String> _selectedPostIds = {};
 
-  void _toggleLocketSelection(String locketId) {
+  void _togglePostSelection(String postId) {
     setState(() {
-      if (_selectedLocketIds.contains(locketId)) {
-        _selectedLocketIds.remove(locketId);
+      if (_selectedPostIds.contains(postId)) {
+        _selectedPostIds.remove(postId);
       } else {
-        _selectedLocketIds.add(locketId);
+        _selectedPostIds.add(postId);
       }
     });
   }
 
-  void _selectAll(List<LocketPhoto> lockets) {
+  void _selectAll(List<PostModel> posts) {
     setState(() {
-      if (_selectedLocketIds.length == lockets.length) {
-        _selectedLocketIds.clear();
+      if (_selectedPostIds.length == posts.length) {
+        _selectedPostIds.clear();
       } else {
-        _selectedLocketIds.clear();
-        _selectedLocketIds.addAll(lockets.map((l) => l.id));
+        _selectedPostIds.clear();
+        _selectedPostIds.addAll(posts.map((p) => p.id));
       }
     });
   }
 
-  Future<void> _deleteSelectedLockets(
-    LocketTrashViewModel vm,
-    List<LocketPhoto> lockets,
-  ) async {
-    if (_selectedLocketIds.isEmpty) return;
+  Future<void> _deleteSelectedPosts(TrashViewModel vm) async {
+    if (_selectedPostIds.isEmpty) return;
 
     final confirm = await showModalBottomSheet<bool>(
       context: context,
@@ -141,7 +96,7 @@ class _LocketTrashContentState extends State<_LocketTrashContent> {
                       const SizedBox(width: 12),
                       Expanded(
                         child: Text(
-                          'Bạn có chắc chắn muốn xóa vĩnh viễn ${_selectedLocketIds.length} locket?',
+                          'Bạn có chắc chắn muốn xóa vĩnh viễn ${_selectedPostIds.length} bài viết?',
                           style: TextStyle(
                             color: Colors.red.shade900,
                             fontSize: 14,
@@ -207,28 +162,27 @@ class _LocketTrashContentState extends State<_LocketTrashContent> {
     );
 
     if (confirm == true) {
-      final count = _selectedLocketIds.length;
-      for (final locketId in _selectedLocketIds) {
-        final locket = lockets.firstWhere((l) => l.id == locketId);
-        await vm.deletePermanently(locketId, locket.imageUrl);
+      final count = _selectedPostIds.length;
+      for (final postId in _selectedPostIds) {
+        await vm.deletePostPermanently(postId);
       }
       if (mounted) {
-        setState(() => _selectedLocketIds.clear());
-        _showSnackBar('Đã xóa vĩnh viễn $count locket', isError: true);
+        setState(() => _selectedPostIds.clear());
+        _showSnackBar('Đã xóa vĩnh viễn $count bài viết', isError: true);
       }
     }
   }
 
-  Future<void> _restoreSelectedLockets(LocketTrashViewModel vm) async {
-    if (_selectedLocketIds.isEmpty) return;
+  Future<void> _restoreSelectedPosts(TrashViewModel vm) async {
+    if (_selectedPostIds.isEmpty) return;
 
-    final count = _selectedLocketIds.length;
-    for (final locketId in _selectedLocketIds) {
-      await vm.restorePhoto(locketId);
+    final count = _selectedPostIds.length;
+    for (final postId in _selectedPostIds) {
+      await vm.restorePost(postId);
     }
     if (mounted) {
-      setState(() => _selectedLocketIds.clear());
-      _showSnackBar('Đã khôi phục $count locket');
+      setState(() => _selectedPostIds.clear());
+      _showSnackBar('Đã khôi phục $count bài viết');
     }
   }
 
@@ -254,12 +208,12 @@ class _LocketTrashContentState extends State<_LocketTrashContent> {
 
   @override
   Widget build(BuildContext context) {
-    final vm = context.watch<LocketTrashViewModel>();
+    final vm = context.watch<TrashViewModel>();
 
     return vm.isLoading
         ? const Center(child: CircularProgressIndicator())
-        : StreamBuilder<List<LocketPhoto>>(
-          stream: vm.deletedPhotosStream,
+        : StreamBuilder<List<PostModel>>(
+          stream: vm.deletedPostsStream,
           builder: (context, snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting) {
               return const Center(child: CircularProgressIndicator());
@@ -294,7 +248,7 @@ class _LocketTrashContentState extends State<_LocketTrashContent> {
                         shape: BoxShape.circle,
                       ),
                       child: Icon(
-                        Icons.delete_sweep_outlined,
+                        Icons.delete_outline_rounded,
                         size: 80,
                         color: Colors.grey[400],
                       ),
@@ -310,7 +264,7 @@ class _LocketTrashContentState extends State<_LocketTrashContent> {
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      'Các locket đã xóa sẽ xuất hiện ở đây',
+                      'Các bài viết đã xóa sẽ xuất hiện ở đây',
                       style: TextStyle(fontSize: 14, color: Colors.grey[600]),
                     ),
                   ],
@@ -318,7 +272,7 @@ class _LocketTrashContentState extends State<_LocketTrashContent> {
               );
             }
 
-            final deletedLockets = snapshot.data!;
+            final deletedPosts = snapshot.data!;
 
             return Column(
               children: [
@@ -333,13 +287,12 @@ class _LocketTrashContentState extends State<_LocketTrashContent> {
                     children: [
                       Checkbox(
                         value:
-                            _selectedLocketIds.length ==
-                                deletedLockets.length &&
-                            deletedLockets.isNotEmpty,
+                            _selectedPostIds.length == deletedPosts.length &&
+                            deletedPosts.isNotEmpty,
                         tristate:
-                            _selectedLocketIds.isNotEmpty &&
-                            _selectedLocketIds.length < deletedLockets.length,
-                        onChanged: (value) => _selectAll(deletedLockets),
+                            _selectedPostIds.isNotEmpty &&
+                            _selectedPostIds.length < deletedPosts.length,
+                        onChanged: (value) => _selectAll(deletedPosts),
                       ),
                       const Text(
                         'Tất cả',
@@ -349,18 +302,17 @@ class _LocketTrashContentState extends State<_LocketTrashContent> {
                         ),
                       ),
                       const Spacer(),
-                      if (_selectedLocketIds.isNotEmpty) ...[
+                      if (_selectedPostIds.isNotEmpty) ...[
                         IconButton(
                           icon: const Icon(Icons.restore_rounded),
                           color: AppColors.primary,
-                          onPressed: () => _restoreSelectedLockets(vm),
+                          onPressed: () => _restoreSelectedPosts(vm),
                           tooltip: 'Khôi phục',
                         ),
                         IconButton(
                           icon: const Icon(Icons.delete_forever_rounded),
                           color: AppColors.error,
-                          onPressed:
-                              () => _deleteSelectedLockets(vm, deletedLockets),
+                          onPressed: () => _deleteSelectedPosts(vm),
                           tooltip: 'Xóa vĩnh viễn',
                         ),
                       ],
@@ -368,23 +320,23 @@ class _LocketTrashContentState extends State<_LocketTrashContent> {
                   ),
                 ),
                 const Divider(height: 1),
-                // Lockets list
+                // Posts list
                 Expanded(
                   child: ListView.builder(
                     padding: const EdgeInsets.all(16.0),
-                    itemCount: deletedLockets.length,
+                    itemCount: deletedPosts.length,
                     itemBuilder: (context, index) {
-                      final locket = deletedLockets[index];
-                      final isSelected = _selectedLocketIds.contains(locket.id);
+                      final post = deletedPosts[index];
+                      final isSelected = _selectedPostIds.contains(post.id);
 
-                      return _LocketCard(
-                        locket: locket,
+                      return _PostCard(
+                        post: post,
                         isSelected: isSelected,
-                        onToggleSelect: () => _toggleLocketSelection(locket.id),
+                        onToggleSelect: () => _togglePostSelection(post.id),
                         onRestore: () async {
-                          await vm.restorePhoto(locket.id);
+                          await vm.restorePost(post.id);
                           if (context.mounted) {
-                            _showSnackBar('Đã khôi phục locket');
+                            _showSnackBar('Đã khôi phục bài viết');
                           }
                         },
                         onDelete: () async {
@@ -428,7 +380,7 @@ class _LocketTrashContentState extends State<_LocketTrashContent> {
                                             const SizedBox(width: 12),
                                             Expanded(
                                               child: Text(
-                                                'Locket sẽ bị xóa vĩnh viễn và không thể khôi phục. Bạn có chắc chắn?',
+                                                'Bài viết sẽ bị xóa vĩnh viễn và không thể khôi phục. Bạn có chắc chắn?',
                                                 style: TextStyle(
                                                   color: Colors.red.shade900,
                                                   fontSize: 14,
@@ -517,10 +469,7 @@ class _LocketTrashContentState extends State<_LocketTrashContent> {
                           );
 
                           if (confirm == true) {
-                            await vm.deletePermanently(
-                              locket.id,
-                              locket.imageUrl,
-                            );
+                            await vm.deletePostPermanently(post.id);
                             if (context.mounted) {
                               _showSnackBar('Đã xóa vĩnh viễn', isError: true);
                             }
@@ -537,16 +486,16 @@ class _LocketTrashContentState extends State<_LocketTrashContent> {
   }
 }
 
-// ==================== LOCKET CARD ====================
-class _LocketCard extends StatelessWidget {
-  final LocketPhoto locket;
+// ==================== POST CARD ====================
+class _PostCard extends StatelessWidget {
+  final PostModel post;
   final bool isSelected;
   final VoidCallback onToggleSelect;
   final VoidCallback onRestore;
   final VoidCallback onDelete;
 
-  const _LocketCard({
-    required this.locket,
+  const _PostCard({
+    required this.post,
     required this.isSelected,
     required this.onToggleSelect,
     required this.onRestore,
@@ -594,105 +543,87 @@ class _LocketCard extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Image with checkbox overlay
-              if (locket.imageUrl.isNotEmpty)
-                Stack(
-                  children: [
-                    CachedNetworkImage(
-                      imageUrl: locket.imageUrl,
-                      height: 200,
-                      width: double.infinity,
-                      fit: BoxFit.cover,
-                      placeholder:
-                          (context, url) => Container(
-                            height: 200,
-                            color: Colors.grey[200],
-                            child: const Center(
-                              child: CircularProgressIndicator(),
-                            ),
-                          ),
-                      errorWidget:
-                          (context, url, error) => Container(
-                            height: 200,
-                            color: Colors.grey[200],
-                            child: const Icon(Icons.error, size: 50),
-                          ),
-                    ),
-                    Positioned(
-                      top: 12,
-                      left: 12,
-                      child: Container(
-                        width: 24,
-                        height: 24,
-                        decoration: BoxDecoration(
-                          color: isSelected ? AppColors.primary : Colors.white,
-                          border: Border.all(
-                            color:
-                                isSelected
-                                    ? AppColors.primary
-                                    : Colors.grey[400]!,
-                            width: 2,
-                          ),
-                          borderRadius: BorderRadius.circular(6),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.1),
-                              blurRadius: 4,
-                              offset: const Offset(0, 2),
-                            ),
-                          ],
-                        ),
-                        child:
-                            isSelected
-                                ? const Icon(
-                                  Icons.check,
-                                  size: 16,
-                                  color: Colors.white,
-                                )
-                                : null,
-                      ),
-                    ),
-                  ],
-                ),
-              // Content
               Padding(
                 padding: const EdgeInsets.all(16.0),
-                child: Column(
+                child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      'Locket Photo',
-                      style: TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w500,
-                        color: Colors.grey[800],
-                      ),
-                    ),
-                    const SizedBox(height: 8),
+                    // Checkbox
                     Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 6,
-                      ),
+                      width: 24,
+                      height: 24,
+                      margin: const EdgeInsets.only(right: 12, top: 2),
                       decoration: BoxDecoration(
-                        color: Colors.grey[100],
-                        borderRadius: BorderRadius.circular(20),
+                        color: isSelected ? AppColors.primary : Colors.white,
+                        border: Border.all(
+                          color:
+                              isSelected
+                                  ? AppColors.primary
+                                  : Colors.grey[400]!,
+                          width: 2,
+                        ),
+                        borderRadius: BorderRadius.circular(6),
                       ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
+                      child:
+                          isSelected
+                              ? const Icon(
+                                Icons.check,
+                                size: 16,
+                                color: Colors.white,
+                              )
+                              : null,
+                    ),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Icon(
-                            Icons.access_time,
-                            size: 14,
-                            color: Colors.grey[600],
-                          ),
-                          const SizedBox(width: 6),
                           Text(
-                            'Đã xóa ${_getTimeAgo(locket.deletedAt!.toDate())}',
+                            post.content.isNotEmpty
+                                ? post.content
+                                : 'Bài viết không có nội dung',
+                            maxLines: 3,
+                            overflow: TextOverflow.ellipsis,
                             style: TextStyle(
-                              fontSize: 12,
-                              color: Colors.grey[600],
-                              fontWeight: FontWeight.w500,
+                              fontSize: 15,
+                              height: 1.5,
+                              color:
+                                  post.content.isEmpty
+                                      ? Colors.grey[400]
+                                      : Colors.grey[800],
+                              fontWeight:
+                                  post.content.isEmpty
+                                      ? FontWeight.w400
+                                      : FontWeight.w500,
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 6,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.grey[100],
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  Icons.access_time,
+                                  size: 14,
+                                  color: Colors.grey[600],
+                                ),
+                                const SizedBox(width: 6),
+                                Text(
+                                  'Đã xóa ${_getTimeAgo(post.deletedAt!)}',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.grey[600],
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
                         ],
@@ -702,7 +633,6 @@ class _LocketCard extends StatelessWidget {
                 ),
               ),
               Container(height: 1, color: Colors.grey[100]),
-              // Action buttons
               Padding(
                 padding: const EdgeInsets.all(12.0),
                 child: Row(
