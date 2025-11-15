@@ -40,7 +40,7 @@ dependencies:
   qr_flutter: ^4.1.0  # Tạo QR code
   mobile_scanner: ^3.5.5  # Quét QR code
   share_plus: ^7.2.1  # Để chia sẻ QR code
-
+  google_sign_in: ^6.2.1
 
 dev_dependencies:
   flutter_test:

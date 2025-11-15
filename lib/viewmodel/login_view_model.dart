@@ -89,8 +89,42 @@ class LoginViewModel extends ChangeNotifier {
       return false;
     }
   }
-  
+
   // *** BẮT ĐẦU CODE MỚI ***
+  /// Đăng nhập bằng Google
+  Future<bool> loginWithGoogle() async {
+    if (_isLoading) return false;
+
+    _isLoading = true;
+    _errorMessage = null;
+    _safeNotify();
+
+    try {
+      _currentUser = await _loginRequest.signInWithGoogle();
+      if (_isDisposed) return false;
+
+      if (_currentUser != null) {
+        print('✅ Google login successful: ${_currentUser!.name}');
+        _isLoading = false;
+        _safeNotify();
+        return true;
+      } else {
+        // Người dùng có thể đã hủy (signInWithGoogle trả về null)
+        _errorMessage = 'Đăng nhập Google đã bị hủy';
+        _isLoading = false;
+        _safeNotify();
+        return false;
+      }
+    } catch (e) {
+      if (_isDisposed) return false;
+      _isLoading = false;
+      _errorMessage = 'Lỗi đăng nhập Google: ${e.toString()}';
+      _safeNotify();
+      return false;
+    }
+  }
+  // *** KẾT THÚC CODE MỚI ***
+  
   /// Gửi email đặt lại mật khẩu
   Future<bool> sendPasswordResetEmail(String email) async {
     if (_isLoading) return false;
@@ -113,7 +147,6 @@ class LoginViewModel extends ChangeNotifier {
       return false;
     }
   }
-  // *** KẾT THÚC CODE MỚI ***
 
   String _parseFirebaseError(FirebaseAuthException e) {
     switch (e.code) {
@@ -127,6 +160,9 @@ class LoginViewModel extends ChangeNotifier {
         return 'Tài khoản đã bị vô hiệu hóa';
       case 'too-many-requests':
         return 'Quá nhiều lần thử. Vui lòng thử lại sau';
+      // Lỗi mới cho Google Sign-In
+      case 'account-exists-with-different-credential':
+        return 'Tài khoản đã tồn tại với phương thức đăng nhập khác';
       default:
         return 'Lỗi đăng nhập: ${e.message}';
     }

@@ -1,11 +1,17 @@
 
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:google_sign_in/google_sign_in.dart'; // <--- IMPORT MỚI
 import 'package:mangxahoi/authanet/firestore_service.dart';
 import 'package:mangxahoi/model/model_user.dart';
 
 class LoginRequest {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirestoreService _firestoreService = FirestoreService();
+  final GoogleSignIn _googleSignIn = GoogleSignIn(
+    scopes: ['email'],
+  // THAY YOUR_WEB_CLIENT_ID bằng Web Client ID từ bước 3
+  clientId: '55399679019-j318ahbn27sri4glbgu9g2eroqsqd7r3.apps.googleusercontent.com',
+  ); // <--- THÊM MỚI
 
   // Đăng nhập - Tối ưu hóa
   Future<UserCredential?> login(String email, String password) async {
@@ -37,6 +43,107 @@ class LoginRequest {
       rethrow;
     }
   }
+
+  // *** BẮT ĐẦU CODE MỚI: ĐĂNG NHẬP BẰNG GOOGLE ***
+  Future<UserModel?> signInWithGoogle() async {
+    try {
+      print('🌎 Bắt đầu đăng nhập Google...');
+      
+      // 1. Bắt đầu quy trình đăng nhập Google
+      final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
+      if (googleUser == null) {
+        print('🚫 Người dùng đã hủy đăng nhập Google');
+        return null; // Người dùng đã hủy
+      }
+
+      // 2. Lấy thông tin xác thực (token)
+      final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
+
+      // 3. Tạo credential cho Firebase
+      final AuthCredential credential = GoogleAuthProvider.credential(
+        accessToken: googleAuth.accessToken,
+        idToken: googleAuth.idToken,
+      );
+
+      // 4. Đăng nhập vào Firebase
+      print('🔐 Đang đăng nhập Firebase với Google credential...');
+      final UserCredential userCredential = await _auth.signInWithCredential(credential);
+      final User user = userCredential.user!;
+      print('✅ Đăng nhập Firebase Auth thành công, UID: ${user.uid}');
+
+      // 5. Kiểm tra xem có phải người dùng mới không
+      if (userCredential.additionalUserInfo?.isNewUser == true) {
+        print('👋 Chào người dùng mới! Đang tạo tài khoản Firestore...');
+        // Tạo UserModel mới
+        final newUser = UserModel(
+          id: '', // Sẽ được gán trong saveUser
+          uid: user.uid,
+          name: user.displayName ?? googleUser.email.split('@').first,
+          email: user.email!,
+          password: '', // Không lưu mật khẩu cho Google Sign-in
+          phone: user.phoneNumber ?? '',
+          bio: 'Xin chào! Tôi là người dùng mới',
+          gender: '',
+          liveAt: '',
+          comeFrom: '',
+          role: 'user',
+          relationship: '',
+          statusAccount: 'active',
+          backgroundImageUrl: '', 
+          avatar: user.photoURL != null ? [user.photoURL!] : [], // Thêm avatar từ Google
+          friends: [],
+          groups: [],
+          posterList: [],
+          followerCount: 0,
+          followingCount: 0,
+          createAt: DateTime.now(),
+          dateOfBirth: null,
+          lastActive: DateTime.now(),
+          notificationSettings: {
+            'comments': true,
+            'friendRequests': true,
+            'likes': true,
+            'messages': true,
+            'tags': true,
+          },
+        );
+
+        // Lưu vào Firestore
+        final docId = await _firestoreService.saveUser(newUser);
+        print('✅ Đã lưu user mới vào Firestore với ID: $docId');
+        // Trả về user model đã có docId
+        return await _firestoreService.getUserData(docId);
+      } else {
+        // 6. Nếu là người dùng cũ, lấy thông tin từ Firestore
+        print('👍 Chào mừng trở lại, người dùng cũ!');
+        final userModel = await _firestoreService.getUserDataByAuthUid(user.uid);
+        if (userModel == null) {
+          print('⚠️ Lỗi: Người dùng đã đăng nhập Auth nhưng không có dữ liệu Firestore!');
+          // Đây là trường hợp hiếm gặp, có thể tạo dữ liệu ở đây nếu cần
+          throw Exception('Tài khoản tồn tại trong Auth nhưng không có trong Firestore.');
+        }
+        
+        // Cập nhật avatar nếu nó trống trong F_Store
+        if (userModel.avatar.isEmpty && user.photoURL != null) {
+          userModel.avatar.add(user.photoURL!);
+          await _firestoreService.updateUser(userModel);
+        }
+
+        print('✅ Đã tải dữ liệu user: ${userModel.name}');
+        return userModel;
+      }
+    } on FirebaseAuthException catch (e) {
+      print('❌ Lỗi Firebase Auth (Google): ${e.code} - ${e.message}');
+      throw _handleAuthException(e);
+    } catch (e) {
+      print('❌ Lỗi đăng nhập Google: $e');
+      // Đảm bảo đăng xuất khỏi Google nếu có lỗi
+      await _googleSignIn.signOut();
+      rethrow;
+    }
+  }
+  // *** KẾT THÚC CODE MỚI ***
+
 
   // Đăng ký - Tối ưu hóa
   Future<UserCredential?> register(
@@ -105,7 +212,6 @@ class LoginRequest {
     }
   }
   
-  // *** BẮT ĐẦU CODE MỚI ***
   // Gửi email đặt lại mật khẩu
   Future<void> sendPasswordResetEmail(String email) async {
     try {
@@ -121,7 +227,6 @@ class LoginRequest {
       rethrow;
     }
   }
-  // *** KẾT THÚC CODE MỚI ***
 
 
   // Xử lý Firebase Auth exceptions - Cải tiến
@@ -145,6 +250,9 @@ class LoginRequest {
         return 'Quá nhiều lần thử đăng nhập. Vui lòng thử lại sau vài phút';
       case 'network-request-failed':
         return 'Lỗi kết nối mạng. Vui lòng kiểm tra kết nối internet';
+      // Lỗi mới cho Google Sign-In
+      case 'account-exists-with-different-credential':
+        return 'Tài khoản đã tồn tại với phương thức đăng nhập khác (ví dụ: email, Facebook...)';
       default:
         return e.message ?? 'Đã xảy ra lỗi không xác định. Vui lòng thử lại';
     }
@@ -191,7 +299,12 @@ class LoginRequest {
       if (currentUser != null) {
         print('🚪 Đang đăng xuất user: ${currentUser.email}');
         await _auth.signOut();
-        print('✅ Đăng xuất thành công');
+        // Đăng xuất khỏi Google nếu đã đăng nhập bằng Google
+        if (await _googleSignIn.isSignedIn()) {
+          await _googleSignIn.signOut();
+          print('✅ Đăng xuất Google thành công');
+        }
+        print('✅ Đăng xuất Firebase thành công');
       } else {
         print('ℹ️ Không có user nào đang đăng nhập');
       }
