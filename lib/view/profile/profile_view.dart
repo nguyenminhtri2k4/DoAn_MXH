@@ -666,23 +666,34 @@ class _ProfileContent extends StatelessWidget {
   }
 
   Widget _buildInfoSection(BuildContext context, ProfileViewModel vm) {
-    final user = vm.user!;
-    final isCurrentUser = vm.isCurrentUserProfile;
+  final user = vm.user!;
+  final isCurrentUser = vm.isCurrentUserProfile;
+  
+  final infoItems = [
+    // Luôn hiển thị email (đặc biệt hữu ích cho Google Sign-In)
+    if (user.email.isNotEmpty)
+      _InfoItem(Icons.email_outlined, user.email),
     
-    final infoItems = [
-      if (user.liveAt.isNotEmpty)
-        _InfoItem(Icons.home_work_outlined, 'Sống tại ${user.liveAt}'),
-      if (user.comeFrom.isNotEmpty)
-        _InfoItem(Icons.location_on_outlined, 'Đến từ ${user.comeFrom}'),
-      if (user.relationship.isNotEmpty)
-        _InfoItem(Icons.favorite_outline, user.relationship),
-      if (user.dateOfBirth != null)
-        _InfoItem(Icons.cake_outlined,
-            'Sinh nhật ${DateFormat('dd/MM/yyyy').format(user.dateOfBirth!)}'),
-    ];
+    if (user.liveAt.isNotEmpty)
+      _InfoItem(Icons.home_work_outlined, 'Sống tại ${user.liveAt}'),
+    
+    if (user.comeFrom.isNotEmpty)
+      _InfoItem(Icons.location_on_outlined, 'Đến từ ${user.comeFrom}'),
+    
+    if (user.relationship.isNotEmpty)
+      _InfoItem(Icons.favorite_outline, user.relationship),
+    
+    if (user.dateOfBirth != null)
+      _InfoItem(Icons.cake_outlined,
+          'Sinh nhật ${DateFormat('dd/MM/yyyy').format(user.dateOfBirth!)}'),
+    
+    // Hiển thị số điện thoại nếu có
+    if (user.phone.isNotEmpty)
+      _InfoItem(Icons.phone_outlined, user.phone),
+  ];
 
-    if (infoItems.isEmpty) return const SizedBox.shrink();
-
+  // Nếu không có thông tin gì (trường hợp rất hiếm), hiển thị thông báo
+  if (infoItems.isEmpty) {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 12),
       padding: const EdgeInsets.all(20),
@@ -708,21 +719,24 @@ class _ProfileContent extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 16),
-          ...infoItems.map((item) => Padding(
-                padding: const EdgeInsets.only(bottom: 12),
-                child: Row(
-                  children: [
-                    Icon(item.icon, color: Colors.grey[600], size: 22),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Text(
-                        item.text,
-                        style: const TextStyle(fontSize: 15),
-                      ),
-                    ),
-                  ],
-                ),
-              )),
+          Center(
+            child: Padding(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                children: [
+                  Icon(Icons.info_outline, size: 48, color: Colors.grey[300]),
+                  const SizedBox(height: 12),
+                  Text(
+                    isCurrentUser 
+                      ? 'Chưa có thông tin. Nhấn "Xem chi tiết" để cập nhật.'
+                      : 'Người dùng chưa cập nhật thông tin',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: Colors.grey[600], fontSize: 14),
+                  ),
+                ],
+              ),
+            ),
+          ),
           const SizedBox(height: 8),
           InkWell(
             onTap: () {
@@ -740,7 +754,7 @@ class _ProfileContent extends StatelessWidget {
                   Icon(Icons.info_outline, color: AppColors.primary, size: 22),
                   const SizedBox(width: 12),
                   Text(
-                    isCurrentUser ? 'Xem chi tiết' : 'Xem thông tin chi tiết',
+                    isCurrentUser ? 'Cập nhật thông tin' : 'Xem thông tin chi tiết',
                     style: TextStyle(
                       fontSize: 15,
                       color: AppColors.primary,
@@ -758,6 +772,82 @@ class _ProfileContent extends StatelessWidget {
       ),
     );
   }
+
+  return Container(
+    margin: const EdgeInsets.symmetric(horizontal: 12),
+    padding: const EdgeInsets.all(20),
+    decoration: BoxDecoration(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(16),
+      boxShadow: [
+        BoxShadow(
+          color: Colors.black.withOpacity(0.04),
+          blurRadius: 10,
+          offset: const Offset(0, 2),
+        ),
+      ],
+    ),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Thông tin',
+          style: TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        const SizedBox(height: 16),
+        ...infoItems.map((item) => Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: Row(
+                children: [
+                  Icon(item.icon, color: Colors.grey[600], size: 22),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      item.text,
+                      style: const TextStyle(fontSize: 15),
+                    ),
+                  ),
+                ],
+              ),
+            )),
+        const SizedBox(height: 8),
+        InkWell(
+          onTap: () {
+            Navigator.pushNamed(
+              context,
+              '/about',
+              arguments: {'viewModel': vm, 'isCurrentUser': isCurrentUser},
+            );
+          },
+          borderRadius: BorderRadius.circular(8),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 8),
+            child: Row(
+              children: [
+                Icon(Icons.info_outline, color: AppColors.primary, size: 22),
+                const SizedBox(width: 12),
+                Text(
+                  isCurrentUser ? 'Xem chi tiết' : 'Xem thông tin chi tiết',
+                  style: TextStyle(
+                    fontSize: 15,
+                    color: AppColors.primary,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const Spacer(),
+                Icon(Icons.arrow_forward_ios,
+                    color: AppColors.primary, size: 16),
+              ],
+            ),
+          ),
+        ),
+      ],
+    ),
+  );
+}
 
   Widget _buildStatsSection(BuildContext context, ProfileViewModel vm) {
     final user = vm.user!;
