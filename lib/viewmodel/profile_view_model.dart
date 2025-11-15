@@ -1,3 +1,4 @@
+
 import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
@@ -9,12 +10,15 @@ import 'package:mangxahoi/request/user_request.dart';
 import 'package:mangxahoi/request/post_request.dart';
 import 'package:mangxahoi/request/friend_request_manager.dart';
 import 'package:mangxahoi/request/storage_request.dart';
+import 'package:mangxahoi/request/group_request.dart';
+import 'package:mangxahoi/model/model_group.dart';
 
 class ProfileViewModel extends ChangeNotifier {
   final _auth = FirebaseAuth.instance;
   final _userRequest = UserRequest();
   final _postRequest = PostRequest();
   final _friendManager = FriendRequestManager();
+  final _groupRequest = GroupRequest();
 
   final ImagePicker _picker = ImagePicker();
   final StorageRequest _storageRequest = StorageRequest();
@@ -34,11 +38,14 @@ class ProfileViewModel extends ChangeNotifier {
   bool isCurrentUserProfile = false;
   String friendshipStatus = 'loading';
 
-  // Thêm biến theo dõi trạng thái chặn
+  // Stream cho bạn bè và nhóm
+  Stream<List<UserModel>>? friendsStream;
+  Stream<List<GroupModel>>? groupsStream;
+
+  // Trạng thái chặn
   bool _isBlocked = false;
   bool get isBlocked => _isBlocked;
 
-  // Thêm biến theo dõi trạng thái bị chặn
   bool _isBlockedByOther = false;
   bool get isBlockedByOther => _isBlockedByOther;
 
@@ -46,8 +53,13 @@ class ProfileViewModel extends ChangeNotifier {
     try {
       isLoading = true;
       friendshipStatus = 'loading';
-      _isBlocked = false; // Reset trạng thái chặn
-      _isBlockedByOther = false; // Reset trạng thái bị chặn
+      _isBlocked = false;
+      _isBlockedByOther = false;
+      
+      // Reset streams
+      userPostsStream = null;
+      friendsStream = null;
+      groupsStream = null;
       notifyListeners();
 
       final currentUserAuth = _auth.currentUser;
@@ -72,13 +84,11 @@ class ProfileViewModel extends ChangeNotifier {
               user!.id,
             );
 
-            // Kiểm tra trạng thái chặn (mình chặn người khác)
             _isBlocked = await _friendManager.isUserBlocked(
               currentUserData!.id,
               user!.id,
             );
 
-            // Kiểm tra trạng thái bị chặn (người khác chặn mình)
             _isBlockedByOther = await _friendManager.isUserBlocked(
               user!.id,
               currentUserData!.id,
@@ -103,11 +113,57 @@ class ProfileViewModel extends ChangeNotifier {
       }
 
       if (user != null) {
+        // 1. Stream bài viết
         userPostsStream = _postRequest.getPostsByAuthorId(
           user!.id,
           currentUserId: currentUserData?.id,
           friendIds: currentUserData?.friends ?? [],
         );
+
+        // 2. Stream danh sách bạn bè (9 người đầu)
+        final friendIds = user!.friends.take(9).toList();
+        if (friendIds.isNotEmpty) {
+          friendsStream = _userRequest.getUsersByIdsStream(friendIds);
+        } else {
+          friendsStream = Stream.value([]);
+        }
+
+        // ========== SỬA LỖI STREAM NHÓM ==========
+        // 3. Stream danh sách nhóm (3 nhóm đầu)
+        print('🔍 [ProfileVM] ========== DEBUG GROUPS ==========');
+        print('🔍 [ProfileVM] User ID: ${user!.id}');
+        print('🔍 [ProfileVM] User Name: ${user!.name}');
+        print('🔍 [ProfileVM] User.groups field: ${user!.groups}');
+        print('🔍 [ProfileVM] User.groups.length: ${user!.groups.length}');
+        print('🔍 [ProfileVM] User.groups.isEmpty: ${user!.groups.isEmpty}');
+        
+        // LUÔN LUÔN tạo stream, bất kể user.groups có rỗng hay không
+        groupsStream = _groupRequest
+            .getGroupsByUserId(user!.id)
+            .map((allGroups) {
+              print('📦 [ProfileVM] Stream emitted ${allGroups.length} groups');
+              
+              // ✨ LỌC CHỈ LẤY NHÓM POST (type == 'post')
+              final postGroups = allGroups.where((g) => g.type == 'post').toList();
+              print('📦 [ProfileVM] Filtered to ${postGroups.length} post groups');
+              
+              if (postGroups.isNotEmpty) {
+                print('📦 [ProfileVM] Group names: ${postGroups.map((g) => g.name).toList()}');
+                print('📦 [ProfileVM] Group IDs: ${postGroups.map((g) => g.id).toList()}');
+              } else {
+                print('⚠️ [ProfileVM] No post groups found');
+              }
+              
+              // Chỉ lấy 3 nhóm post đầu tiên
+              return postGroups.take(3).toList();
+            })
+            .handleError((error) {
+              print('❌ [ProfileVM] Stream error: $error');
+              return <GroupModel>[];
+            });
+        
+        print('🔍 [ProfileVM] ========== END DEBUG ==========');
+        // ==========================================
       }
     } catch (e) {
       print('❌ Lỗi khi tải thông tin cá nhân: $e');
@@ -132,7 +188,6 @@ class ProfileViewModel extends ChangeNotifier {
     await loadProfile(userId: user!.id);
   }
 
-  // Cập nhật method blockUser
   Future<void> blockUser() async {
     if (currentUserData == null || user == null) return;
 
@@ -147,7 +202,6 @@ class ProfileViewModel extends ChangeNotifier {
     }
   }
 
-  // Thêm method unblockUser mới
   Future<void> unblockUser() async {
     if (currentUserData == null || user == null) return;
 

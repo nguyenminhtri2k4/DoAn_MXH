@@ -51,6 +51,11 @@ import 'package:mangxahoi/view/group_chat/qr_scanner_view.dart';
 import 'package:mangxahoi/view/group_chat/group_qr_code_view.dart';
 // ------------------------------
 
+// --- (A) THÊM IMPORT MỚI ---
+import 'package:mangxahoi/view/friend_list_view.dart';
+import 'package:mangxahoi/view/user_groups_view.dart';
+// -------------------------
+
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 void main() async {
@@ -97,8 +102,8 @@ class _MyAppState extends State<MyApp> {
       child: Consumer<UserService>(
         builder: (context, userService, _) {
           // Khởi tạo call service khi user đã được tải
-          if (userService.currentUser != null && 
-              !userService.isLoading && 
+          if (userService.currentUser != null &&
+              !userService.isLoading &&
               !_hasInitializedCallService) {
             WidgetsBinding.instance.addPostFrameCallback((_) {
               _initCallService(context, userService);
@@ -160,7 +165,8 @@ class _MyAppState extends State<MyApp> {
                   if (settings.arguments is ProfileViewModel) {
                     final viewModel = settings.arguments as ProfileViewModel;
                     return MaterialPageRoute(
-                      builder: (context) => EditProfileView(viewModel: viewModel),
+                      builder: (context) =>
+                          EditProfileView(viewModel: viewModel),
                     );
                   }
                   return _buildErrorRoute();
@@ -172,7 +178,7 @@ class _MyAppState extends State<MyApp> {
                     final isCurrentUser = args['isCurrentUser'] as bool;
                     return MaterialPageRoute(
                       builder: (context) => AboutView(
-                        viewModel: viewModel, 
+                        viewModel: viewModel,
                         isCurrentUser: isCurrentUser,
                       ),
                     );
@@ -187,7 +193,7 @@ class _MyAppState extends State<MyApp> {
                     if (chatId != null && chatName != null) {
                       return MaterialPageRoute(
                         builder: (context) => ChatView(
-                          chatId: chatId, 
+                          chatId: chatId,
                           chatName: chatName,
                         ),
                       );
@@ -212,7 +218,7 @@ class _MyAppState extends State<MyApp> {
                     if (originalPost != null && currentUser != null) {
                       return MaterialPageRoute(
                         builder: (context) => SharePostView(
-                          originalPost: originalPost, 
+                          originalPost: originalPost,
                           currentUser: currentUser,
                         ),
                       );
@@ -224,7 +230,8 @@ class _MyAppState extends State<MyApp> {
                   if (settings.arguments is PostModel) {
                     final post = settings.arguments as PostModel;
                     return MaterialPageRoute(
-                      builder: (context) => ShareToMessengerView(postToShare: post),
+                      builder: (context) =>
+                          ShareToMessengerView(postToShare: post),
                     );
                   }
                   return _buildErrorRoute();
@@ -261,46 +268,70 @@ class _MyAppState extends State<MyApp> {
               '/register': (context) => const RegisterView(),
               '/home': (context) => const HomeView(),
               '/search': (context) => const SearchView(),
-              '/friends': (context) => const FriendsView(),
+              '/friends': (context) {
+                final arguments = ModalRoute.of(context)?.settings.arguments;
+                int initialIndex = 0; // Mặc định là tab 0
+                if (arguments is int) {
+                  initialIndex = arguments; // Gán index nếu được truyền vào
+                }
+                return FriendsView(initialIndex: initialIndex);
+              },
+              '/friend_list': (context) {
+                final args = ModalRoute.of(context)!.settings.arguments
+                    as Map<String, dynamic>?;
+                if (args != null &&
+                    args['userId'] != null &&
+                    args['userName'] != null) {
+                  return FriendListView(
+                    userId: args['userId'],
+                    userName: args['userName'],
+                  );
+                }
+                return _buildErrorWidget();
+              },
               '/groups': (context) => const GroupsView(),
               '/create_group': (context) => const CreateGroupView(),
               '/blocked_list': (context) => const BlockedListView(),
-              '/notification_settings': (context) => const NotificationSettingsView(),
+              '/notification_settings': (context) =>
+                  const NotificationSettingsView(),
               '/messages': (context) => const MessagesView(),
               '/trash': (context) => const TrashView(),
-              '/locket_manage_friends': (context) => const LocketManageFriendsView(),
+              '/locket_manage_friends': (context) =>
+                  const LocketManageFriendsView(),
               '/my_locket_history': (context) => const MyLocketHistoryView(),
               '/locket_trash': (context) => const LocketTrashView(),
               '/qr_scanner': (context) => const QRScannerView(),
               '/follow': (context) {
-                final args = ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>?;
+                final args = ModalRoute.of(context)!.settings.arguments
+                    as Map<String, dynamic>?;
                 if (args != null) {
                   return FollowViewer(
                     userId: args['userId'],
                     initialIndex: args['initialIndex'] ?? 0,
                   );
                 }
-                return const Scaffold(
-                  body: Center(child: Text('Lỗi: Thiếu thông tin người dùng')),
-                );
+                return _buildErrorWidget(); // <-- SỬA: Gọi Widget
               },
+              '/user_groups': (context) {
+                  final args = ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>;
+                  return UserGroupsView(
+                    userId: args['userId'],
+                    userName: args['userName'],
+                  );
+                },
               '/group_management': (context) {
                 final args = ModalRoute.of(context)!.settings.arguments;
                 if (args is String) {
                   return GroupManagementView(groupId: args);
                 }
-                return const Scaffold(
-                  body: Center(child: Text('Lỗi: Thiếu thông tin nhóm')),
-                );
+                return _buildErrorWidget(); // <-- SỬA: Gọi Widget
               },
               '/add_members': (context) {
                 final args = ModalRoute.of(context)!.settings.arguments;
                 if (args is String) {
                   return AddMembersView(groupId: args);
                 }
-                return const Scaffold(
-                  body: Center(child: Text('Lỗi: Thiếu thông tin nhóm')),
-                );
+                return _buildErrorWidget(); // <-- SỬA: Gọi Widget
               },
               '/create_story': (context) => const CreateStoryView(),
             },
@@ -342,17 +373,27 @@ class _MyAppState extends State<MyApp> {
     return const LoginView();
   }
 
-  MaterialPageRoute _buildErrorRoute() {
-    return MaterialPageRoute(
-      builder: (context) => const Scaffold(
-        body: Center(
-          child: Text('Lỗi: Không thể tải trang'),
-        ),
+  // --- (C) TÁCH WIDGET LỖI RA ĐÂY ---
+  /// Trả về một Widget lỗi (dùng cho 'routes')
+  Widget _buildErrorWidget() {
+    return Scaffold( // <-- SỬA: Bỏ 'const'
+      appBar: AppBar(title: const Text('Lỗi')), // Thêm AppBar
+      body: const Center( // Thêm const
+        child: Text('Lỗi: Không thể tải trang'), // Thêm const
       ),
     );
   }
 
-  Future<void> _initCallService(BuildContext context, UserService userService) async {
+  /// Trả về một Route lỗi (dùng cho 'onGenerateRoute')
+  MaterialPageRoute _buildErrorRoute() {
+    return MaterialPageRoute(
+      builder: (context) => _buildErrorWidget(), // Gọi lại widget lỗi
+    );
+  }
+  // ---------------------------------
+
+  Future<void> _initCallService(
+      BuildContext context, UserService userService) async {
     if (_hasInitializedCallService) return;
 
     if (!kIsWeb) {

@@ -11,14 +11,31 @@ import 'package:mangxahoi/model/model_friend.dart';
 import 'package:mangxahoi/request/friend_request_manager.dart';
 
 class FriendsView extends StatefulWidget {
-  const FriendsView({super.key});
+  // --- THÊM DÒNG NÀY ---
+  final int initialIndex;
+  // ---------------------
+
+  const FriendsView({
+    super.key,
+    this.initialIndex = 0, // Giá trị mặc định là 0
+  });
 
   @override
   State<FriendsView> createState() => _FriendsViewState();
 }
 
 class _FriendsViewState extends State<FriendsView> {
-  int _selectedIndex = 0;
+  late int _selectedIndex; // <-- SỬA DÒNG NÀY
+
+  // --- THÊM HÀM NÀY ---
+  @override
+  void initState() {
+    super.initState();
+    // Gán giá trị từ widget.initialIndex cho _selectedIndex
+    _selectedIndex = widget.initialIndex;
+  }
+  // ---------------------
+
 
   @override
   Widget build(BuildContext context) {
@@ -73,7 +90,7 @@ class _FriendsViewState extends State<FriendsView> {
                       child: _buildTabChip(
                         label: 'Gợi ý',
                         icon: Icons.person_add_outlined,
-                        isSelected: _selectedIndex == 0,
+                        isSelected: _selectedIndex == 0, // Đã dùng _selectedIndex
                         onTap: () => setState(() => _selectedIndex = 0),
                       ),
                     ),
@@ -82,7 +99,7 @@ class _FriendsViewState extends State<FriendsView> {
                       child: _buildTabChip(
                         label: 'Bạn bè',
                         icon: Icons.people_outline,
-                        isSelected: _selectedIndex == 1,
+                        isSelected: _selectedIndex == 1, // Đã dùng _selectedIndex
                         onTap: () => setState(() => _selectedIndex = 1),
                       ),
                     ),
@@ -92,7 +109,7 @@ class _FriendsViewState extends State<FriendsView> {
               // Tab Content
               Expanded(
                 child: IndexedStack(
-                  index: _selectedIndex,
+                  index: _selectedIndex, // Đã dùng _selectedIndex
                   children: const [
                     _SuggestionsTab(),
                     _AllFriendsTab(),
@@ -154,6 +171,9 @@ class _FriendsViewState extends State<FriendsView> {
     );
   }
 }
+
+// ... (Phần còn lại của tệp _SuggestionsTab và _AllFriendsTab giữ nguyên)
+// ... (Tôi sẽ không dán lại toàn bộ phần đó cho ngắn gọn)
 
 class _SuggestionsTab extends StatelessWidget {
   const _SuggestionsTab();
