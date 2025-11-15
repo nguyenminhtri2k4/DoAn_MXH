@@ -1,6 +1,7 @@
+
 import 'package:flutter/material.dart';
 import 'package:mangxahoi/model/model_user.dart';
-import 'package:mangxahoi/request/user_request.dart'; // Cần import UserRequest
+import 'package:mangxahoi/request/user_request.dart';
 import 'package:mangxahoi/constant/app_colors.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 
@@ -19,119 +20,325 @@ class FriendListView extends StatefulWidget {
 }
 
 class _FriendListViewState extends State<FriendListView> {
-  // Dùng Future để tải danh sách một lần
   late Future<List<UserModel>> _friendsFuture;
   final UserRequest _userRequest = UserRequest();
 
   @override
   void initState() {
     super.initState();
-    // Khởi tạo Future khi widget được tạo
     _friendsFuture = _loadAllFriends();
   }
 
   Future<List<UserModel>> _loadAllFriends() async {
     try {
-      // 1. Lấy thông tin người dùng để lấy danh sách ID bạn bè
       final user = await _userRequest.getUserData(widget.userId);
       if (user == null || user.friends.isEmpty) {
-        return []; // Trả về danh sách rỗng nếu không có bạn bè
+        return [];
       }
 
-      // 2. Lấy thông tin chi tiết của TẤT CẢ bạn bè
-      // (Phương thức getUsersByIds trong UserRequest đã hỗ trợ batching)
       final friendList = await _userRequest.getUsersByIds(user.friends);
       return friendList;
     } catch (e) {
       print('❌ Lỗi khi tải danh sách bạn bè: $e');
-      rethrow; // Ném lỗi để FutureBuilder bắt
+      rethrow;
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: Text('Bạn bè của ${widget.userName}'),
-        backgroundColor: AppColors.primary,
-        foregroundColor: Colors.white,
+        title: Text(
+          'Bạn bè của ${widget.userName}',
+          style: const TextStyle(fontWeight: FontWeight.bold),
+        ),
+        backgroundColor: Colors.white,
+        foregroundColor: Colors.black87,
+        elevation: 0,
+        centerTitle: false,
       ),
       body: FutureBuilder<List<UserModel>>(
         future: _friendsFuture,
         builder: (context, snapshot) {
-          // Đang tải...
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
-
-          // Bị lỗi
-          if (snapshot.hasError) {
-            return Center(
-                child: Text('Lỗi tải danh sách: ${snapshot.error}'));
-          }
-
-          // Không có dữ liệu hoặc danh sách rỗng
-          if (!snapshot.hasData || snapshot.data!.isEmpty) {
             return const Center(
-              child: Text(
-                'Người này không có bạn bè nào.',
-                style: TextStyle(fontSize: 16, color: Colors.grey),
-              ),
+              child: CircularProgressIndicator(),
             );
           }
 
-          // Có dữ liệu
-          final friends = snapshot.data!;
-          return ListView.builder(
-            padding: const EdgeInsets.all(8.0),
-            itemCount: friends.length,
-            itemBuilder: (context, index) {
-              final friend = friends[index];
-              return _buildFriendTile(context, friend);
-            },
+          if (snapshot.hasError) {
+            return _buildErrorState(snapshot.error.toString());
+          }
+
+          final friends = snapshot.data ?? [];
+
+          if (friends.isEmpty) {
+            return _buildEmptyState();
+          }
+
+          return CustomScrollView(
+            slivers: [
+              SliverToBoxAdapter(
+                child: Container(
+                  padding: const EdgeInsets.all(16),
+                  color: Colors.white,
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: AppColors.primary.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Icon(
+                          Icons.people,
+                          color: AppColors.primary,
+                          size: 20,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Text(
+                        '${friends.length} bạn bè',
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              SliverPadding(
+                padding: const EdgeInsets.all(12),
+                sliver: SliverList(
+                  delegate: SliverChildBuilderDelegate(
+                    (context, index) {
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 12),
+                        child: _buildFriendCard(context, friends[index]),
+                      );
+                    },
+                    childCount: friends.length,
+                  ),
+                ),
+              ),
+            ],
           );
         },
       ),
     );
   }
 
-  // Widget để hiển thị thông tin từng người bạn
-  Widget _buildFriendTile(BuildContext context, UserModel friend) {
-    return Card(
-      margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      elevation: 1,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: ListTile(
-        leading: CircleAvatar(
-          radius: 28,
-          backgroundImage: friend.avatar.isNotEmpty
-              ? CachedNetworkImageProvider(friend.avatar.first)
-              : null,
-          backgroundColor: Colors.grey[200],
-          child: friend.avatar.isEmpty
-              ? const Icon(Icons.person, size: 28, color: Colors.grey)
-              : null,
+  Widget _buildFriendCard(BuildContext context, UserModel friend) {
+    final hasAvatar = friend.avatar.isNotEmpty;
+
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(16),
+          onTap: () {
+            Navigator.pushNamed(
+              context,
+              '/profile',
+              arguments: friend.id,
+            );
+          },
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              children: [
+                Container(
+                  width: 72,
+                  height: 72,
+                  decoration: BoxDecoration(
+                    gradient: !hasAvatar
+                        ? LinearGradient(
+                            colors: [Colors.blue[400]!, Colors.blue[600]!],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          )
+                        : null,
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.blue.withOpacity(0.3),
+                        blurRadius: 8,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(16),
+                    child: hasAvatar
+                        ? CachedNetworkImage(
+                            imageUrl: friend.avatar.first,
+                            fit: BoxFit.cover,
+                            placeholder: (context, url) => Container(
+                              color: Colors.grey[200],
+                            ),
+                            errorWidget: (context, url, error) => const Icon(
+                              Icons.person,
+                              color: Colors.white,
+                              size: 36,
+                            ),
+                          )
+                        : const Icon(
+                            Icons.person,
+                            color: Colors.white,
+                            size: 36,
+                          ),
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        friend.name,
+                        style: const TextStyle(
+                          fontSize: 17,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black87,
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      if (friend.bio.isNotEmpty && friend.bio != "No") ...[
+                        const SizedBox(height: 8),
+                        Row(
+                          children: [
+                            Icon(
+                              Icons.info_outline,
+                              size: 16,
+                              color: Colors.grey[600],
+                            ),
+                            const SizedBox(width: 6),
+                            Expanded(
+                              child: Text(
+                                friend.bio,
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  color: Colors.grey[600],
+                                  fontWeight: FontWeight.w500,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                      if (friend.friends.isNotEmpty) ...[
+                        const SizedBox(height: 4),
+                        Row(
+                          children: [
+                            Icon(
+                              Icons.people_outline,
+                              size: 16,
+                              color: Colors.grey[600],
+                            ),
+                            const SizedBox(width: 6),
+                            Text(
+                              '${friend.friends.length} bạn chung',
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: Colors.grey[600],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Colors.grey[100],
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Icon(
+                    Icons.chevron_right,
+                    color: Colors.grey[600],
+                    size: 20,
+                  ),
+                ),
+              ],
+            ),
+          ),
         ),
-        title: Text(
-          friend.name,
-          style: const TextStyle(fontWeight: FontWeight.bold),
-        ),
-        subtitle: friend.bio.isNotEmpty && friend.bio != "No"
-            ? Text(
-                friend.bio,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              )
-            : null,
-        trailing: const Icon(Icons.chevron_right, color: Colors.grey),
-        onTap: () {
-          // Khi nhấn vào, điều hướng đến trang cá nhân của người bạn đó
-          Navigator.pushNamed(
-            context,
-            '/profile',
-            arguments: friend.id,
-          );
-        },
+      ),
+    );
+  }
+
+  Widget _buildEmptyState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.people_outline,
+            size: 80,
+            color: Colors.grey[300],
+          ),
+          const SizedBox(height: 20),
+          Text(
+            'Chưa có bạn bè nào',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w600,
+              color: Colors.grey[700],
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Kết bạn để kết nối với mọi người',
+            style: TextStyle(
+              fontSize: 14,
+              color: Colors.grey[500],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildErrorState(String error) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.error_outline, size: 64, color: Colors.red[300]),
+          const SizedBox(height: 16),
+          Text(
+            'Không thể tải danh sách bạn bè',
+            style: TextStyle(
+              fontSize: 16,
+              color: Colors.grey[700],
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            error,
+            style: TextStyle(fontSize: 14, color: Colors.grey[500]),
+            textAlign: TextAlign.center,
+          ),
+        ],
       ),
     );
   }
