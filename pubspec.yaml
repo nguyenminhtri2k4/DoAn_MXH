@@ -41,6 +41,7 @@ dependencies:
   mobile_scanner: ^3.5.5  # Quét QR code
   share_plus: ^7.2.1  # Để chia sẻ QR code
   google_sign_in: ^6.2.1
+  rxdart: ^0.27.7
 
 dev_dependencies:
   flutter_test:

@@ -2,8 +2,8 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class UserModel {
-  final String id; // document ID
-  final String uid; // uid Firebase Auth
+  final String id;
+  final String uid;
   final String name;
   final String email;
   final String password;
@@ -15,11 +15,11 @@ class UserModel {
   final String role;
   final String relationship;
   final String statusAccount;
-  final String backgroundImageUrl; 
+  final String backgroundImageUrl;
 
   final List<String> avatar;
   final List<String> friends;
-  final List<String> locketFriends; 
+  final List<String> locketFriends;
   final List<String> groups;
   final List<String> posterList;
   final int followerCount;
@@ -45,7 +45,7 @@ class UserModel {
     required this.role,
     required this.relationship,
     required this.statusAccount,
-    required this.backgroundImageUrl, 
+    required this.backgroundImageUrl,
     required this.avatar,
     required this.friends,
     required this.groups,
@@ -56,23 +56,22 @@ class UserModel {
     this.dateOfBirth,
     this.lastActive,
     required this.notificationSettings,
-    List<String>? locketFriends, 
-  }) : locketFriends = locketFriends ?? []; 
+    List<String>? locketFriends,
+  }) : locketFriends = locketFriends ?? [];
 
-  
+  // ✅ SỐ BẠN BÈ = friends.length
+  int get friendsCount => friends.length;
+
   factory UserModel.fromFirestore(DocumentSnapshot doc) {
-    // 1. Ép kiểu an toàn cho data. Nếu null thì gán bằng Map rỗng để tránh crash ngay lập tức.
     final data = (doc.data() as Map<String, dynamic>?) ?? {};
 
-    // Helper functions giữ nguyên
     int parseCount(dynamic value) {
       if (value is int) return value;
       if (value is String) return int.tryParse(value) ?? 0;
-      // Xử lý trường hợp đặc biệt nếu Firestore lưu nhầm thành List
       if (value is List && value.isNotEmpty) {
-         final last = value.last;
-         if (last is int) return last;
-         if (last is String) return int.tryParse(last) ?? 0;
+        final last = value.last;
+        if (last is int) return last;
+        if (last is String) return int.tryParse(last) ?? 0;
       }
       return 0;
     }
@@ -87,7 +86,7 @@ class UserModel {
     return UserModel(
       id: doc.id,
       uid: data['uid'] ?? '',
-      name: data['name'] ?? 'Unknown User', // Giá trị mặc định nếu thiếu tên
+      name: data['name'] ?? 'Unknown User',
       email: data['email'] ?? '',
       password: data['password'] ?? '',
       phone: data['phone'] ?? '',
@@ -97,7 +96,7 @@ class UserModel {
       comeFrom: data['comeFrom'] ?? '',
       role: data['role'] ?? 'user',
       relationship: data['relationship'] ?? '',
-      statusAccount: data['statusAccount']  ?? 'active',
+      statusAccount: data['statusAccount'] ?? 'active',
       backgroundImageUrl: data['backgroundImageUrl'] ?? '',
       avatar: parseStringList(data['avatar']),
       friends: parseStringList(data['friends']),
@@ -108,14 +107,13 @@ class UserModel {
       followingCount: parseCount(data['followingCount']),
       createAt: data['createAt'] is Timestamp
           ? (data['createAt'] as Timestamp).toDate()
-          : DateTime.now(), // Fallback nếu createAt bị null
+          : DateTime.now(),
       dateOfBirth: data['dateOfBirth'] is Timestamp
           ? (data['dateOfBirth'] as Timestamp).toDate()
           : null,
       lastActive: data['lastActive'] is Timestamp
           ? (data['lastActive'] as Timestamp).toDate()
           : null,
-      // 2. SỬA LỖI CHÍNH Ở ĐÂY: Kiểm tra kỹ trước khi ép kiểu Map
       notificationSettings: (data['notificationSettings'] is Map)
           ? Map<String, bool>.from(data['notificationSettings'])
           : {},
@@ -136,19 +134,17 @@ class UserModel {
       'role': role,
       'relationship': relationship,
       'statusAccount': statusAccount,
-      'backgroundImageUrl': backgroundImageUrl, 
+      'backgroundImageUrl': backgroundImageUrl,
       'avatar': avatar,
       'friends': friends,
-      'locketFriends': locketFriends, 
+      'locketFriends': locketFriends,
       'groups': groups,
       'posterList': posterList,
       'followerCount': followerCount,
       'followingCount': followingCount,
       'createAt': Timestamp.fromDate(createAt),
-      'dateOfBirth':
-          dateOfBirth != null ? Timestamp.fromDate(dateOfBirth!) : null,
-      'lastActive':
-          lastActive != null ? Timestamp.fromDate(lastActive!) : null,
+      'dateOfBirth': dateOfBirth != null ? Timestamp.fromDate(dateOfBirth!) : null,
+      'lastActive': lastActive != null ? Timestamp.fromDate(lastActive!) : null,
       'notificationSettings': notificationSettings,
     };
   }
@@ -162,17 +158,17 @@ class UserModel {
     String? liveAt,
     String? comeFrom,
     String? relationship,
-    String? backgroundImageUrl, 
+    String? backgroundImageUrl,
     List<String>? avatar,
     List<String>? friends,
-    List<String>? locketFriends, 
+    List<String>? locketFriends,
     List<String>? groups,
     List<String>? posterList,
     int? followerCount,
     int? followingCount,
     DateTime? dateOfBirth,
     DateTime? lastActive,
-    Map<String, bool>? notificationSettings, // <--- THÊM LẠI DÒNG NÀY
+    Map<String, bool>? notificationSettings,
   }) {
     return UserModel(
       id: id ?? this.id,
@@ -188,10 +184,10 @@ class UserModel {
       role: role,
       relationship: relationship ?? this.relationship,
       statusAccount: statusAccount,
-      backgroundImageUrl: backgroundImageUrl ?? this.backgroundImageUrl, 
+      backgroundImageUrl: backgroundImageUrl ?? this.backgroundImageUrl,
       avatar: avatar ?? this.avatar,
       friends: friends ?? this.friends,
-      locketFriends: locketFriends ?? this.locketFriends, 
+      locketFriends: locketFriends ?? this.locketFriends,
       groups: groups ?? this.groups,
       posterList: posterList ?? this.posterList,
       followerCount: followerCount ?? this.followerCount,
@@ -199,7 +195,7 @@ class UserModel {
       createAt: createAt,
       dateOfBirth: dateOfBirth ?? this.dateOfBirth,
       lastActive: lastActive ?? this.lastActive,
-      notificationSettings: notificationSettings ?? this.notificationSettings, // <--- THÊM LẠI DÒNG NÀY
+      notificationSettings: notificationSettings ?? this.notificationSettings,
     );
   }
 }

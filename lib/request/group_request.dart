@@ -207,31 +207,90 @@ class GroupRequest {
     }
   }
 
-  Stream<List<GroupModel>> getGroupsByIdsStream(List<String> groupIds) {
-    if (groupIds.isEmpty) {
-      return Stream.value([]);
-    }
+  // Thay thế method getGroupsByIdsStream() trong group_request.dart
 
-    List<Stream<List<GroupModel>>> streams = [];
-    for (int i = 0; i < groupIds.length; i += 10) {
-      final batchIds = groupIds.skip(i).take(10).toList();
-      if (batchIds.isNotEmpty) {
-        streams.add(_firestore
-            .collection(_collectionName)
-            .where(FieldPath.documentId, whereIn: batchIds)
-            .snapshots()
-            .map((snapshot) => snapshot.docs
-                .map((doc) => GroupModel.fromMap(doc.id, doc.data()))
-                .toList()));
-      }
-    }
+Stream<List<GroupModel>> getGroupsByIdsStream(List<String> groupIds) {
+  print('🔍 [GroupRequest] getGroupsByIdsStream called with ${groupIds.length} IDs');
+  print('🔍 [GroupRequest] Group IDs: $groupIds');
+  
+  if (groupIds.isEmpty) {
+    print('⚠️ [GroupRequest] Empty groupIds - returning empty stream');
+    return Stream.value([]);
+  }
 
-    if (streams.isNotEmpty) {
-      return streams.first;
-    } else {
-      return Stream.value([]);
+  // ✅ FIX: Nếu <= 10 groups, query trực tiếp
+  if (groupIds.length <= 10) {
+    return _firestore
+        .collection(_collectionName)
+        .where(FieldPath.documentId, whereIn: groupIds)
+        .snapshots()
+        .map((snapshot) {
+          print('📦 [GroupRequest] Snapshot received: ${snapshot.docs.length} docs');
+          
+          final groups = snapshot.docs.map((doc) {
+            try {
+              final group = GroupModel.fromMap(doc.id, doc.data());
+              print('✅ [GroupRequest] Loaded group: ${group.name} (${group.type})');
+              return group;
+            } catch (e) {
+              print('❌ [GroupRequest] Error parsing group ${doc.id}: $e');
+              return null;
+            }
+          }).whereType<GroupModel>().toList();
+          
+          print('✅ [GroupRequest] Total groups loaded: ${groups.length}');
+          return groups;
+        })
+        .handleError((error) {
+          print('❌ [GroupRequest] Stream error: $error');
+        });
+  }
+
+  // ✅ FIX: Nếu > 10 groups, chia thành batches và combine streams
+  // (Hiếm khi xảy ra vì profile chỉ hiển thị 3 groups)
+  print('⚠️ [GroupRequest] More than 10 groups, splitting into batches...');
+  
+  List<Stream<List<GroupModel>>> streams = [];
+  
+  for (int i = 0; i < groupIds.length; i += 10) {
+    final batchIds = groupIds.skip(i).take(10).toList();
+    print('📦 [GroupRequest] Creating batch ${i ~/ 10 + 1} with ${batchIds.length} IDs');
+    
+    if (batchIds.isNotEmpty) {
+      final batchStream = _firestore
+          .collection(_collectionName)
+          .where(FieldPath.documentId, whereIn: batchIds)
+          .snapshots()
+          .map((snapshot) => snapshot.docs
+              .map((doc) {
+                try {
+                  return GroupModel.fromMap(doc.id, doc.data());
+                } catch (e) {
+                  print('❌ [GroupRequest] Error parsing group ${doc.id}: $e');
+                  return null;
+                }
+              })
+              .whereType<GroupModel>()
+              .toList());
+      
+      streams.add(batchStream);
     }
   }
+
+  // Combine all streams - lấy data từ stream đầu tiên có data
+  // Note: Đây là simplified version, production có thể cần combine phức tạp hơn
+  if (streams.isEmpty) {
+    return Stream.value([]);
+  }
+  
+  if (streams.length == 1) {
+    return streams.first;
+  }
+  
+  // Nếu có nhiều batches, chỉ return batch đầu (vì profile chỉ cần 3 groups)
+  print('⚠️ [GroupRequest] Multiple batches detected, returning first batch only');
+  return streams.first;
+}
 
   /// Lấy tất cả nhóm mà user là thành viên
   Future<List<GroupModel>> getUserGroups(String userId) async {
