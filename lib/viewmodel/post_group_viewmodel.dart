@@ -17,9 +17,23 @@ class PostGroupViewModel extends ChangeNotifier {
   bool isLoading = true;
   bool hasAccess = false; // Kiểm tra quyền truy cập
   bool isMember = false; // Kiểm tra xem có phải thành viên không
+  bool _isDisposed = false; // Thêm flag để track dispose
 
   PostGroupViewModel({required this.group}) {
     _initialize();
+  }
+
+  @override
+  void dispose() {
+    _isDisposed = true;
+    super.dispose();
+  }
+
+  @override
+  void notifyListeners() {
+    if (!_isDisposed) {
+      super.notifyListeners();
+    }
   }
 
   void _initialize() async {
@@ -38,7 +52,8 @@ class PostGroupViewModel extends ChangeNotifier {
           
           if (hasAccess) {
             // Chỉ load bài viết nếu có quyền truy cập
-            postsStream = _postRequest.getPostsByGroupId(group.id);
+            // Dùng asBroadcastStream để tránh lỗi "already been listened to"
+            postsStream = _postRequest.getPostsByGroupId(group.id).asBroadcastStream();
             print('✅ [PostGroupViewModel] User có quyền xem nhóm ${group.name}');
           } else {
             print('🔒 [PostGroupViewModel] User không có quyền xem nhóm ${group.name}');
