@@ -70,8 +70,10 @@ class _PostGroupViewContent extends StatelessWidget {
                       onPressed: () => Navigator.pop(context),
                     ),
                     
+                    // ✅ FIX: Chỉ hiện actions khi là thành viên (isMember = true)
                     actions: vm.isMember
                         ? [
+                            // Search button
                             Container(
                               margin: const EdgeInsets.only(right: 8),
                               decoration: BoxDecoration(
@@ -89,9 +91,16 @@ class _PostGroupViewContent extends StatelessWidget {
                                 tooltip: 'Tìm kiếm',
                                 onPressed: () {
                                   // TODO: Implement search
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text('Tính năng tìm kiếm đang được phát triển'),
+                                      duration: Duration(seconds: 2),
+                                    ),
+                                  );
                                 },
                               ),
                             ),
+                            // More options menu
                             Container(
                               margin: const EdgeInsets.only(right: 12),
                               decoration: BoxDecoration(
@@ -111,25 +120,28 @@ class _PostGroupViewContent extends StatelessWidget {
                                   borderRadius: BorderRadius.circular(12),
                                 ),
                                 itemBuilder: (context) => [
-                                  PopupMenuItem(
-                                    child: const Row(
-                                      children: [
-                                        Icon(Icons.person_add_outlined, size: 20),
-                                        SizedBox(width: 12),
-                                        Text('Thêm thành viên'),
-                                      ],
+                                  // ✅ Thêm thành viên (chỉ Owner hoặc Manager)
+                                  if (vm.isOwner || vm.isManager)
+                                    PopupMenuItem(
+                                      child: const Row(
+                                        children: [
+                                          Icon(Icons.person_add_outlined, size: 20),
+                                          SizedBox(width: 12),
+                                          Text('Thêm thành viên'),
+                                        ],
+                                      ),
+                                      onTap: () {
+                                        Future.delayed(Duration.zero, () {
+                                          Navigator.push(
+                                            context,
+                                            MaterialPageRoute(
+                                              builder: (_) => AddMembersView(groupId: vm.group.id),
+                                            ),
+                                          );
+                                        });
+                                      },
                                     ),
-                                    onTap: () {
-                                      Future.delayed(Duration.zero, () {
-                                        Navigator.push(
-                                          context,
-                                          MaterialPageRoute(
-                                            builder: (_) => AddMembersView(groupId: vm.group.id),
-                                          ),
-                                        );
-                                      });
-                                    },
-                                  ),
+                                  // Thông tin nhóm (tất cả thành viên)
                                   PopupMenuItem(
                                     child: const Row(
                                       children: [
@@ -148,6 +160,7 @@ class _PostGroupViewContent extends StatelessWidget {
                                       });
                                     },
                                   ),
+                                  // Cài đặt thông báo (tất cả thành viên)
                                   PopupMenuItem(
                                     child: const Row(
                                       children: [
@@ -158,13 +171,35 @@ class _PostGroupViewContent extends StatelessWidget {
                                     ),
                                     onTap: () {
                                       // TODO: Notification settings
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        const SnackBar(
+                                          content: Text('Tính năng cài đặt thông báo đang được phát triển'),
+                                          duration: Duration(seconds: 2),
+                                        ),
+                                      );
                                     },
                                   ),
+                                  // Rời nhóm (tất cả thành viên trừ Owner)
+                                  if (!vm.isOwner)
+                                    PopupMenuItem(
+                                      child: const Row(
+                                        children: [
+                                          Icon(Icons.exit_to_app, size: 20, color: Colors.red),
+                                          SizedBox(width: 12),
+                                          Text('Rời nhóm', style: TextStyle(color: Colors.red)),
+                                        ],
+                                      ),
+                                      onTap: () {
+                                        Future.delayed(Duration.zero, () {
+                                          _showLeaveGroupDialog(context, vm);
+                                        });
+                                      },
+                                    ),
                                 ],
                               ),
                             ),
                           ]
-                        : [],
+                        : [], // ✅ Không hiện actions nếu không phải thành viên
 
                     flexibleSpace: FlexibleSpaceBar(
                       centerTitle: false,
@@ -307,7 +342,7 @@ class _PostGroupViewContent extends StatelessWidget {
                                       ),
                                     ),
                                     const SizedBox(width: 12),
-                                    Icon(
+                                    const Icon(
                                       Icons.people,
                                       color: Colors.white,
                                       size: 16,
@@ -340,6 +375,37 @@ class _PostGroupViewContent extends StatelessWidget {
               },
               body: _buildBodyWithPosts(context, vm),
             ),
+    );
+  }
+
+  // ✅ Thêm dialog xác nhận rời nhóm
+  void _showLeaveGroupDialog(BuildContext context, PostGroupViewModel vm) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Rời khỏi nhóm'),
+        content: Text('Bạn có chắc chắn muốn rời khỏi nhóm "${vm.group.name}"?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Hủy'),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context); // Đóng dialog
+              // TODO: Implement leave group logic
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Tính năng rời nhóm đang được phát triển'),
+                  duration: Duration(seconds: 2),
+                ),
+              );
+            },
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Rời nhóm'),
+          ),
+        ],
+      ),
     );
   }
 
@@ -424,9 +490,10 @@ class _PostGroupViewContent extends StatelessWidget {
           return ListView(
             padding: const EdgeInsets.symmetric(vertical: 8.0),
             children: [
-              _buildCreatePostSection(context, vm),
-              const SizedBox(height: 8),
-              _buildQuickActions(context, vm),
+              // ✅ Chỉ hiện phần tạo bài viết khi là thành viên
+              if (vm.isMember) _buildCreatePostSection(context, vm),
+              if (vm.isMember) const SizedBox(height: 8),
+              if (vm.isMember) _buildQuickActions(context, vm),
               if (posts.isNotEmpty) const SizedBox(height: 8),
               if (posts.isEmpty)
                 Padding(
@@ -449,7 +516,9 @@ class _PostGroupViewContent extends StatelessWidget {
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        "Hãy là người đầu tiên chia sẻ điều gì đó!",
+                        vm.isMember
+                            ? "Hãy là người đầu tiên chia sẻ điều gì đó!"
+                            : "Tham gia nhóm để xem và chia sẻ bài viết",
                         style: TextStyle(
                           fontSize: 14,
                           color: Colors.grey[500],
@@ -582,7 +651,12 @@ class _PostGroupViewContent extends StatelessWidget {
               icon: Icons.event_outlined,
               label: 'Sự kiện',
               onTap: () {
-                // TODO: Events
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Tính năng sự kiện đang được phát triển'),
+                    duration: Duration(seconds: 2),
+                  ),
+                );
               },
             ),
           ),
@@ -592,7 +666,12 @@ class _PostGroupViewContent extends StatelessWidget {
               icon: Icons.more_horiz,
               label: 'Thêm',
               onTap: () {
-                // TODO: More options
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Tính năng đang được phát triển'),
+                    duration: Duration(seconds: 2),
+                  ),
+                );
               },
             ),
           ),
