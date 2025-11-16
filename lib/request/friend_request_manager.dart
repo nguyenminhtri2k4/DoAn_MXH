@@ -90,41 +90,39 @@ class FriendRequestManager {
   }
 
   Future<void> acceptRequest(FriendRequestModel request) async {
-    final user1Id = request.fromUserId;
-    final user2Id = request.toUserId;
-    final batch = _firestore.batch();
+  final user1Id = request.fromUserId;
+  final user2Id = request.toUserId;
+  final batch = _firestore.batch();
 
-    final requestRef = _firestore
-        .collection(_friendRequestCollection)
-        .doc(request.id);
-    batch.update(requestRef, {
-      'status': 'accepted',
-      'updatedAt': FieldValue.serverTimestamp(),
-    });
+  final requestRef = _firestore.collection(_friendRequestCollection).doc(request.id);
+  batch.update(requestRef, {
+    'status': 'accepted',
+    'updatedAt': FieldValue.serverTimestamp(),
+  });
 
-    final newFriend = FriendModel(
-      id: '',
-      user1: user1Id,
-      user2: user2Id,
-      status: 'accepted',
-      createdAt: DateTime.now(),
-    );
-    final friendRef = _firestore.collection(_friendCollection).doc();
-    batch.set(friendRef, newFriend.toMap());
+  final newFriend = FriendModel(
+    id: '',
+    user1: user1Id,
+    user2: user2Id,
+    status: 'accepted',
+    createdAt: DateTime.now(),
+  );
+  final friendRef = _firestore.collection(_friendCollection).doc();
+  batch.set(friendRef, newFriend.toMap());
 
-    final user1Ref = _firestore.collection(_userCollection).doc(user1Id);
-    batch.update(user1Ref, {
-      'friends': FieldValue.arrayUnion([user2Id]),
-      'followingCount': FieldValue.increment(1),
-    });
-    final user2Ref = _firestore.collection(_userCollection).doc(user2Id);
-    batch.update(user2Ref, {
-      'friends': FieldValue.arrayUnion([user1Id]),
-      'followingCount': FieldValue.increment(1),
-    });
+  // CHỈ CẬP NHẬT `friends` – KHÔNG ĐỘNG ĐẾN followingCount
+  final user1Ref = _firestore.collection(_userCollection).doc(user1Id);
+  batch.update(user1Ref, {
+    'friends': FieldValue.arrayUnion([user2Id]),
+  });
 
-    await batch.commit();
-  }
+  final user2Ref = _firestore.collection(_userCollection).doc(user2Id);
+  batch.update(user2Ref, {
+    'friends': FieldValue.arrayUnion([user1Id]),
+  });
+
+  await batch.commit();
+}
 
   Future<void> rejectRequest(String requestId) async {
     await _firestore
@@ -171,32 +169,32 @@ class FriendRequestManager {
   // ==================== B. LOGIC HỦY BẠN, CHẶN, BỎ CHẶN ====================
 
   Future<void> unfriend(String userId1, String userId2) async {
-    final batch = _firestore.batch();
-    final friendQuery =
-        await _firestore
-            .collection(_friendCollection)
-            .where('user1', whereIn: [userId1, userId2])
-            .where('user2', whereIn: [userId1, userId2])
-            .limit(1)
-            .get();
+  final batch = _firestore.batch();
 
-    if (friendQuery.docs.isNotEmpty) {
-      final friendDocId = friendQuery.docs.first.id;
-      batch.delete(_firestore.collection(_friendCollection).doc(friendDocId));
-    }
+  final friendQuery = await _firestore
+      .collection(_friendCollection)
+      .where('user1', whereIn: [userId1, userId2])
+      .where('user2', whereIn: [userId1, userId2])
+      .limit(1)
+      .get();
 
-    final user1Ref = _firestore.collection(_userCollection).doc(userId1);
-    batch.update(user1Ref, {
-      'friends': FieldValue.arrayRemove([userId2]),
-      'followingCount': FieldValue.increment(-1),
-    });
-    final user2Ref = _firestore.collection(_userCollection).doc(userId2);
-    batch.update(user2Ref, {
-      'friends': FieldValue.arrayRemove([userId1]),
-      'followingCount': FieldValue.increment(-1),
-    });
-    await batch.commit();
+  if (friendQuery.docs.isNotEmpty) {
+    final friendDocId = friendQuery.docs.first.id;
+    batch.delete(_firestore.collection(_friendCollection).doc(friendDocId));
   }
+
+  final user1Ref = _firestore.collection(_userCollection).doc(userId1);
+  batch.update(user1Ref, {
+    'friends': FieldValue.arrayRemove([userId2]),
+  });
+
+  final user2Ref = _firestore.collection(_userCollection).doc(userId2);
+  batch.update(user2Ref, {
+    'friends': FieldValue.arrayRemove([userId1]),
+  });
+
+  await batch.commit();
+}
 
   Future<void> blockUser(String blockerId, String blockedId) async {
     final batch = _firestore.batch();
