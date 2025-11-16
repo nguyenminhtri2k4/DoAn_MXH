@@ -21,16 +21,33 @@ class ProfileView extends StatelessWidget {
   Widget build(BuildContext context) {
     return ChangeNotifierProvider(
       create: (_) => ProfileViewModel()..loadProfile(userId: userId),
-      child: const _ProfileContent(),
+      // ✅ Vẫn dùng ValueKey và không có const
+      child: _ProfileContent(key: ValueKey(userId ?? 'currentUser')),
     );
   }
 }
 
-class _ProfileContent extends StatelessWidget {
-  const _ProfileContent();
+// ✅ Vẫn là StatefulWidget
+class _ProfileContent extends StatefulWidget {
+  const _ProfileContent({super.key});
+
+  @override
+  State<_ProfileContent> createState() => _ProfileContentState();
+}
+
+// ✅ Vẫn dùng mixin
+class _ProfileContentState extends State<_ProfileContent>
+    with AutomaticKeepAliveClientMixin {
+  
+  // ❌ XÓA BỎ CÁC BIẾN STREAM VÀ HÀM initState() MÀ TÔI ĐÃ THÊM TRƯỚC ĐÓ
+
+  @override
+  bool get wantKeepAlive => true; // ✅ Vẫn giữ
 
   @override
   Widget build(BuildContext context) {
+    super.build(context); // ✅ Vẫn giữ
+
     final vm = context.watch<ProfileViewModel>();
 
     return Scaffold(
@@ -43,7 +60,8 @@ class _ProfileContent extends StatelessWidget {
                   headerSliverBuilder: (context, innerBoxIsScrolled) {
                     return [
                       SliverAppBar(
-                        expandedHeight: vm.isCurrentUserProfile ? 380.0 : 480.0,
+                        expandedHeight:
+                            vm.isCurrentUserProfile ? 380.0 : 480.0,
                         floating: false,
                         pinned: true,
                         backgroundColor: Colors.white,
@@ -60,11 +78,14 @@ class _ProfileContent extends StatelessWidget {
     );
   }
 
-  Widget _buildHeader(BuildContext context, ProfileViewModel vm) {
+  // ... (Tất cả các hàm _buildHeader, _buildActionButtons, v.v.
+  // ... đều được giữ nguyên như cũ, không thay đổi gì) ...
+  
+    Widget _buildHeader(BuildContext context, ProfileViewModel vm) {
     if (vm.isBlocked || vm.isBlockedByOther) {
       return _buildBlockedHeader(context, vm);
     }
-    
+
     return Container(
       color: Colors.white,
       child: Column(
@@ -108,7 +129,7 @@ class _ProfileContent extends StatelessWidget {
               ),
             ],
           ),
-          
+
           // Avatar & Info
           Transform.translate(
             offset: const Offset(0, -50),
@@ -138,7 +159,7 @@ class _ProfileContent extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 8),
-                
+
                 // Name
                 Text(
                   vm.user!.name,
@@ -148,11 +169,12 @@ class _ProfileContent extends StatelessWidget {
                     color: AppColors.textPrimary,
                   ),
                 ),
-                
+
                 // Bio
                 if (vm.user!.bio.isNotEmpty && vm.user!.bio != "No")
                   Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 6),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 24, vertical: 6),
                     child: Text(
                       vm.user!.bio,
                       textAlign: TextAlign.center,
@@ -164,9 +186,9 @@ class _ProfileContent extends StatelessWidget {
                       ),
                     ),
                   ),
-                
+
                 const SizedBox(height: 12),
-                
+
                 // Action Buttons
                 if (!vm.isCurrentUserProfile) ...[
                   Padding(
@@ -208,7 +230,8 @@ class _ProfileContent extends StatelessWidget {
                   child: CircleAvatar(
                     radius: 56,
                     backgroundColor: Colors.grey.shade300,
-                    child: const Icon(Icons.person, size: 56, color: Colors.white),
+                    child:
+                        const Icon(Icons.person, size: 56, color: Colors.white),
                   ),
                 ),
                 const SizedBox(height: 12),
@@ -238,7 +261,7 @@ class _ProfileContent extends StatelessWidget {
     if (vm.isBlocked) {
       return _buildUnblockButton(context, vm);
     }
-    
+
     return Row(
       children: [
         Expanded(
@@ -600,6 +623,7 @@ class _ProfileContent extends StatelessWidget {
 
     return Container(
       color: AppColors.background,
+      // ✅ Sửa lại: Dùng vm.userPostsStream trực tiếp
       child: StreamBuilder<List<PostModel>>(
         stream: vm.userPostsStream,
         builder: (context, snapshot) {
@@ -666,34 +690,115 @@ class _ProfileContent extends StatelessWidget {
   }
 
   Widget _buildInfoSection(BuildContext context, ProfileViewModel vm) {
-  final user = vm.user!;
-  final isCurrentUser = vm.isCurrentUserProfile;
-  
-  final infoItems = [
-    // Luôn hiển thị email (đặc biệt hữu ích cho Google Sign-In)
-    if (user.email.isNotEmpty)
-      _InfoItem(Icons.email_outlined, user.email),
-    
-    if (user.liveAt.isNotEmpty)
-      _InfoItem(Icons.home_work_outlined, 'Sống tại ${user.liveAt}'),
-    
-    if (user.comeFrom.isNotEmpty)
-      _InfoItem(Icons.location_on_outlined, 'Đến từ ${user.comeFrom}'),
-    
-    if (user.relationship.isNotEmpty)
-      _InfoItem(Icons.favorite_outline, user.relationship),
-    
-    if (user.dateOfBirth != null)
-      _InfoItem(Icons.cake_outlined,
-          'Sinh nhật ${DateFormat('dd/MM/yyyy').format(user.dateOfBirth!)}'),
-    
-    // Hiển thị số điện thoại nếu có
-    if (user.phone.isNotEmpty)
-      _InfoItem(Icons.phone_outlined, user.phone),
-  ];
+    final user = vm.user!;
+    final isCurrentUser = vm.isCurrentUserProfile;
 
-  // Nếu không có thông tin gì (trường hợp rất hiếm), hiển thị thông báo
-  if (infoItems.isEmpty) {
+    final infoItems = [
+      // Luôn hiển thị email (đặc biệt hữu ích cho Google Sign-In)
+      if (user.email.isNotEmpty) _InfoItem(Icons.email_outlined, user.email),
+
+      if (user.liveAt.isNotEmpty)
+        _InfoItem(Icons.home_work_outlined, 'Sống tại ${user.liveAt}'),
+
+      if (user.comeFrom.isNotEmpty)
+        _InfoItem(Icons.location_on_outlined, 'Đến từ ${user.comeFrom}'),
+
+      if (user.relationship.isNotEmpty)
+        _InfoItem(Icons.favorite_outline, user.relationship),
+
+      if (user.dateOfBirth != null)
+        _InfoItem(Icons.cake_outlined,
+            'Sinh nhật ${DateFormat('dd/MM/yyyy').format(user.dateOfBirth!)}'),
+
+      // Hiển thị số điện thoại nếu có
+      if (user.phone.isNotEmpty)
+        _InfoItem(Icons.phone_outlined, user.phone),
+    ];
+
+    // Nếu không có thông tin gì (trường hợp rất hiếm), hiển thị thông báo
+    if (infoItems.isEmpty) {
+      return Container(
+        margin: const EdgeInsets.symmetric(horizontal: 12),
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.04),
+              blurRadius: 10,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Thông tin',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 16),
+            Center(
+              child: Padding(
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  children: [
+                    Icon(Icons.info_outline, size: 48, color: Colors.grey[300]),
+                    const SizedBox(height: 12),
+                    Text(
+                      isCurrentUser
+                          ? 'Chưa có thông tin. Nhấn "Xem chi tiết" để cập nhật.'
+                          : 'Người dùng chưa cập nhật thông tin',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: Colors.grey[600], fontSize: 14),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 8),
+            InkWell(
+              onTap: () {
+                Navigator.pushNamed(
+                  context,
+                  '/about',
+                  arguments: {'viewModel': vm, 'isCurrentUser': isCurrentUser},
+                );
+              },
+              borderRadius: BorderRadius.circular(8),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                child: Row(
+                  children: [
+                    Icon(Icons.info_outline,
+                        color: AppColors.primary, size: 22),
+                    const SizedBox(width: 12),
+                    Text(
+                      isCurrentUser
+                          ? 'Cập nhật thông tin'
+                          : 'Xem thông tin chi tiết',
+                      style: TextStyle(
+                        fontSize: 15,
+                        color: AppColors.primary,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const Spacer(),
+                    Icon(Icons.arrow_forward_ios,
+                        color: AppColors.primary, size: 16),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 12),
       padding: const EdgeInsets.all(20),
@@ -719,24 +824,21 @@ class _ProfileContent extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 16),
-          Center(
-            child: Padding(
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                children: [
-                  Icon(Icons.info_outline, size: 48, color: Colors.grey[300]),
-                  const SizedBox(height: 12),
-                  Text(
-                    isCurrentUser 
-                      ? 'Chưa có thông tin. Nhấn "Xem chi tiết" để cập nhật.'
-                      : 'Người dùng chưa cập nhật thông tin',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(color: Colors.grey[600], fontSize: 14),
-                  ),
-                ],
-              ),
-            ),
-          ),
+          ...infoItems.map((item) => Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: Row(
+                  children: [
+                    Icon(item.icon, color: Colors.grey[600], size: 22),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        item.text,
+                        style: const TextStyle(fontSize: 15),
+                      ),
+                    ),
+                  ],
+                ),
+              )),
           const SizedBox(height: 8),
           InkWell(
             onTap: () {
@@ -754,7 +856,7 @@ class _ProfileContent extends StatelessWidget {
                   Icon(Icons.info_outline, color: AppColors.primary, size: 22),
                   const SizedBox(width: 12),
                   Text(
-                    isCurrentUser ? 'Cập nhật thông tin' : 'Xem thông tin chi tiết',
+                    isCurrentUser ? 'Xem chi tiết' : 'Xem thông tin chi tiết',
                     style: TextStyle(
                       fontSize: 15,
                       color: AppColors.primary,
@@ -773,85 +875,9 @@ class _ProfileContent extends StatelessWidget {
     );
   }
 
-  return Container(
-    margin: const EdgeInsets.symmetric(horizontal: 12),
-    padding: const EdgeInsets.all(20),
-    decoration: BoxDecoration(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(16),
-      boxShadow: [
-        BoxShadow(
-          color: Colors.black.withOpacity(0.04),
-          blurRadius: 10,
-          offset: const Offset(0, 2),
-        ),
-      ],
-    ),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          'Thông tin',
-          style: TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        const SizedBox(height: 16),
-        ...infoItems.map((item) => Padding(
-              padding: const EdgeInsets.only(bottom: 12),
-              child: Row(
-                children: [
-                  Icon(item.icon, color: Colors.grey[600], size: 22),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      item.text,
-                      style: const TextStyle(fontSize: 15),
-                    ),
-                  ),
-                ],
-              ),
-            )),
-        const SizedBox(height: 8),
-        InkWell(
-          onTap: () {
-            Navigator.pushNamed(
-              context,
-              '/about',
-              arguments: {'viewModel': vm, 'isCurrentUser': isCurrentUser},
-            );
-          },
-          borderRadius: BorderRadius.circular(8),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 8),
-            child: Row(
-              children: [
-                Icon(Icons.info_outline, color: AppColors.primary, size: 22),
-                const SizedBox(width: 12),
-                Text(
-                  isCurrentUser ? 'Xem chi tiết' : 'Xem thông tin chi tiết',
-                  style: TextStyle(
-                    fontSize: 15,
-                    color: AppColors.primary,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                const Spacer(),
-                Icon(Icons.arrow_forward_ios,
-                    color: AppColors.primary, size: 16),
-              ],
-            ),
-          ),
-        ),
-      ],
-    ),
-  );
-}
-
   Widget _buildStatsSection(BuildContext context, ProfileViewModel vm) {
     final user = vm.user!;
-    
+
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 12),
       padding: const EdgeInsets.symmetric(vertical: 20),
@@ -1013,6 +1039,7 @@ class _ProfileContent extends StatelessWidget {
   }
 
   Widget _buildFriendsGrid(BuildContext context, ProfileViewModel vm) {
+    // ✅ Sửa lại: Dùng vm.friendsStream trực tiếp
     return StreamBuilder<List<UserModel>>(
       stream: vm.friendsStream,
       builder: (context, snapshot) {
@@ -1175,6 +1202,7 @@ class _ProfileContent extends StatelessWidget {
   }
 
   Widget _buildGroupsList(BuildContext context, ProfileViewModel vm) {
+    // ✅ Sửa lại: Dùng vm.groupsStream trực tiếp
     return StreamBuilder<List<GroupModel>>(
       stream: vm.groupsStream,
       builder: (context, snapshot) {
@@ -1443,7 +1471,7 @@ class _ProfileContent extends StatelessWidget {
       ),
     );
   }
-}
+} // ✅ Đóng class _ProfileContentState
 
 class _InfoItem {
   final IconData icon;

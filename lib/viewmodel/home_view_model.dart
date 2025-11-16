@@ -15,7 +15,7 @@ import 'package:mangxahoi/model/model_user.dart';
 import 'package:mangxahoi/model/model_story.dart';
 import 'package:mangxahoi/request/story_request.dart';
 import 'package:mangxahoi/request/user_request.dart';
-import 'package:mangxahoi/utils/post_privacy_helper.dart'; 
+import 'package:mangxahoi/utils/post_privacy_helper.dart';
 
 class HomeViewModel extends ChangeNotifier {
   final FirebaseAuth _auth = FirebaseAuth.instance;
@@ -39,13 +39,34 @@ class HomeViewModel extends ChangeNotifier {
 
   bool _isInitialized = false;
   bool _storyListenersInitialized = false;
+  bool _isDisposed = false;
 
   HomeViewModel() {
     _init();
   }
 
+  @override
+  void dispose() {
+    print('🔧 [HomeViewModel] Disposing...');
+    _isDisposed = true;
+    for (var sub in _storySubscriptions) {
+      sub.cancel();
+    }
+    _storySubscriptions.clear();
+    _groupsCache.clear();
+    _stories.clear();
+    super.dispose();
+  }
+
+  @override
+  void notifyListeners() {
+    if (!_isDisposed) {
+      super.notifyListeners();
+    }
+  }
+
   void _init() async {
-    if (_isInitialized) return;
+    if (_isInitialized || _isDisposed) return;
     _isInitialized = true;
 
     print('🔧 [HomeViewModel] Bắt đầu khởi tạo...');
@@ -55,6 +76,8 @@ class HomeViewModel extends ChangeNotifier {
       try {
         final user = await _userRequest.getUserByUid(firebaseUser.uid)
             .timeout(const Duration(seconds: 5));
+        
+        if (_isDisposed) return;
         
         if (user != null) {
           print('✅ [HomeViewModel] Đã lấy user: ${user.id}');
@@ -70,8 +93,8 @@ class HomeViewModel extends ChangeNotifier {
   }
 
   void _initStoryListeners(UserModel currentUser) {
-    if (_storyListenersInitialized) {
-      print('⚠️ [HomeViewModel] Story listeners đã được khởi tạo, bỏ qua');
+    if (_storyListenersInitialized || _isDisposed) {
+      print('⚠️ [HomeViewModel] Story listeners đã được khởi tạo hoặc disposed, bỏ qua');
       return;
     }
     _storyListenersInitialized = true;
@@ -94,6 +117,8 @@ class HomeViewModel extends ChangeNotifier {
     for (final userId in userIdsToListen) {
       final subscription = _storyRequest.getStoriesForUser(userId).listen(
         (userStories) {
+          if (_isDisposed) return;
+          
           if (userStories.isNotEmpty) {
             userStories.sort((a, b) => b.createdAt.compareTo(a.createdAt));
             _stories[userId] = userStories;
@@ -117,8 +142,8 @@ class HomeViewModel extends ChangeNotifier {
   void listenToStories(BuildContext context) {
     print('📞 [HomeViewModel] listenToStories được gọi');
     
-    if (_storyListenersInitialized) {
-      print('⚠️ [HomeViewModel] listenToStories: đã init rồi, bỏ qua');
+    if (_storyListenersInitialized || _isDisposed) {
+      print('⚠️ [HomeViewModel] listenToStories: đã init hoặc disposed, bỏ qua');
       return;
     }
 
@@ -150,46 +175,42 @@ class HomeViewModel extends ChangeNotifier {
     return null;
   }
   
-  // *** HÀM NẠP DANH SÁCH CHẶN (ĐÃ SỬA ĐÚNG) ***
   Future<void> _fetchBlockedIds(String currentUserId) async {
     try {
-      // Truy vấn collection 'Blocked' (cấp cao)
-      // giống hệt như trong FriendRequestManager
       final snapshot = await _firestore
-          .collection('Blocked') // <-- Tên collection gốc
-          .where('blockerId', isEqualTo: currentUserId) // <-- Lọc theo 'blockerId'
+          .collection('Blocked')
+          .where('blockerId', isEqualTo: currentUserId)
           .where('status', isEqualTo: 'active')
           .get();
 
       _blockedUserIds = snapshot.docs
-          .map((doc) => doc.data()['blockedId'] as String) // Lấy ID người BỊ chặn
+          .map((doc) => doc.data()['blockedId'] as String)
           .toSet();
           
       print('[HomeViewModel] Đã nạp ${_blockedUserIds.length} ID người dùng bị chặn.');
 
     } catch (e) {
       print("❌ Lỗi khi nạp danh sách chặn: $e");
-      _blockedUserIds = {}; // Đảm bảo an toàn
+      _blockedUserIds = {};
     }
   }
 
-
-  /// Filter bài viết dựa trên privacy (nhóm VÀ chặn)
   List<PostModel> _filterPostsByPrivacy(
     List<PostModel> allPosts,
     UserModel currentUser,
-    Map<String, GroupModel> groupsMap, // Lấy từ FirestoreListener
+    Map<String, GroupModel> groupsMap,
   ) {
-    // Sử dụng helper
     return PostPrivacyHelper.filterPosts(
       posts: allPosts,
       currentUser: currentUser,
       groupsMap: groupsMap,
-      blockedUserIds: _blockedUserIds, // <-- Sử dụng danh sách chặn đã nạp
+      blockedUserIds: _blockedUserIds,
     );
   }
 
   void _preloadVideosForPosts(BuildContext context, List<PostModel> newPosts) {
+    if (_isDisposed) return;
+    
     try {
       final videoCacheManager = context.read<VideoCacheManager>();
       final firestoreListener = context.read<FirestoreListener>();
@@ -217,16 +238,19 @@ class HomeViewModel extends ChangeNotifier {
   }
 
   Future<void> refreshPosts(BuildContext context) async {
+    if (_isDisposed) return;
+    
     _lastDocument = null;
     hasMore = true;
     posts.clear();
-    _blockedUserIds.clear(); 
+    _blockedUserIds.clear();
     
     await fetchInitialPosts(context);
   }
 
   Future<void> fetchInitialPosts(BuildContext context) async {
-    if (isLoading) return;
+    if (isLoading || _isDisposed) return;
+    
     isLoading = true;
     notifyListeners();
 
@@ -237,20 +261,21 @@ class HomeViewModel extends ChangeNotifier {
       }
       final currentUser = userService.currentUser!;
       
-      // Nạp danh sách chặn
       await _fetchBlockedIds(currentUser.id);
 
-      // Nạp bài viết
+      if (_isDisposed) return;
+
       final newPosts = await _postRequest.getPostsPaginated(
         currentUserId: currentUser.id,
         friendIds: currentUser.friends,
         limit: 10,
       );
 
+      if (_isDisposed) return;
+
       if (newPosts.isNotEmpty) {
         final groupsMap = context.read<FirestoreListener>().groupsMap;
         
-        // Lọc bài viết
         final filteredPosts = _filterPostsByPrivacy(
           newPosts, 
           currentUser, 
@@ -268,13 +293,16 @@ class HomeViewModel extends ChangeNotifier {
     } catch (e) {
       print('❌ Lỗi khi tải bài viết ban đầu: $e');
     } finally {
-      isLoading = false;
-      notifyListeners();
+      if (!_isDisposed) {
+        isLoading = false;
+        notifyListeners();
+      }
     }
   }
 
   Future<void> fetchMorePosts(BuildContext context) async {
-    if (_isFetchingMore || !hasMore) return;
+    if (_isFetchingMore || !hasMore || _isDisposed) return;
+    
     _isFetchingMore = true;
     
     try {
@@ -284,7 +312,6 @@ class HomeViewModel extends ChangeNotifier {
       }
       final currentUser = userService.currentUser!;
 
-      // Nạp thêm bài viết
       final newPosts = await _postRequest.getPostsPaginated(
         currentUserId: currentUser.id,
         friendIds: currentUser.friends,
@@ -292,10 +319,11 @@ class HomeViewModel extends ChangeNotifier {
         startAfter: _lastDocument,
       );
 
+      if (_isDisposed) return;
+
       if (newPosts.isNotEmpty) {
         final groupsMap = context.read<FirestoreListener>().groupsMap;
 
-        // Lọc bài viết (dùng lại _blockedUserIds đã nạp)
         final filteredPosts = _filterPostsByPrivacy(
           newPosts, 
           currentUser, 
@@ -303,7 +331,7 @@ class HomeViewModel extends ChangeNotifier {
         );
 
         _lastDocument = await _firestore.collection('Post').doc(newPosts.last.id).get();
-        posts.addAll(filteredPosts); // Thêm bài đã lọc
+        posts.addAll(filteredPosts);
         hasMore = newPosts.length == 10;
         
         _preloadVideosForPosts(context, filteredPosts);
@@ -313,31 +341,25 @@ class HomeViewModel extends ChangeNotifier {
     } catch (e) {
       print('❌ Lỗi khi tải thêm bài viết: $e');
     } finally {
-      _isFetchingMore = false;
-      notifyListeners();
+      if (!_isDisposed) {
+        _isFetchingMore = false;
+        notifyListeners();
+      }
     }
   }
 
   Future<void> signOut(BuildContext context) async {
+    if (_isDisposed) return;
+    
     try {
       context.read<VideoCacheManager>().pauseAllVideos();
       await _auth.signOut();
       
-      if (context.mounted) {
+      if (context.mounted && !_isDisposed) {
         Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
       }
     } catch (e) {
       print('❌ Lỗi khi đăng xuất: $e');
     }
-  }
-
-  @override
-  void dispose() {
-    print('🔧 [HomeViewModel] Disposing...');
-    for (var sub in _storySubscriptions) {
-      sub.cancel();
-    }
-    _groupsCache.clear();
-    super.dispose();
   }
 }

@@ -5,20 +5,20 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:mangxahoi/model/model_locket_photo.dart';
 import 'package:mangxahoi/model/model_user.dart';
 import 'package:mangxahoi/request/locket_request.dart';
-import 'package:mangxahoi/request/user_request.dart'; // ✅ THÊM
+import 'package:mangxahoi/request/user_request.dart';
 
 class LocketViewModel extends ChangeNotifier {
   final LocketRequest _locketRequest = LocketRequest();
-  final UserRequest _userRequest = UserRequest(); // ✅ THÊM
+  final UserRequest _userRequest = UserRequest();
   final ImagePicker _picker = ImagePicker();
-  final FirebaseAuth _auth = FirebaseAuth.instance; // ✅ THÊM
+  final FirebaseAuth _auth = FirebaseAuth.instance;
 
   List<UserModel> _locketFriends = [];
   Map<String, LocketPhoto> _latestPhotos = {};
   bool _isLoading = true;
   bool _isUploading = false;
+  bool _isDisposed = false;
   
-  // ✅ THÊM: Cache currentUserId
   String? _currentUserId;
   String? get currentUserId => _currentUserId;
 
@@ -27,13 +27,27 @@ class LocketViewModel extends ChangeNotifier {
   bool get isLoading => _isLoading;
   bool get isUploading => _isUploading;
 
-  // ✅ THÊM: Constructor tự động init
   LocketViewModel() {
     _init();
   }
 
-  // ✅ THÊM: Hàm init tự động (giống GroupsViewModel)
+  @override
+  void dispose() {
+    print('🔧 [LocketViewModel] Disposing...');
+    _isDisposed = true;
+    super.dispose();
+  }
+
+  @override
+  void notifyListeners() {
+    if (!_isDisposed) {
+      super.notifyListeners();
+    }
+  }
+
   void _init() async {
+    if (_isDisposed) return;
+    
     print("🔧 [LocketVM] Bắt đầu khởi tạo...");
     _isLoading = true;
     notifyListeners();
@@ -42,39 +56,50 @@ class LocketViewModel extends ChangeNotifier {
       final firebaseUser = _auth.currentUser;
       if (firebaseUser == null) {
         print("⚠️ [LocketVM] Chưa đăng nhập Firebase Auth");
-        _isLoading = false;
-        notifyListeners();
+        if (!_isDisposed) {
+          _isLoading = false;
+          notifyListeners();
+        }
         return;
       }
 
       print("🔍 [LocketVM] Đang tìm user với UID: ${firebaseUser.uid}");
       final user = await _userRequest.getUserByUid(firebaseUser.uid);
       
+      if (_isDisposed) return;
+      
       if (user != null) {
         _currentUserId = user.id;
         print("✅ [LocketVM] Đã lấy currentUserId: $_currentUserId");
         
-        // Tự động fetch dữ liệu locket
         await _fetchLocketDataInternal(_currentUserId!);
       } else {
         print("⚠️ [LocketVM] Không tìm thấy user trong Firestore");
-        _isLoading = false;
-        notifyListeners();
+        if (!_isDisposed) {
+          _isLoading = false;
+          notifyListeners();
+        }
       }
     } catch (e, stackTrace) {
       print("❌ [LocketVM] Lỗi khi init: $e");
       print("❌ [LocketVM] StackTrace: $stackTrace");
-      _isLoading = false;
-      notifyListeners();
+      if (!_isDisposed) {
+        _isLoading = false;
+        notifyListeners();
+      }
     }
   }
 
-  // ✅ ĐỔI TÊN: fetchLocketData → _fetchLocketDataInternal (private)
   Future<void> _fetchLocketDataInternal(String userId) async {
+    if (_isDisposed) return;
+    
     print("🔄 [LocketVM] Bắt đầu fetch dữ liệu cho user $userId");
 
     try { 
       _locketFriends = await _locketRequest.getLocketFriendsDetails(userId);
+      
+      if (_isDisposed) return;
+      
       print("✅ [LocketVM] Đã lấy được ${_locketFriends.length} locket friends");
 
       List<String> friendIds = _locketFriends.map((f) => f.id).toList();
@@ -84,6 +109,9 @@ class LocketViewModel extends ChangeNotifier {
       print("🔍 [LocketVM] Danh sách ID cần lấy ảnh: $friendIds");
 
       _latestPhotos = await _locketRequest.getLatestLocketPhotos(friendIds);
+      
+      if (_isDisposed) return;
+      
       print("✅ [LocketVM] Đã lấy được ${_latestPhotos.length} ảnh mới nhất");
 
       _isLoading = false;
@@ -92,15 +120,16 @@ class LocketViewModel extends ChangeNotifier {
     } catch (e, stackTrace) { 
       print("❌ [LocketVM] LỖI trong fetch: $e");
       print("❌ [LocketVM] StackTrace: $stackTrace");
-      _isLoading = false;
-      notifyListeners();
+      if (!_isDisposed) {
+        _isLoading = false;
+        notifyListeners();
+      }
     }
   }
 
-  // ✅ THÊM: Public method để refresh thủ công
   Future<void> refreshLocketData() async {
-    if (_currentUserId == null) {
-      print("⚠️ [LocketVM] refreshLocketData: currentUserId = null");
+    if (_currentUserId == null || _isDisposed) {
+      print("⚠️ [LocketVM] refreshLocketData: currentUserId = null hoặc disposed");
       return;
     }
     
@@ -109,10 +138,9 @@ class LocketViewModel extends ChangeNotifier {
     await _fetchLocketDataInternal(_currentUserId!);
   }
 
-  // ✅ SỬA: Dùng _currentUserId thay vì truyền parameter
   Future<void> pickAndUploadLocket() async {
-    if (_currentUserId == null) {
-      print("⚠️ [LocketVM] pickAndUploadLocket: currentUserId = null");
+    if (_currentUserId == null || _isDisposed) {
+      print("⚠️ [LocketVM] pickAndUploadLocket: currentUserId = null hoặc disposed");
       return;
     }
 
@@ -122,6 +150,8 @@ class LocketViewModel extends ChangeNotifier {
         preferredCameraDevice: CameraDevice.front,
       );
 
+      if (_isDisposed) return;
+
       if (image != null) {
         _isUploading = true;
         notifyListeners();
@@ -129,21 +159,25 @@ class LocketViewModel extends ChangeNotifier {
         print("📤 [LocketVM] Đang upload ảnh cho user $_currentUserId");
         await _locketRequest.uploadLocketPhoto(image, _currentUserId!);
         
-        // Refresh dữ liệu sau khi upload
+        if (_isDisposed) return;
+        
         await _fetchLocketDataInternal(_currentUserId!);
 
-        _isUploading = false;
-        notifyListeners();
-        print("✅ [LocketVM] Upload hoàn tất");
+        if (!_isDisposed) {
+          _isUploading = false;
+          notifyListeners();
+          print("✅ [LocketVM] Upload hoàn tất");
+        }
       }
     } catch (e, stackTrace) {
-      _isUploading = false;
-      notifyListeners();
+      if (!_isDisposed) {
+        _isUploading = false;
+        notifyListeners();
+      }
       print("❌ [LocketVM] Error picking/uploading locket: $e");
       print("❌ [LocketVM] StackTrace: $stackTrace");
     }
   }
 
-  // ✅ THÊM: Hàm để check xem đã init xong chưa
-  bool get isInitialized => _currentUserId != null && !_isLoading;
+  bool get isInitialized => _currentUserId != null && !_isLoading && !_isDisposed;
 }
