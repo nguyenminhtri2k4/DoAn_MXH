@@ -52,8 +52,8 @@ import 'package:mangxahoi/view/group_chat/group_qr_code_view.dart';
 // ------------------------------
 
 // --- (A) THÊM IMPORT MỚI ---
-import 'package:mangxahoi/view/friend_list_view.dart';
-import 'package:mangxahoi/view/user_groups_view.dart';
+import 'package:mangxahoi/view/profile/friend_list_view.dart';
+import 'package:mangxahoi/view/profile/user_groups_view.dart';
 // -------------------------
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
