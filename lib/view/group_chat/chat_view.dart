@@ -143,25 +143,22 @@ class _ChatViewContent extends StatelessWidget {
           children: [
             Expanded(
               child: StreamBuilder<List<MessageModel>>(
-                stream: vm.messagesStream,
-                builder: (context, snapshot) {
-                  if (!snapshot.hasData) {
-                    return const Center(child: CircularProgressIndicator());
-                  }
-                  var messages = snapshot.data!;
-                  messages = messages.where((m) => m.status != 'deleted').toList();
+              stream: vm.messagesStream,
+              builder: (context, snapshot) {
+                if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
 
-                  if (!vm.isBlocked) {
-                    WidgetsBinding.instance.addPostFrameCallback((_) {
-                      if (context.mounted) {
-                        vm.generateReplies(messages);
-                      }
-                    });
-                  }
+                var messages = snapshot.data!.where((m) => m.status != 'deleted').toList();
 
-                  if (messages.isEmpty) {
-                    return const Center(child: Text('Bắt đầu cuộc trò chuyện.'));
+                // Chỉ gọi generateReplies khi có tin nhắn mới từ người khác
+                if (messages.isNotEmpty) {
+                  final lastMessage = messages.first;
+                  if (lastMessage.senderId != vm.currentUserId && 
+                      !vm.isGroup && 
+                      !vm.isBlocked) {
+                    // Dùng Future.microtask để tránh stack overflow
+                    Future.microtask(() => vm.generateReplies(messages));
                   }
+                }
 
                   return ListView.builder(
                     reverse: true,
