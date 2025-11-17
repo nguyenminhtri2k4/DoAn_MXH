@@ -18,17 +18,12 @@ import 'package:visibility_detector/visibility_detector.dart';
 import 'package:mangxahoi/services/user_service.dart';
 import 'package:mangxahoi/view/widgets/full_screen_image_viewer.dart';
 import 'package:mangxahoi/view/widgets/full_screen_video_player.dart';
-
-// --- IMPORT MỚI ĐỂ ĐIỀU HƯỚNG ---
 import 'package:mangxahoi/view/group_chat/add_members_view.dart';
 import 'package:mangxahoi/view/group_chat/group_management_view.dart';
-
-// === CÁC IMPORT MỚI ĐỂ XỬ LÝ LỜI MỜI ===
 import 'package:mangxahoi/model/model_qr_invite.dart';
 import 'package:mangxahoi/request/group_request.dart';
 import 'package:mangxahoi/notification/notification_service.dart';
 import 'package:mangxahoi/model/model_group.dart';
-// ========================================
 
 class ChatView extends StatelessWidget {
   final String chatId;
@@ -71,17 +66,15 @@ class _ChatViewContent extends StatelessWidget {
     Widget appBarTitle;
     
     if (vm.isGroup) {
-      // Nếu là nhóm, thử lấy thông tin nhóm từ cache
       final group = firestoreListener.getGroupById(vm.chatId);
       final bool hasCoverImage = group?.coverImage.isNotEmpty ?? false;
 
       if (hasCoverImage) {
-        // Nếu có ảnh bìa, hiển thị Avatar + Tên
         appBarTitle = Row(
-          mainAxisSize: MainAxisSize.min, // Giúp Row co lại
+          mainAxisSize: MainAxisSize.min,
           children: [
             CircleAvatar(
-              radius: 18, // Kích thước nhỏ cho AppBar
+              radius: 18,
               backgroundImage: CachedNetworkImageProvider(group!.coverImage),
             ),
             const SizedBox(width: 12),
@@ -89,113 +82,126 @@ class _ChatViewContent extends StatelessWidget {
           ],
         );
       } else {
-        // Nếu là nhóm nhưng không có ảnh bìa, chỉ hiển thị tên
         appBarTitle = Text(chatName);
       }
     } else {
-      // Nếu không phải nhóm, chỉ hiển thị tên
       appBarTitle = Text(chatName);
     }
-    // --- KẾT THÚC LOGIC ---
 
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: AppBar(
-        title: appBarTitle,
-        centerTitle: false, 
-        titleSpacing: 0, 
-        backgroundColor: AppColors.backgroundLight,
-        elevation: 1,
-        actions: [
-          if (!vm.isGroup && !vm.isBlocked)
-            IconButton(
-              icon: const Icon(Icons.call),
-              onPressed: () => vm.startAudioCall(context),
-            ),
-          if (!vm.isGroup && !vm.isBlocked)
-            IconButton(
-              icon: const Icon(Icons.videocam),
-              onPressed: () => vm.startVideoCall(context),
-            ),
-          
-          if (vm.isGroup) // Chỉ hiển thị nếu là group chat
-            IconButton(
-              icon: const Icon(Icons.person_add),
-              tooltip: 'Thêm thành viên',
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => AddMembersView(groupId: vm.chatId),
-                  ),
-                );
-              },
-            ),
-            if (vm.isGroup)
-    IconButton(
-      icon: const Icon(Icons.info_outline),
-      tooltip: 'Thông tin nhóm',
-      onPressed: () {
-        Navigator.pushNamed(
-          context,
-          '/group_management',
-          arguments: vm.chatId,
-        );
+    return GestureDetector(
+      onTap: () {
+        FocusScope.of(context).unfocus();
       },
-    ),
-        ],
-      ),
-      body: Column(
-        children: [
-          Expanded(
-            child: StreamBuilder<List<MessageModel>>(
-              stream: vm.messagesStream,
-              builder: (context, snapshot) {
-                if (!snapshot.hasData) {
-                  return const Center(child: CircularProgressIndicator());
-                }
-                var messages = snapshot.data!;
-                messages = messages.where((m) => m.status != 'deleted').toList();
+      child: Scaffold(
+        backgroundColor: AppColors.background,
+        appBar: AppBar(
+          title: appBarTitle,
+          centerTitle: false, 
+          titleSpacing: 0, 
+          backgroundColor: AppColors.backgroundLight,
+          elevation: 1,
+          actions: [
+            if (!vm.isGroup && !vm.isBlocked)
+              IconButton(
+                icon: const Icon(Icons.call),
+                onPressed: () => vm.startAudioCall(context),
+              ),
+            if (!vm.isGroup && !vm.isBlocked)
+              IconButton(
+                icon: const Icon(Icons.videocam),
+                onPressed: () => vm.startVideoCall(context),
+              ),
+            
+            if (vm.isGroup)
+              IconButton(
+                icon: const Icon(Icons.person_add),
+                tooltip: 'Thêm thành viên',
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => AddMembersView(groupId: vm.chatId),
+                    ),
+                  );
+                },
+              ),
+            if (vm.isGroup)
+              IconButton(
+                icon: const Icon(Icons.info_outline),
+                tooltip: 'Thông tin nhóm',
+                onPressed: () {
+                  Navigator.pushNamed(
+                    context,
+                    '/group_management',
+                    arguments: vm.chatId,
+                  );
+                },
+              ),
+          ],
+        ),
+        body: Column(
+          children: [
+            Expanded(
+              child: StreamBuilder<List<MessageModel>>(
+                stream: vm.messagesStream,
+                builder: (context, snapshot) {
+                  if (!snapshot.hasData) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
+                  var messages = snapshot.data!;
+                  messages = messages.where((m) => m.status != 'deleted').toList();
 
-                if (messages.isEmpty) {
-                  return const Center(child: Text('Bắt đầu cuộc trò chuyện.'));
-                }
+                  if (!vm.isBlocked) {
+                    WidgetsBinding.instance.addPostFrameCallback((_) {
+                      if (context.mounted) {
+                        vm.generateReplies(messages);
+                      }
+                    });
+                  }
 
-                return ListView.builder(
-                  reverse: true,
-                  padding: const EdgeInsets.all(10.0),
-                  itemCount: messages.length,
-                  itemBuilder: (context, index) {
-                    final message = messages[index];
-                    final sender = firestoreListener.getUserById(message.senderId);
-                    final isMe = message.senderId == vm.currentUserId;
+                  if (messages.isEmpty) {
+                    return const Center(child: Text('Bắt đầu cuộc trò chuyện.'));
+                  }
 
-                    return VisibilityDetector(
-                      key: Key(message.id),
-                      onVisibilityChanged: (visibilityInfo) {
-                        if (visibilityInfo.visibleFraction == 1.0 && !isMe && message.status != 'seen') {
-                          vm.markAsSeen(message.id);
-                        }
-                      },
-                      child: GestureDetector(
-                        onLongPress: () {
-                          if (isMe) {
-                            _showMessageOptions(context, vm, message);
+                  return ListView.builder(
+                    reverse: true,
+                    padding: const EdgeInsets.all(10.0),
+                    itemCount: messages.length,
+                    itemBuilder: (context, index) {
+                      final message = messages[index];
+                      final sender = firestoreListener.getUserById(message.senderId);
+                      final isMe = message.senderId == vm.currentUserId;
+
+                      return VisibilityDetector(
+                        key: Key(message.id),
+                        onVisibilityChanged: (visibilityInfo) {
+                          if (visibilityInfo.visibleFraction == 1.0 && !isMe && message.status != 'seen') {
+                            vm.markAsSeen(message.id);
                           }
                         },
-                        child: _MessageBubble(message: message, sender: sender, isMe: isMe),
-                      ),
-                    );
-                  },
-                );
-              },
+                        child: GestureDetector(
+                          onLongPress: () {
+                            if (isMe) {
+                              _showMessageOptions(context, vm, message);
+                            }
+                          },
+                          child: _MessageBubble(message: message, sender: sender, isMe: isMe),
+                        ),
+                      );
+                    },
+                  );
+                },
+              ),
             ),
-          ),
-          if (vm.isBlocked && !vm.isGroup)
-            _buildBlockedNotification(context, vm)
-          else
-            _buildMessageComposer(context, vm),
-        ],
+            
+            if (vm.isBlocked && !vm.isGroup)
+              _buildBlockedNotification(context, vm)
+            else ...[
+              _buildSmartReplySuggestions(vm),
+              _buildMessageComposer(context, vm),
+            ]
+          ],
+        ),
       ),
     );
   }
@@ -255,9 +261,9 @@ class _ChatViewContent extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 8.0),
       decoration: const BoxDecoration(
         color: AppColors.backgroundLight,
-        border: Border(top: BorderSide(color: AppColors.divider)),
       ),
       child: SafeArea(
+        top: false,
         child: Column(
           children: [
             _buildMediaPreview(vm),
@@ -356,10 +362,135 @@ class _ChatViewContent extends StatelessWidget {
       ),
     );
   }
+
+  Widget _buildSmartReplySuggestions(ChatViewModel vm) {
+    final replies = vm.smartReplies;
+
+    if (replies.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    return Container(
+      padding: const EdgeInsets.fromLTRB(12.0, 8.0, 12.0, 4.0),
+      decoration: BoxDecoration(
+        color: AppColors.backgroundLight,
+        border: Border(
+          top: BorderSide(color: Colors.grey.shade200, width: 1),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.03),
+            blurRadius: 4,
+            offset: const Offset(0, -1),
+          ),
+        ],
+      ),
+      child: SafeArea(
+        top: false,
+        bottom: false,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(4),
+                  decoration: BoxDecoration(
+                    color: AppColors.primary.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Icon(
+                    Icons.auto_awesome,
+                    size: 14,
+                    color: AppColors.primary,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  'Gợi ý trả lời',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.grey[700],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8.0,
+              runSpacing: 6.0,
+              children: replies.map((reply) {
+                return InkWell(
+                  onTap: () {
+                    vm.selectReply(reply);
+                  },
+                  borderRadius: BorderRadius.circular(20.0),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14.0,
+                      vertical: 8.0,
+                    ),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [
+                          Colors.white,
+                          Colors.grey.shade50,
+                        ],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: BorderRadius.circular(20.0),
+                      border: Border.all(
+                        color: AppColors.primary.withOpacity(0.2),
+                        width: 1.5,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: AppColors.primary.withOpacity(0.08),
+                          blurRadius: 4,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Flexible(
+                          child: Text(
+                            reply,
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w500,
+                              color: Colors.grey[800],
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+                        Icon(
+                          Icons.arrow_forward_ios,
+                          size: 10,
+                          color: AppColors.primary.withOpacity(0.6),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              }).toList(),
+            ),
+            const SizedBox(height: 4),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
 // ====================================================================
-// ==================== BONG BÓNG CHAT (QUAN TRỌNG) ===================
+// ==================== BONG BÓNG CHAT ================================
 // ====================================================================
 
 class _MessageBubble extends StatelessWidget {
@@ -371,28 +502,13 @@ class _MessageBubble extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // 1. Tin nhắn đã thu hồi
     if (message.status == 'recalled') return _buildRecalledMessageBubble();
-    
-    // 2. Tin nhắn chia sẻ bài viết
     if (message.type == 'share_post' && message.sharedPostId != null) return _buildSharedPostBubble(context);
-    
-    // 3. Tin nhắn mời nhóm
-    if (message.type == 'share_group_qr' && message.sharedPostId != null) {
-      return _buildSharedGroupQRBubble(context);
-    }
-    
-    // 4. Tin nhắn CUỘC GỌI (MỚI)
-    if (message.type == 'call_audio' || message.type == 'call_video') {
-      return _buildCallMessageBubble(context);
-    }
-
-    // 5. Tin nhắn văn bản/media thông thường
+    if (message.type == 'share_group_qr' && message.sharedPostId != null) return _buildSharedGroupQRBubble(context);
+    if (message.type == 'call_audio' || message.type == 'call_video') return _buildCallMessageBubble(context);
     return _buildTextBubble(context);
   }
 
-  // --- WIDGET 4: TIN NHẮN CUỘC GỌI ---
-  // --- WIDGET 4: TIN NHẮN CUỘC GỌI (GIỐNG ZALO) ---
   Widget _buildCallMessageBubble(BuildContext context) {
     final bool isAudioCall = message.type == 'call_audio';
     final String? currentAuthid = context.read<UserService>().currentUser?.id;
@@ -404,7 +520,6 @@ class _MessageBubble extends StatelessWidget {
     String? durationText;
 
     if (message.content == 'missed') {
-      // Cuộc gọi nhỡ - màu đỏ
       callStatusText = isAudioCall ? 'Cuộc gọi thoại' : 'Cuộc gọi video';
       callIcon = isCallFromMe 
           ? (isAudioCall ? Icons.phone_forwarded : Icons.videocam)
@@ -412,7 +527,6 @@ class _MessageBubble extends StatelessWidget {
       iconColor = Colors.red;
       durationText = isCallFromMe ? 'Đã bị từ chối' : 'Nhỡ';
     } else if (message.content == 'declined') {
-      // Cuộc gọi bị từ chối - màu đỏ
       callStatusText = isAudioCall ? 'Cuộc gọi thoại' : 'Cuộc gọi video';
       callIcon = isCallFromMe 
           ? (isAudioCall ? Icons.phone_forwarded : Icons.videocam)
@@ -420,14 +534,13 @@ class _MessageBubble extends StatelessWidget {
       iconColor = Colors.red;
       durationText = 'Đã bị từ chối';
     } else if (message.content.startsWith('completed_')) {
-      // Cuộc gọi thành công - màu xanh/xám
       try {
-        final duration = message.content.split('_')[1]; // "mm:ss"
+        final duration = message.content.split('_')[1];
         callStatusText = isAudioCall ? 'Cuộc gọi thoại' : 'Cuộc gọi video';
         callIcon = isCallFromMe
             ? (isAudioCall ? Icons.phone_forwarded : Icons.videocam)
             : (isAudioCall ? Icons.phone_callback : Icons.videocam);
-        iconColor = const Color(0xFF0084FF); // Màu xanh Zalo
+        iconColor = const Color(0xFF0084FF);
         durationText = duration;
       } catch (e) {
         callStatusText = isAudioCall ? 'Cuộc gọi thoại' : 'Cuộc gọi video';
@@ -436,14 +549,12 @@ class _MessageBubble extends StatelessWidget {
         durationText = 'Đã kết thúc';
       }
     } else {
-      // Trạng thái mặc định
       callStatusText = isAudioCall ? 'Cuộc gọi thoại' : 'Cuộc gọi video';
       callIcon = isAudioCall ? Icons.phone : Icons.videocam;
       iconColor = Colors.grey[600]!;
       durationText = null;
     }
     
-    // Avatar cho người gọi đến
     final avatarImage = sender?.avatar.isNotEmpty ?? false ? NetworkImage(sender!.avatar.first) : null;
     
     return Padding(
@@ -455,7 +566,6 @@ class _MessageBubble extends StatelessWidget {
             mainAxisAlignment: isCallFromMe ? MainAxisAlignment.end : MainAxisAlignment.start,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Avatar bên trái nếu không phải mình gọi
               if (!isCallFromMe) ...[
                 Container(
                   decoration: BoxDecoration(
@@ -472,7 +582,6 @@ class _MessageBubble extends StatelessWidget {
                 const SizedBox(width: 8.0),
               ],
               
-              // Bong bóng cuộc gọi
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 14.0, vertical: 10.0),
                 decoration: BoxDecoration(
@@ -483,10 +592,8 @@ class _MessageBubble extends StatelessWidget {
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    // Icon cuộc gọi
                     Icon(callIcon, size: 18, color: iconColor),
                     const SizedBox(width: 10),
-                    // Text mô tả
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       mainAxisSize: MainAxisSize.min,
@@ -518,7 +625,6 @@ class _MessageBubble extends StatelessWidget {
             ],
           ),
           
-          // Timestamp và status
           Padding(
             padding: EdgeInsets.only(
               top: 4,
@@ -544,7 +650,6 @@ class _MessageBubble extends StatelessWidget {
     );
   }
 
-  // --- WIDGET 3: LỜI MỜI NHÓM ---
   Widget _buildSharedGroupQRBubble(BuildContext context) {
     final alignment = isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start;
     final rowAlignment = isMe ? MainAxisAlignment.end : MainAxisAlignment.start;
@@ -615,7 +720,6 @@ class _MessageBubble extends StatelessWidget {
     );
   }
 
-  // --- WIDGET 1: THU HỒI ---
   Widget _buildRecalledMessageBubble() {
     return Row(
       mainAxisAlignment: isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
@@ -630,7 +734,6 @@ class _MessageBubble extends StatelessWidget {
     );
   }
 
-  // --- WIDGET 2: CHIA SẺ BÀI VIẾT ---
   Widget _buildSharedPostBubble(BuildContext context) {
     final alignment = isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start;
     final rowAlignment = isMe ? MainAxisAlignment.end : MainAxisAlignment.start;
@@ -686,7 +789,6 @@ class _MessageBubble extends StatelessWidget {
     );
   }
 
-  // --- WIDGET 5: VĂN BẢN/MEDIA ---
   Widget _buildTextBubble(BuildContext context) {
     const Radius messageRadius = Radius.circular(18.0);
     final avatarImage = sender?.avatar.isNotEmpty ?? false ? NetworkImage(sender!.avatar.first) : null;
