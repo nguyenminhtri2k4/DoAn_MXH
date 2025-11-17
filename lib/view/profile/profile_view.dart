@@ -1,4 +1,3 @@
-
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:mangxahoi/viewmodel/profile_view_model.dart';
@@ -35,7 +34,6 @@ class _ProfileContent extends StatefulWidget {
 
 class _ProfileContentState extends State<_ProfileContent>
     with AutomaticKeepAliveClientMixin {
-  
   @override
   bool get wantKeepAlive => true;
 
@@ -46,31 +44,58 @@ class _ProfileContentState extends State<_ProfileContent>
 
     return Scaffold(
       backgroundColor: AppColors.background,
-      body: vm.isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : vm.user == null
+      body:
+          vm.isLoading
+              ? const Center(child: CircularProgressIndicator())
+              : vm.user == null
               ? const Center(child: Text('Không tìm thấy thông tin người dùng'))
               : NestedScrollView(
-                  physics: const ClampingScrollPhysics(),
-                  headerSliverBuilder: (context, innerBoxIsScrolled) {
-                    return [
-                      SliverAppBar(
-                        expandedHeight:
-                            vm.isCurrentUserProfile ? 380.0 : 480.0,
-                        floating: false,
-                        pinned: true,
-                        backgroundColor: Colors.white,
-                        foregroundColor: AppColors.textPrimary,
-                        elevation: 0,
-                        flexibleSpace: FlexibleSpaceBar(
-                          key: ValueKey('header_${vm.user?.id}'),
-                          background: _buildHeader(context, vm),
+                physics: const ClampingScrollPhysics(),
+                headerSliverBuilder: (context, innerBoxIsScrolled) {
+                  return [
+                    SliverAppBar(
+                      leading: IconButton(
+                        icon: Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.9),
+                            shape: BoxShape.circle,
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.2),
+                                blurRadius: 8,
+                              ),
+                            ],
+                          ),
+                          child: const Icon(Icons.arrow_back, size: 20),
                         ),
+                        onPressed: () {
+                          if (Navigator.canPop(context)) {
+                            Navigator.pop(context);
+                          } else {
+                            Navigator.pushNamedAndRemoveUntil(
+                              context,
+                              '/home', // Thay bằng route trang chủ của bạn: '/home', '/main', etc.
+                              (route) => false,
+                            );
+                          }
+                        },
                       ),
-                    ];
-                  },
-                  body: _buildBodyWithPosts(context, vm),
-                ),
+                      expandedHeight: vm.isCurrentUserProfile ? 380.0 : 480.0,
+                      floating: false,
+                      pinned: true,
+                      backgroundColor: Colors.white,
+                      foregroundColor: AppColors.textPrimary,
+                      elevation: 0,
+                      flexibleSpace: FlexibleSpaceBar(
+                        key: ValueKey('header_${vm.user?.id}'),
+                        background: _buildHeader(context, vm),
+                      ),
+                    ),
+                  ];
+                },
+                body: _buildBodyWithPosts(context, vm),
+              ),
     );
   }
 
@@ -88,22 +113,24 @@ class _ProfileContentState extends State<_ProfileContent>
               Container(
                 height: 180,
                 decoration: BoxDecoration(
-                  image: vm.user!.backgroundImageUrl.isNotEmpty
-                      ? DecorationImage(
-                          image: NetworkImage(vm.user!.backgroundImageUrl),
-                          fit: BoxFit.cover,
-                        )
-                      : null,
-                  gradient: vm.user!.backgroundImageUrl.isEmpty
-                      ? LinearGradient(
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                          colors: [
-                            AppColors.primary,
-                            AppColors.primary.withOpacity(0.8),
-                          ],
-                        )
-                      : null,
+                  image:
+                      vm.user!.backgroundImageUrl.isNotEmpty
+                          ? DecorationImage(
+                            image: NetworkImage(vm.user!.backgroundImageUrl),
+                            fit: BoxFit.cover,
+                          )
+                          : null,
+                  gradient:
+                      vm.user!.backgroundImageUrl.isEmpty
+                          ? LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: [
+                              AppColors.primary,
+                              AppColors.primary.withOpacity(0.8),
+                            ],
+                          )
+                          : null,
                 ),
               ),
               Container(
@@ -112,10 +139,7 @@ class _ProfileContentState extends State<_ProfileContent>
                   gradient: LinearGradient(
                     begin: Alignment.topCenter,
                     end: Alignment.bottomCenter,
-                    colors: [
-                      Colors.transparent,
-                      Colors.black.withOpacity(0.3),
-                    ],
+                    colors: [Colors.transparent, Colors.black.withOpacity(0.3)],
                   ),
                 ),
               ),
@@ -140,12 +164,14 @@ class _ProfileContentState extends State<_ProfileContent>
                   ),
                   child: CircleAvatar(
                     radius: 56,
-                    backgroundImage: vm.user!.avatar.isNotEmpty
-                        ? NetworkImage(vm.user!.avatar.first)
-                        : null,
-                    child: vm.user!.avatar.isEmpty
-                        ? const Icon(Icons.person, size: 56)
-                        : null,
+                    backgroundImage:
+                        vm.user!.avatar.isNotEmpty
+                            ? NetworkImage(vm.user!.avatar.first)
+                            : null,
+                    child:
+                        vm.user!.avatar.isEmpty
+                            ? const Icon(Icons.person, size: 56)
+                            : null,
                   ),
                 ),
                 const SizedBox(height: 8),
@@ -161,17 +187,16 @@ class _ProfileContentState extends State<_ProfileContent>
 
                 if (vm.user!.bio.isNotEmpty && vm.user!.bio != "No")
                   Padding(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 24, vertical: 6),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 24,
+                      vertical: 6,
+                    ),
                     child: Text(
                       vm.user!.bio,
                       textAlign: TextAlign.center,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontSize: 15,
-                        color: Colors.grey[700],
-                      ),
+                      style: TextStyle(fontSize: 15, color: Colors.grey[700]),
                     ),
                   ),
 
@@ -200,9 +225,7 @@ class _ProfileContentState extends State<_ProfileContent>
           Container(
             height: 180,
             decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                colors: [Colors.grey, Colors.blueGrey],
-              ),
+              gradient: LinearGradient(colors: [Colors.grey, Colors.blueGrey]),
             ),
           ),
           Transform.translate(
@@ -217,8 +240,11 @@ class _ProfileContentState extends State<_ProfileContent>
                   child: CircleAvatar(
                     radius: 56,
                     backgroundColor: Colors.grey.shade300,
-                    child:
-                        const Icon(Icons.person, size: 56, color: Colors.white),
+                    child: const Icon(
+                      Icons.person,
+                      size: 56,
+                      color: Colors.white,
+                    ),
                   ),
                 ),
                 const SizedBox(height: 12),
@@ -232,9 +258,10 @@ class _ProfileContentState extends State<_ProfileContent>
                 const SizedBox(height: 16),
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: vm.isBlockedByOther
-                      ? _buildBlockedByOtherButton()
-                      : _buildUnblockButton(context, vm),
+                  child:
+                      vm.isBlockedByOther
+                          ? _buildBlockedByOtherButton()
+                          : _buildUnblockButton(context, vm),
                 ),
               ],
             ),
@@ -251,13 +278,9 @@ class _ProfileContentState extends State<_ProfileContent>
 
     return Row(
       children: [
-        Expanded(
-          child: _buildFriendButton(context, vm, vm.friendshipStatus),
-        ),
+        Expanded(child: _buildFriendButton(context, vm, vm.friendshipStatus)),
         const SizedBox(width: 12),
-        Expanded(
-          child: _buildMessageButton(context, vm),
-        ),
+        Expanded(child: _buildMessageButton(context, vm)),
       ],
     );
   }
@@ -408,34 +431,35 @@ class _ProfileContentState extends State<_ProfileContent>
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder: (context) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const SizedBox(height: 12),
-            Container(
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(
-                color: Colors.grey.shade300,
-                borderRadius: BorderRadius.circular(2),
-              ),
+      builder:
+          (context) => SafeArea(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const SizedBox(height: 12),
+                Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade300,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+                const SizedBox(height: 20),
+                _buildBottomSheetItem(
+                  icon: Icons.check_circle_outline,
+                  label: 'Hủy chặn người dùng',
+                  iconColor: Colors.green,
+                  onTap: () async {
+                    Navigator.pop(context);
+                    await vm.unblockUser();
+                    await vm.loadProfile(userId: vm.user?.id);
+                  },
+                ),
+                const SizedBox(height: 20),
+              ],
             ),
-            const SizedBox(height: 20),
-            _buildBottomSheetItem(
-              icon: Icons.check_circle_outline,
-              label: 'Hủy chặn người dùng',
-              iconColor: Colors.green,
-              onTap: () async {
-                Navigator.pop(context);
-                await vm.unblockUser();
-                await vm.loadProfile(userId: vm.user?.id);
-              },
-            ),
-            const SizedBox(height: 20),
-          ],
-        ),
-      ),
+          ),
     );
   }
 
@@ -446,44 +470,45 @@ class _ProfileContentState extends State<_ProfileContent>
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder: (context) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const SizedBox(height: 12),
-            Container(
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(
-                color: Colors.grey.shade300,
-                borderRadius: BorderRadius.circular(2),
-              ),
+      builder:
+          (context) => SafeArea(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const SizedBox(height: 12),
+                Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade300,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+                const SizedBox(height: 20),
+                _buildBottomSheetItem(
+                  icon: Icons.person_remove_outlined,
+                  label: 'Hủy kết bạn',
+                  iconColor: Colors.red,
+                  onTap: () {
+                    Navigator.pop(context);
+                    vm.unfriend();
+                  },
+                ),
+                const Divider(height: 1),
+                _buildBottomSheetItem(
+                  icon: Icons.block_outlined,
+                  label: 'Chặn người dùng',
+                  iconColor: Colors.grey.shade700,
+                  onTap: () async {
+                    Navigator.pop(context);
+                    await vm.blockUser();
+                    await vm.loadProfile(userId: vm.user?.id);
+                  },
+                ),
+                const SizedBox(height: 20),
+              ],
             ),
-            const SizedBox(height: 20),
-            _buildBottomSheetItem(
-              icon: Icons.person_remove_outlined,
-              label: 'Hủy kết bạn',
-              iconColor: Colors.red,
-              onTap: () {
-                Navigator.pop(context);
-                vm.unfriend();
-              },
-            ),
-            const Divider(height: 1),
-            _buildBottomSheetItem(
-              icon: Icons.block_outlined,
-              label: 'Chặn người dùng',
-              iconColor: Colors.grey.shade700,
-              onTap: () async {
-                Navigator.pop(context);
-                await vm.blockUser();
-                await vm.loadProfile(userId: vm.user?.id);
-              },
-            ),
-            const SizedBox(height: 20),
-          ],
-        ),
-      ),
+          ),
     );
   }
 
@@ -494,33 +519,34 @@ class _ProfileContentState extends State<_ProfileContent>
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder: (context) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const SizedBox(height: 12),
-            Container(
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(
-                color: Colors.grey.shade300,
-                borderRadius: BorderRadius.circular(2),
-              ),
+      builder:
+          (context) => SafeArea(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const SizedBox(height: 12),
+                Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade300,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+                const SizedBox(height: 20),
+                _buildBottomSheetItem(
+                  icon: Icons.cancel_outlined,
+                  label: 'Hủy lời mời kết bạn',
+                  iconColor: Colors.red,
+                  onTap: () {
+                    Navigator.pop(context);
+                    // TODO: Implement cancel friend request
+                  },
+                ),
+                const SizedBox(height: 20),
+              ],
             ),
-            const SizedBox(height: 20),
-            _buildBottomSheetItem(
-              icon: Icons.cancel_outlined,
-              label: 'Hủy lời mời kết bạn',
-              iconColor: Colors.red,
-              onTap: () {
-                Navigator.pop(context);
-                // TODO: Implement cancel friend request
-              },
-            ),
-            const SizedBox(height: 20),
-          ],
-        ),
-      ),
+          ),
     );
   }
 
@@ -531,44 +557,45 @@ class _ProfileContentState extends State<_ProfileContent>
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder: (context) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const SizedBox(height: 12),
-            Container(
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(
-                color: Colors.grey.shade300,
-                borderRadius: BorderRadius.circular(2),
-              ),
+      builder:
+          (context) => SafeArea(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const SizedBox(height: 12),
+                Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade300,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+                const SizedBox(height: 20),
+                _buildBottomSheetItem(
+                  icon: Icons.person_add_outlined,
+                  label: 'Gửi lời mời kết bạn',
+                  iconColor: Colors.blue,
+                  onTap: () {
+                    Navigator.pop(context);
+                    vm.sendFriendRequest();
+                  },
+                ),
+                const Divider(height: 1),
+                _buildBottomSheetItem(
+                  icon: Icons.block_outlined,
+                  label: 'Chặn người dùng',
+                  iconColor: Colors.grey.shade700,
+                  onTap: () async {
+                    Navigator.pop(context);
+                    await vm.blockUser();
+                    await vm.loadProfile(userId: vm.user?.id);
+                  },
+                ),
+                const SizedBox(height: 20),
+              ],
             ),
-            const SizedBox(height: 20),
-            _buildBottomSheetItem(
-              icon: Icons.person_add_outlined,
-              label: 'Gửi lời mời kết bạn',
-              iconColor: Colors.blue,
-              onTap: () {
-                Navigator.pop(context);
-                vm.sendFriendRequest();
-              },
-            ),
-            const Divider(height: 1),
-            _buildBottomSheetItem(
-              icon: Icons.block_outlined,
-              label: 'Chặn người dùng',
-              iconColor: Colors.grey.shade700,
-              onTap: () async {
-                Navigator.pop(context);
-                await vm.blockUser();
-                await vm.loadProfile(userId: vm.user?.id);
-              },
-            ),
-            const SizedBox(height: 20),
-          ],
-        ),
-      ),
+          ),
     );
   }
 
@@ -589,10 +616,7 @@ class _ProfileContentState extends State<_ProfileContent>
       ),
       title: Text(
         label,
-        style: const TextStyle(
-          fontSize: 16,
-          fontWeight: FontWeight.w500,
-        ),
+        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
       ),
       onTap: onTap,
     );
@@ -618,7 +642,11 @@ class _ProfileContentState extends State<_ProfileContent>
   }
 
   // ==================== POSTS LIST ====================
-  Widget _buildPostsList(BuildContext context, ProfileViewModel vm, List<PostModel> posts) {
+  Widget _buildPostsList(
+    BuildContext context,
+    ProfileViewModel vm,
+    List<PostModel> posts,
+  ) {
     return ListView(
       padding: const EdgeInsets.symmetric(vertical: 12),
       children: [
@@ -636,16 +664,15 @@ class _ProfileContentState extends State<_ProfileContent>
             padding: EdgeInsets.fromLTRB(16, 20, 16, 12),
             child: Text(
               'Bài viết',
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-              ),
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
             ),
           ),
-          ...posts.map((post) => PostWidget(
-                post: post,
-                currentUserDocId: vm.currentUserData!.id,
-              )),
+          ...posts.map(
+            (post) => PostWidget(
+              post: post,
+              currentUserDocId: vm.currentUserData!.id,
+            ),
+          ),
         ],
         if (posts.isEmpty && !vm.isCurrentUserProfile)
           Center(
@@ -653,14 +680,15 @@ class _ProfileContentState extends State<_ProfileContent>
               padding: const EdgeInsets.all(40),
               child: Column(
                 children: [
-                  Icon(Icons.article_outlined, size: 64, color: Colors.grey[300]),
+                  Icon(
+                    Icons.article_outlined,
+                    size: 64,
+                    color: Colors.grey[300],
+                  ),
                   const SizedBox(height: 16),
                   Text(
                     'Chưa có bài viết nào',
-                    style: TextStyle(
-                      color: Colors.grey[600],
-                      fontSize: 16,
-                    ),
+                    style: TextStyle(color: Colors.grey[600], fontSize: 16),
                   ),
                 ],
               ),
@@ -684,10 +712,11 @@ class _ProfileContentState extends State<_ProfileContent>
       if (user.relationship.isNotEmpty)
         _InfoItem(Icons.favorite_outline, user.relationship),
       if (user.dateOfBirth != null)
-        _InfoItem(Icons.cake_outlined,
-            'Sinh nhật ${DateFormat('dd/MM/yyyy').format(user.dateOfBirth!)}'),
-      if (user.phone.isNotEmpty)
-        _InfoItem(Icons.phone_outlined, user.phone),
+        _InfoItem(
+          Icons.cake_outlined,
+          'Sinh nhật ${DateFormat('dd/MM/yyyy').format(user.dateOfBirth!)}',
+        ),
+      if (user.phone.isNotEmpty) _InfoItem(Icons.phone_outlined, user.phone),
     ];
 
     if (infoItems.isEmpty) {
@@ -710,10 +739,7 @@ class _ProfileContentState extends State<_ProfileContent>
           children: [
             const Text(
               'Thông tin',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 16),
             Center(
@@ -748,8 +774,11 @@ class _ProfileContentState extends State<_ProfileContent>
                 padding: const EdgeInsets.symmetric(vertical: 8),
                 child: Row(
                   children: [
-                    Icon(Icons.info_outline,
-                        color: AppColors.primary, size: 22),
+                    Icon(
+                      Icons.info_outline,
+                      color: AppColors.primary,
+                      size: 22,
+                    ),
                     const SizedBox(width: 12),
                     Text(
                       isCurrentUser
@@ -762,8 +791,11 @@ class _ProfileContentState extends State<_ProfileContent>
                       ),
                     ),
                     const Spacer(),
-                    Icon(Icons.arrow_forward_ios,
-                        color: AppColors.primary, size: 16),
+                    Icon(
+                      Icons.arrow_forward_ios,
+                      color: AppColors.primary,
+                      size: 16,
+                    ),
                   ],
                 ),
               ),
@@ -792,27 +824,26 @@ class _ProfileContentState extends State<_ProfileContent>
         children: [
           const Text(
             'Thông tin',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-            ),
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 16),
-          ...infoItems.map((item) => Padding(
-                padding: const EdgeInsets.only(bottom: 12),
-                child: Row(
-                  children: [
-                    Icon(item.icon, color: Colors.grey[600], size: 22),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Text(
-                        item.text,
-                        style: const TextStyle(fontSize: 15),
-                      ),
+          ...infoItems.map(
+            (item) => Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: Row(
+                children: [
+                  Icon(item.icon, color: Colors.grey[600], size: 22),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      item.text,
+                      style: const TextStyle(fontSize: 15),
                     ),
-                  ],
-                ),
-              )),
+                  ),
+                ],
+              ),
+            ),
+          ),
           const SizedBox(height: 8),
           InkWell(
             onTap: () {
@@ -838,8 +869,11 @@ class _ProfileContentState extends State<_ProfileContent>
                     ),
                   ),
                   const Spacer(),
-                  Icon(Icons.arrow_forward_ios,
-                      color: AppColors.primary, size: 16),
+                  Icon(
+                    Icons.arrow_forward_ios,
+                    color: AppColors.primary,
+                    size: 16,
+                  ),
                 ],
               ),
             ),
@@ -879,18 +913,11 @@ class _ProfileContentState extends State<_ProfileContent>
               Navigator.pushNamed(
                 context,
                 '/friend_list',
-                arguments: {
-                  'userId': user.id,
-                  'userName': user.name,
-                },
+                arguments: {'userId': user.id, 'userName': user.name},
               );
             },
           ),
-          Container(
-            width: 1,
-            height: 40,
-            color: Colors.grey[300],
-          ),
+          Container(width: 1, height: 40, color: Colors.grey[300]),
           _buildStatItem(
             context,
             user.followerCount.toString(),
@@ -898,11 +925,7 @@ class _ProfileContentState extends State<_ProfileContent>
             Colors.green,
             null,
           ),
-          Container(
-            width: 1,
-            height: 40,
-            color: Colors.grey[300],
-          ),
+          Container(width: 1, height: 40, color: Colors.grey[300]),
           _buildStatItem(
             context,
             user.followingCount.toString(),
@@ -981,10 +1004,7 @@ class _ProfileContentState extends State<_ProfileContent>
             children: [
               const Text(
                 'Bạn bè',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
               TextButton(
                 onPressed: () {
@@ -1065,21 +1085,25 @@ class _ProfileContentState extends State<_ProfileContent>
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(8),
                     child: CachedNetworkImage(
-                      imageUrl: friend.avatar.isNotEmpty
-                          ? friend.avatar.first
-                          : '',
+                      imageUrl:
+                          friend.avatar.isNotEmpty ? friend.avatar.first : '',
                       fit: BoxFit.cover,
-                      placeholder: (context, url) => Container(
-                        color: Colors.grey[200],
-                        child: const Center(
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        ),
-                      ),
-                      errorWidget: (context, url, error) => Container(
-                        color: Colors.grey[200],
-                        child: Icon(Icons.person,
-                            color: Colors.grey[400], size: 32),
-                      ),
+                      placeholder:
+                          (context, url) => Container(
+                            color: Colors.grey[200],
+                            child: const Center(
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            ),
+                          ),
+                      errorWidget:
+                          (context, url, error) => Container(
+                            color: Colors.grey[200],
+                            child: Icon(
+                              Icons.person,
+                              color: Colors.grey[400],
+                              size: 32,
+                            ),
+                          ),
                     ),
                   ),
                 ),
@@ -1104,62 +1128,61 @@ class _ProfileContentState extends State<_ProfileContent>
     );
   }
 
- 
   Widget _buildGroupsSection(BuildContext context, ProfileViewModel vm) {
-  final totalGroups = vm.user?.groups.length ?? 0;
+    final totalGroups = vm.user?.groups.length ?? 0;
 
-  return Container(
-    margin: const EdgeInsets.symmetric(horizontal: 12),
-    padding: const EdgeInsets.all(20),
-    decoration: BoxDecoration(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(16),
-      boxShadow: [
-        BoxShadow(
-          color: Colors.black.withOpacity(0.04),
-          blurRadius: 10,
-          offset: const Offset(0, 2),
-        ),
-      ],
-    ),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            const Text(
-              'Nhóm',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            if (totalGroups > 0)
-              TextButton(
-                onPressed: () {
-                  Navigator.pushNamed(
-                    context,
-                    '/user_groups',
-                    arguments: {
-                      'userId': vm.user!.id,
-                      'userName': vm.user!.name,
-                    },
-                  );
-                },
-                child: Text(
-                  'Xem tất cả ($totalGroups)', // ← ĐÚNG: đếm TẤT CẢ
-                  style: TextStyle(
-                    color: AppColors.primary,
-                    fontWeight: FontWeight.w600,
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 12),
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                'Nhóm',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+              if (totalGroups > 0)
+                TextButton(
+                  onPressed: () {
+                    Navigator.pushNamed(
+                      context,
+                      '/user_groups',
+                      arguments: {
+                        'userId': vm.user!.id,
+                        'userName': vm.user!.name,
+                      },
+                    );
+                  },
+                  child: Text(
+                    'Xem tất cả ($totalGroups)', // ← ĐÚNG: đếm TẤT CẢ
+                    style: TextStyle(
+                      color: AppColors.primary,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                 ),
-              ),
-          ],
-        ),
-        const SizedBox(height: 12),
-        _buildGroupsList(context, vm),
-      ],
-    ),
-  );
-}
+            ],
+          ),
+          const SizedBox(height: 12),
+          _buildGroupsList(context, vm),
+        ],
+      ),
+    );
+  }
 
   Widget _buildGroupsList(BuildContext context, ProfileViewModel vm) {
     return StreamBuilder<List<GroupModel>>(
@@ -1213,13 +1236,14 @@ class _ProfileContentState extends State<_ProfileContent>
                 width: 56,
                 height: 56,
                 decoration: BoxDecoration(
-                  gradient: !hasCoverImage
-                      ? LinearGradient(
-                          colors: [Colors.purple[400]!, Colors.purple[600]!],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                        )
-                      : null,
+                  gradient:
+                      !hasCoverImage
+                          ? LinearGradient(
+                            colors: [Colors.purple[400]!, Colors.purple[600]!],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          )
+                          : null,
                   borderRadius: BorderRadius.circular(12),
                   boxShadow: [
                     BoxShadow(
@@ -1231,24 +1255,26 @@ class _ProfileContentState extends State<_ProfileContent>
                 ),
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(12),
-                  child: hasCoverImage
-                      ? CachedNetworkImage(
-                          imageUrl: group.coverImage,
-                          fit: BoxFit.cover,
-                          placeholder: (context, url) => Container(
-                            color: Colors.grey[200],
-                          ),
-                          errorWidget: (context, url, error) => const Icon(
+                  child:
+                      hasCoverImage
+                          ? CachedNetworkImage(
+                            imageUrl: group.coverImage,
+                            fit: BoxFit.cover,
+                            placeholder:
+                                (context, url) =>
+                                    Container(color: Colors.grey[200]),
+                            errorWidget:
+                                (context, url, error) => const Icon(
+                                  Icons.article,
+                                  color: Colors.white,
+                                  size: 28,
+                                ),
+                          )
+                          : const Icon(
                             Icons.article,
                             color: Colors.white,
                             size: 28,
                           ),
-                        )
-                      : const Icon(
-                          Icons.article,
-                          color: Colors.white,
-                          size: 28,
-                        ),
                 ),
               ),
               const SizedBox(width: 12),
@@ -1268,8 +1294,11 @@ class _ProfileContentState extends State<_ProfileContent>
                     const SizedBox(height: 4),
                     Row(
                       children: [
-                        Icon(Icons.people_outline,
-                            size: 14, color: Colors.grey[600]),
+                        Icon(
+                          Icons.people_outline,
+                          size: 14,
+                          color: Colors.grey[600],
+                        ),
                         const SizedBox(width: 4),
                         Text(
                           '${group.members.length} thành viên',
@@ -1280,8 +1309,11 @@ class _ProfileContentState extends State<_ProfileContent>
                         ),
                         if (group.status == 'private') ...[
                           const SizedBox(width: 8),
-                          Icon(Icons.lock_outline,
-                              size: 14, color: Colors.grey[600]),
+                          Icon(
+                            Icons.lock_outline,
+                            size: 14,
+                            color: Colors.grey[600],
+                          ),
                           const SizedBox(width: 4),
                           Text(
                             'Riêng tư',
@@ -1326,12 +1358,14 @@ class _ProfileContentState extends State<_ProfileContent>
             children: [
               CircleAvatar(
                 radius: 22,
-                backgroundImage: vm.user!.avatar.isNotEmpty
-                    ? NetworkImage(vm.user!.avatar.first)
-                    : null,
-                child: vm.user!.avatar.isEmpty
-                    ? const Icon(Icons.person, size: 22)
-                    : null,
+                backgroundImage:
+                    vm.user!.avatar.isNotEmpty
+                        ? NetworkImage(vm.user!.avatar.first)
+                        : null,
+                child:
+                    vm.user!.avatar.isEmpty
+                        ? const Icon(Icons.person, size: 22)
+                        : null,
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -1354,10 +1388,7 @@ class _ProfileContentState extends State<_ProfileContent>
                     ),
                     child: Text(
                       'Bạn đang nghĩ gì?',
-                      style: TextStyle(
-                        color: Colors.grey[600],
-                        fontSize: 15,
-                      ),
+                      style: TextStyle(color: Colors.grey[600], fontSize: 15),
                     ),
                   ),
                 ),

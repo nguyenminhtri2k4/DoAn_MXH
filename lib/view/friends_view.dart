@@ -1,4 +1,3 @@
-
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -11,31 +10,22 @@ import 'package:mangxahoi/model/model_friend.dart';
 import 'package:mangxahoi/request/friend_request_manager.dart';
 
 class FriendsView extends StatefulWidget {
-  // --- THÊM DÒNG NÀY ---
   final int initialIndex;
-  // ---------------------
 
-  const FriendsView({
-    super.key,
-    this.initialIndex = 0, // Giá trị mặc định là 0
-  });
+  const FriendsView({super.key, this.initialIndex = 0});
 
   @override
   State<FriendsView> createState() => _FriendsViewState();
 }
 
 class _FriendsViewState extends State<FriendsView> {
-  late int _selectedIndex; // <-- SỬA DÒNG NÀY
+  late int _selectedIndex;
 
-  // --- THÊM HÀM NÀY ---
   @override
   void initState() {
     super.initState();
-    // Gán giá trị từ widget.initialIndex cho _selectedIndex
     _selectedIndex = widget.initialIndex;
   }
-  // ---------------------
-
 
   @override
   Widget build(BuildContext context) {
@@ -43,7 +33,8 @@ class _FriendsViewState extends State<FriendsView> {
       providers: [
         Provider<FriendRequestManager>(create: (_) => FriendRequestManager()),
         ChangeNotifierProvider(
-          create: (context) => FriendsViewModel(context.read<FirestoreListener>()),
+          create:
+              (context) => FriendsViewModel(context.read<FirestoreListener>()),
         ),
       ],
       child: Scaffold(
@@ -62,7 +53,11 @@ class _FriendsViewState extends State<FriendsView> {
           centerTitle: false,
           actions: [
             IconButton(
-              icon: const Icon(Icons.search_rounded, color: Colors.white, size: 26),
+              icon: const Icon(
+                Icons.search_rounded,
+                color: Colors.white,
+                size: 26,
+              ),
               onPressed: () => Navigator.pushNamed(context, '/search'),
             ),
             const SizedBox(width: 8),
@@ -71,7 +66,6 @@ class _FriendsViewState extends State<FriendsView> {
         body: SafeArea(
           child: Column(
             children: [
-              // Modern Tab Bar với gradient background
               Container(
                 decoration: BoxDecoration(
                   color: Colors.white,
@@ -83,14 +77,17 @@ class _FriendsViewState extends State<FriendsView> {
                     ),
                   ],
                 ),
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 16,
+                ),
                 child: Row(
                   children: [
                     Expanded(
                       child: _buildTabChip(
                         label: 'Gợi ý',
                         icon: Icons.person_add_outlined,
-                        isSelected: _selectedIndex == 0, // Đã dùng _selectedIndex
+                        isSelected: _selectedIndex == 0,
                         onTap: () => setState(() => _selectedIndex = 0),
                       ),
                     ),
@@ -99,21 +96,17 @@ class _FriendsViewState extends State<FriendsView> {
                       child: _buildTabChip(
                         label: 'Bạn bè',
                         icon: Icons.people_outline,
-                        isSelected: _selectedIndex == 1, // Đã dùng _selectedIndex
+                        isSelected: _selectedIndex == 1,
                         onTap: () => setState(() => _selectedIndex = 1),
                       ),
                     ),
                   ],
                 ),
               ),
-              // Tab Content
               Expanded(
                 child: IndexedStack(
-                  index: _selectedIndex, // Đã dùng _selectedIndex
-                  children: const [
-                    _SuggestionsTab(),
-                    _AllFriendsTab(),
-                  ],
+                  index: _selectedIndex,
+                  children: const [_SuggestionsTab(), _AllFriendsTab()],
                 ),
               ),
             ],
@@ -138,15 +131,16 @@ class _FriendsViewState extends State<FriendsView> {
         decoration: BoxDecoration(
           color: isSelected ? AppColors.primary : Colors.grey[100],
           borderRadius: BorderRadius.circular(12),
-          boxShadow: isSelected
-              ? [
-                  BoxShadow(
-                    color: AppColors.primary.withOpacity(0.3),
-                    blurRadius: 8,
-                    offset: const Offset(0, 4),
-                  ),
-                ]
-              : [],
+          boxShadow:
+              isSelected
+                  ? [
+                    BoxShadow(
+                      color: AppColors.primary.withOpacity(0.3),
+                      blurRadius: 8,
+                      offset: const Offset(0, 4),
+                    ),
+                  ]
+                  : [],
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -172,9 +166,6 @@ class _FriendsViewState extends State<FriendsView> {
   }
 }
 
-// ... (Phần còn lại của tệp _SuggestionsTab và _AllFriendsTab giữ nguyên)
-// ... (Tôi sẽ không dán lại toàn bộ phần đó cho ngắn gọn)
-
 class _SuggestionsTab extends StatelessWidget {
   const _SuggestionsTab();
 
@@ -185,32 +176,32 @@ class _SuggestionsTab extends StatelessWidget {
     return vm.isLoading
         ? const Center(child: CircularProgressIndicator())
         : (vm.incomingRequestsStream == null)
-            ? const Center(child: Text('Đang chờ dữ liệu người dùng...'))
-            : SingleChildScrollView(
-                padding: const EdgeInsets.all(16.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _buildRequestSection(
-                      context,
-                      title: 'Lời mời kết bạn',
-                      icon: Icons.person_add_alt_1_rounded,
-                      stream: vm.incomingRequestsStream!,
-                      vm: vm,
-                      isIncoming: true,
-                    ),
-                    const SizedBox(height: 20),
-                    _buildRequestSection(
-                      context,
-                      title: 'Lời mời đã gửi',
-                      icon: Icons.send_rounded,
-                      stream: vm.sentRequestsStream!,
-                      vm: vm,
-                      isIncoming: false,
-                    ),
-                  ],
-                ),
-              );
+        ? const Center(child: Text('Đang chờ dữ liệu người dùng...'))
+        : SingleChildScrollView(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildRequestSection(
+                context,
+                title: 'Lời mời kết bạn',
+                icon: Icons.person_add_alt_1_rounded,
+                stream: vm.incomingRequestsStream!,
+                vm: vm,
+                isIncoming: true,
+              ),
+              const SizedBox(height: 20),
+              _buildRequestSection(
+                context,
+                title: 'Lời mời đã gửi',
+                icon: Icons.send_rounded,
+                stream: vm.sentRequestsStream!,
+                vm: vm,
+                isIncoming: false,
+              ),
+            ],
+          ),
+        );
   }
 
   Widget _buildRequestSection(
@@ -240,51 +231,55 @@ class _SuggestionsTab extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           StreamBuilder<List<FriendRequestModel>>(
-              stream: stream,
-              builder: (context, snapshot) {
-                final count = snapshot.data?.length ?? 0;
-                return Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: AppColors.primary.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Icon(icon, color: AppColors.primary, size: 20),
+            stream: stream,
+            builder: (context, snapshot) {
+              final count = snapshot.data?.length ?? 0;
+              return Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: AppColors.primary.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8),
                     ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Text(
-                        title,
-                        style: const TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w600,
-                          color: Color(0xFF2C3E50),
-                        ),
-                      ),
-                    ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 12, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: count > 0
-                            ? AppColors.primary.withOpacity(0.1)
-                            : Colors.grey[100],
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Text(
-                        '$count',
-                        style: TextStyle(
-                          color: count > 0 ? AppColors.primary : Colors.grey[600],
-                          fontWeight: FontWeight.w600,
-                          fontSize: 14,
-                        ),
+                    child: Icon(icon, color: AppColors.primary, size: 20),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      title,
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w600,
+                        color: Color(0xFF2C3E50),
                       ),
                     ),
-                  ],
-                );
-              }),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 6,
+                    ),
+                    decoration: BoxDecoration(
+                      color:
+                          count > 0
+                              ? AppColors.primary.withOpacity(0.1)
+                              : Colors.grey[100],
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text(
+                      '$count',
+                      style: TextStyle(
+                        color: count > 0 ? AppColors.primary : Colors.grey[600],
+                        fontWeight: FontWeight.w600,
+                        fontSize: 14,
+                      ),
+                    ),
+                  ),
+                ],
+              );
+            },
+          ),
           const SizedBox(height: 16),
           Divider(color: Colors.grey[200], height: 1),
           const SizedBox(height: 16),
@@ -334,19 +329,20 @@ class _SuggestionsTab extends StatelessWidget {
               }
 
               return Column(
-                children: requests.map((request) {
-                  final targetUserId =
-                      isIncoming ? request.fromUserId : request.toUserId;
-                  final user = listener.getUserById(targetUserId);
+                children:
+                    requests.map((request) {
+                      final targetUserId =
+                          isIncoming ? request.fromUserId : request.toUserId;
+                      final user = listener.getUserById(targetUserId);
 
-                  return _buildRequestTile(
-                    context,
-                    request,
-                    user,
-                    vm,
-                    isIncoming,
-                  );
-                }).toList(),
+                      return _buildRequestTile(
+                        context,
+                        request,
+                        user,
+                        vm,
+                        isIncoming,
+                      );
+                    }).toList(),
               );
             },
           ),
@@ -377,11 +373,15 @@ class _SuggestionsTab extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Đang tải...',
-                      style: TextStyle(fontWeight: FontWeight.w600)),
+                  Text(
+                    'Đang tải...',
+                    style: TextStyle(fontWeight: FontWeight.w600),
+                  ),
                   SizedBox(height: 4),
-                  Text('Vui lòng chờ',
-                      style: TextStyle(color: Colors.grey, fontSize: 13)),
+                  Text(
+                    'Vui lòng chờ',
+                    style: TextStyle(color: Colors.grey, fontSize: 13),
+                  ),
                 ],
               ),
             ),
@@ -392,54 +392,60 @@ class _SuggestionsTab extends StatelessWidget {
 
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 10.0),
-      child: Row(
-        children: [
-          Container(
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              border: Border.all(color: Colors.grey[200]!, width: 2),
+      child: InkWell(
+        onTap: () {
+          Navigator.pushNamed(context, '/profile', arguments: user.id);
+        },
+        child: Row(
+          children: [
+            Container(
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                border: Border.all(color: Colors.grey[200]!, width: 2),
+              ),
+              child: CircleAvatar(
+                radius: 32,
+                backgroundColor: Colors.grey[100],
+                backgroundImage:
+                    user.avatar.isNotEmpty
+                        ? NetworkImage(user.avatar.first)
+                        : null,
+                child:
+                    user.avatar.isEmpty
+                        ? Icon(Icons.person, size: 32, color: Colors.grey[400])
+                        : null,
+              ),
             ),
-            child: CircleAvatar(
-              radius: 32,
-              backgroundColor: Colors.grey[100],
-              backgroundImage:
-                  user.avatar.isNotEmpty ? NetworkImage(user.avatar.first) : null,
-              child: user.avatar.isEmpty
-                  ? Icon(Icons.person, size: 32, color: Colors.grey[400])
-                  : null,
-            ),
-          ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  user.name,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w600,
-                    fontSize: 16,
-                    color: Color(0xFF2C3E50),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    user.name,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 16,
+                      color: Color(0xFF2C3E50),
+                    ),
                   ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  user.bio.isNotEmpty
-                      ? user.bio
-                      : (isIncoming ? 'Muốn kết bạn với bạn' : 'Chờ phản hồi'),
-                  style: TextStyle(
-                    color: Colors.grey[600],
-                    fontSize: 14,
+                  const SizedBox(height: 4),
+                  Text(
+                    user.bio.isNotEmpty
+                        ? user.bio
+                        : (isIncoming
+                            ? 'Muốn kết bạn với bạn'
+                            : 'Chờ phản hồi'),
+                    style: TextStyle(color: Colors.grey[600], fontSize: 14),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-          const SizedBox(width: 12),
-          isIncoming
-              ? Column(
+            const SizedBox(width: 12),
+            isIncoming
+                ? Column(
                   children: [
                     SizedBox(
                       width: 100,
@@ -491,7 +497,7 @@ class _SuggestionsTab extends StatelessWidget {
                     ),
                   ],
                 )
-              : SizedBox(
+                : SizedBox(
                   width: 100,
                   height: 38,
                   child: OutlinedButton(
@@ -514,7 +520,8 @@ class _SuggestionsTab extends StatelessWidget {
                     ),
                   ),
                 ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -533,10 +540,7 @@ class _AllFriendsTabState extends State<_AllFriendsTab> {
   void _showFriendOptions(BuildContext context, UserModel friend) {
     final vm = context.read<FriendsViewModel>();
     final friendRequestManager = context.read<FriendRequestManager>();
-    // --- SỬA LỖI ---
-    // Thêm listener để cập nhật local state
     final listener = context.read<FirestoreListener>();
-    // ---------------
 
     showModalBottomSheet(
       context: context,
@@ -567,8 +571,10 @@ class _AllFriendsTabState extends State<_AllFriendsTab> {
                     color: Colors.red[50],
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  child:
-                      const Icon(Icons.person_remove_outlined, color: Colors.red),
+                  child: const Icon(
+                    Icons.person_remove_outlined,
+                    color: Colors.red,
+                  ),
                 ),
                 title: const Text(
                   'Hủy kết bạn',
@@ -577,12 +583,14 @@ class _AllFriendsTabState extends State<_AllFriendsTab> {
                 onTap: () async {
                   Navigator.pop(context);
                   await friendRequestManager.unfriend(
-                      vm.currentUserDocId!, friend.id);
-                  // --- SỬA LỖI HỦY BẠN ---
-                  // Cập nhật local state ngay lập tức, báo là "xóa bạn" (false)
+                    vm.currentUserDocId!,
+                    friend.id,
+                  );
                   listener.updateLocalFriendship(
-                      vm.currentUserDocId!, friend.id, false);
-                  // -------------------------
+                    vm.currentUserDocId!,
+                    friend.id,
+                    false,
+                  );
                   if (mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
@@ -604,7 +612,10 @@ class _AllFriendsTabState extends State<_AllFriendsTab> {
                     color: Colors.grey[100],
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  child: const Icon(Icons.block_outlined, color: Colors.black87),
+                  child: const Icon(
+                    Icons.block_outlined,
+                    color: Colors.black87,
+                  ),
                 ),
                 title: Text(
                   'Chặn ${friend.name}',
@@ -613,12 +624,14 @@ class _AllFriendsTabState extends State<_AllFriendsTab> {
                 onTap: () async {
                   Navigator.pop(context);
                   await friendRequestManager.blockUser(
-                      vm.currentUserDocId!, friend.id);
-                  // --- SỬA LỖI CHẶN ---
-                  // Chặn cũng là một dạng hủy bạn, nên cập nhật local
+                    vm.currentUserDocId!,
+                    friend.id,
+                  );
                   listener.updateLocalFriendship(
-                      vm.currentUserDocId!, friend.id, false);
-                  // --------------------
+                    vm.currentUserDocId!,
+                    friend.id,
+                    false,
+                  );
                   if (mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
@@ -644,45 +657,37 @@ class _AllFriendsTabState extends State<_AllFriendsTab> {
   @override
   Widget build(BuildContext context) {
     final vm = context.watch<FriendsViewModel>();
-    // _AllFriendsTab đang 'watch' listener,
-    // vì vậy nó sẽ tự động rebuild khi listener.notifyListeners() được gọi
     final listener = context.watch<FirestoreListener>();
 
     if (vm.currentUserDocId == null) {
       return const Center(child: CircularProgressIndicator());
     }
 
-    // --- BẮT ĐẦU SỬA LỖI ---
-    // 1. Lấy currentUser trực tiếp từ listener
-    //    Vì _AllFriendsTab 'watch' listener, nó sẽ tự rebuild khi listener notify
     final currentUser = listener.getUserById(vm.currentUserDocId!);
 
-    // 2. Xử lý trường hợp listener chưa sẵn sàng
     if (currentUser == null) {
-      // Trường hợp này xảy ra khi vm có ID nhưng listener chưa kịp tải
       return const Center(child: CircularProgressIndicator());
     }
 
-    // 3. Lấy danh sách bạn bè từ currentUser model
     final friendIds = currentUser.friends;
 
-    final allFriends = friendIds
-        .map((id) => listener.getUserById(id))
-        .where((user) => user != null)
-        .cast<UserModel>()
-        .toList();
+    final allFriends =
+        friendIds
+            .map((id) => listener.getUserById(id))
+            .where((user) => user != null)
+            .cast<UserModel>()
+            .toList();
 
     final query = _searchController.text.toLowerCase();
-    final filteredFriends = allFriends
-        .where((friend) => friend.name.toLowerCase().contains(query))
-        .toList();
-    // --- KẾT THÚC SỬA LỖI ---
+    final filteredFriends =
+        allFriends
+            .where((friend) => friend.name.toLowerCase().contains(query))
+            .toList();
 
     return Padding(
       padding: const EdgeInsets.all(16.0),
       child: Column(
         children: [
-          // Search Bar (Giữ nguyên)
           Container(
             decoration: BoxDecoration(
               color: Colors.white,
@@ -701,32 +706,39 @@ class _AllFriendsTabState extends State<_AllFriendsTab> {
               decoration: InputDecoration(
                 hintText: 'Tìm kiếm bạn bè...',
                 hintStyle: TextStyle(color: Colors.grey[400]),
-                prefixIcon:
-                    Icon(Icons.search_rounded, color: Colors.grey[400], size: 24),
-                suffixIcon: _searchController.text.isNotEmpty
-                    ? IconButton(
-                        icon: Icon(Icons.clear,
-                            color: Colors.grey[400], size: 20),
-                        onPressed: () {
-                          _searchController.clear();
-                          setState(() {});
-                        },
-                      )
-                    : null,
+                prefixIcon: Icon(
+                  Icons.search_rounded,
+                  color: Colors.grey[400],
+                  size: 24,
+                ),
+                suffixIcon:
+                    _searchController.text.isNotEmpty
+                        ? IconButton(
+                          icon: Icon(
+                            Icons.clear,
+                            color: Colors.grey[400],
+                            size: 20,
+                          ),
+                          onPressed: () {
+                            _searchController.clear();
+                            setState(() {});
+                          },
+                        )
+                        : null,
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(14),
                   borderSide: BorderSide.none,
                 ),
                 filled: true,
                 fillColor: Colors.white,
-                contentPadding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 14,
+                ),
               ),
             ),
           ),
           const SizedBox(height: 20),
-
-          // --- SỬA LỖI: Bỏ StreamBuilder và dùng nội dung trực tiếp ---
           Expanded(
             child: Container(
               decoration: BoxDecoration(
@@ -751,13 +763,16 @@ class _AllFriendsTabState extends State<_AllFriendsTab> {
                           color: AppColors.primary.withOpacity(0.1),
                           borderRadius: BorderRadius.circular(8),
                         ),
-                        child:
-                            Icon(Icons.people, color: AppColors.primary, size: 20),
+                        child: Icon(
+                          Icons.people,
+                          color: AppColors.primary,
+                          size: 20,
+                        ),
                       ),
                       const SizedBox(width: 12),
-                      Text(
+                      const Text(
                         'Tất cả bạn bè',
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.w600,
                           color: Color(0xFF2C3E50),
@@ -766,13 +781,15 @@ class _AllFriendsTabState extends State<_AllFriendsTab> {
                       const Spacer(),
                       Container(
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 12, vertical: 6),
+                          horizontal: 12,
+                          vertical: 6,
+                        ),
                         decoration: BoxDecoration(
                           color: AppColors.primary.withOpacity(0.1),
                           borderRadius: BorderRadius.circular(20),
                         ),
                         child: Text(
-                          '${allFriends.length}', // <-- Dùng allFriends.length
+                          '${allFriends.length}',
                           style: TextStyle(
                             color: AppColors.primary,
                             fontWeight: FontWeight.w600,
@@ -786,91 +803,115 @@ class _AllFriendsTabState extends State<_AllFriendsTab> {
                   Divider(color: Colors.grey[200], height: 1),
                   const SizedBox(height: 16),
                   Expanded(
-                    child: filteredFriends.isEmpty
-                        ? Center(
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Icon(
-                                  query.isEmpty
-                                      ? Icons.people_outline
-                                      : Icons.search_off,
-                                  size: 64,
-                                  color: Colors.grey[300],
-                                ),
-                                const SizedBox(height: 16),
-                                Text(
-                                  query.isEmpty
-                                      ? 'Chưa có bạn bè'
-                                      : 'Không tìm thấy "$query"',
-                                  style: TextStyle(
-                                    color: Colors.grey[500],
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w500,
+                    child:
+                        filteredFriends.isEmpty
+                            ? Center(
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(
+                                    query.isEmpty
+                                        ? Icons.people_outline
+                                        : Icons.search_off,
+                                    size: 64,
+                                    color: Colors.grey[300],
                                   ),
-                                ),
-                              ],
+                                  const SizedBox(height: 16),
+                                  Text(
+                                    query.isEmpty
+                                        ? 'Chưa có bạn bè'
+                                        : 'Không tìm thấy "$query"',
+                                    style: TextStyle(
+                                      color: Colors.grey[500],
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            )
+                            : ListView.separated(
+                              padding: EdgeInsets.zero,
+                              itemCount: filteredFriends.length,
+                              separatorBuilder:
+                                  (context, index) => Divider(
+                                    color: Colors.grey[100],
+                                    height: 24,
+                                  ),
+                              itemBuilder: (context, index) {
+                                final friend = filteredFriends[index];
+                                return ListTile(
+                                  contentPadding: EdgeInsets.zero,
+                                  onTap: () {
+                                    Navigator.pushNamed(
+                                      context,
+                                      '/profile',
+                                      arguments: friend.id,
+                                    );
+                                  },
+                                  leading: Container(
+                                    decoration: BoxDecoration(
+                                      shape: BoxShape.circle,
+                                      border: Border.all(
+                                        color: Colors.grey[200]!,
+                                        width: 2,
+                                      ),
+                                    ),
+                                    child: CircleAvatar(
+                                      radius: 28,
+                                      backgroundColor: Colors.grey[100],
+                                      backgroundImage:
+                                          friend.avatar.isNotEmpty
+                                              ? NetworkImage(
+                                                friend.avatar.first,
+                                              )
+                                              : null,
+                                      child:
+                                          friend.avatar.isEmpty
+                                              ? Icon(
+                                                Icons.person,
+                                                size: 28,
+                                                color: Colors.grey[400],
+                                              )
+                                              : null,
+                                    ),
+                                  ),
+                                  title: Text(
+                                    friend.name,
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 16,
+                                    ),
+                                  ),
+                                  subtitle:
+                                      friend.bio.isNotEmpty
+                                          ? Padding(
+                                            padding: const EdgeInsets.only(
+                                              top: 4,
+                                            ),
+                                            child: Text(
+                                              friend.bio,
+                                              style: TextStyle(
+                                                color: Colors.grey[600],
+                                                fontSize: 13,
+                                              ),
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                          )
+                                          : null,
+                                  trailing: IconButton(
+                                    icon: Icon(
+                                      Icons.more_vert,
+                                      color: Colors.grey[600],
+                                    ),
+                                    onPressed:
+                                        () =>
+                                            _showFriendOptions(context, friend),
+                                  ),
+                                );
+                              },
                             ),
-                          )
-                        : ListView.separated(
-                            padding: EdgeInsets.zero,
-                            itemCount: filteredFriends.length,
-                            separatorBuilder: (context, index) => Divider(
-                              color: Colors.grey[100],
-                              height: 24,
-                            ),
-                            itemBuilder: (context, index) {
-                              final friend = filteredFriends[index];
-                              return ListTile(
-                                contentPadding: EdgeInsets.zero,
-                                leading: Container(
-                                  decoration: BoxDecoration(
-                                    shape: BoxShape.circle,
-                                    border: Border.all(
-                                        color: Colors.grey[200]!, width: 2),
-                                  ),
-                                  child: CircleAvatar(
-                                    radius: 28,
-                                    backgroundColor: Colors.grey[100],
-                                    backgroundImage: friend.avatar.isNotEmpty
-                                        ? NetworkImage(friend.avatar.first)
-                                        : null,
-                                    child: friend.avatar.isEmpty
-                                        ? Icon(Icons.person,
-                                            size: 28, color: Colors.grey[400])
-                                        : null,
-                                  ),
-                                ),
-                                title: Text(
-                                  friend.name,
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.w600,
-                                    fontSize: 16,
-                                  ),
-                                ),
-                                subtitle: friend.bio.isNotEmpty
-                                    ? Padding(
-                                        padding: const EdgeInsets.only(top: 4),
-                                        child: Text(
-                                          friend.bio,
-                                          style: TextStyle(
-                                            color: Colors.grey[600],
-                                            fontSize: 13,
-                                          ),
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
-                                        ),
-                                      )
-                                    : null,
-                                trailing: IconButton(
-                                  icon: Icon(Icons.more_vert,
-                                      color: Colors.grey[600]),
-                                  onPressed: () =>
-                                      _showFriendOptions(context, friend),
-                                ),
-                              );
-                            },
-                          ),
                   ),
                 ],
               ),
