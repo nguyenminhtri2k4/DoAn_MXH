@@ -8,7 +8,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:share_plus/share_plus.dart';
 
 // === THÊM DÒNG NÀY (SỬA LỖI 5) ===
-import 'package:mangxahoi/view/share_qr_to_messenger_view.dart';
+import 'package:mangxahoi/view/group_chat/share_qr_to_messenger_view.dart';
 // ==================================
 
 class GroupQRCodeView extends StatelessWidget {
