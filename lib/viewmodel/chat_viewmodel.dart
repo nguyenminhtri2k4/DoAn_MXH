@@ -211,43 +211,49 @@ String? _lastProcessedMessageIdForGeneration; // ← (tùy chọn, càng tốt h
   }
 
   Future<void> sendMessage() async {
-    if (isBlocked) {
-      _setError("Bạn không thể gửi tin nhắn do đang bị chặn.");
-      return;
-    }
-    final String content = messageController.text.trim();
-    if (currentUserId == null) {
-      _setError("Lỗi: Không tìm thấy người dùng.");
-      return;
-    }
-    if (content.isEmpty && _selectedMedia.isEmpty) return;
-
-    _setLoading(true);
-    _clearError();
-    List<String> mediaIds = [];
-    try {
-      if (_selectedMedia.isNotEmpty) {
-        final List<File> filesToUpload = _selectedMedia.map((xfile) => File(xfile.path)).toList();
-        mediaIds = await _storageRequest.uploadFilesAndCreateMedia(filesToUpload, currentUserId!);
-      }
-      final message = MessageModel(
-        id: '',
-        senderId: currentUserId!,
-        content: content,
-        createdAt: DateTime.now(),
-        mediaIds: mediaIds,
-        status: 'sent',
-        type: 'text',
-      );
-      await _chatRequest.sendMessage(chatId, message);
-      _selectedMedia.clear();
-      messageController.clear();
-    } catch (e) {
-      _setError('Gửi tin nhắn thất bại: $e');
-    } finally {
-      _setLoading(false);
-    }
+  if (isBlocked) {
+    _setError("Bạn không thể gửi tin nhắn do đang bị chặn.");
+    return;
   }
+  final String content = messageController.text.trim();
+  if (currentUserId == null) {
+    _setError("Lỗi: Không tìm thấy người dùng.");
+    return;
+  }
+  if (content.isEmpty && _selectedMedia.isEmpty) return;
+
+  _setLoading(true);
+  _clearError();
+  List<String> mediaIds = [];
+  
+  try {
+    if (_selectedMedia.isNotEmpty) {
+      final List<File> filesToUpload = _selectedMedia.map((xfile) => File(xfile.path)).toList();
+      mediaIds = await _storageRequest.uploadFilesAndCreateMedia(filesToUpload, currentUserId!);
+    }
+    
+    // ✅ TẠO MESSAGE VỚI DateTime.now() (CHỈ ĐỂ HIỂN THỊ TẠM)
+    final message = MessageModel(
+      id: '',
+      senderId: currentUserId!,
+      content: content,
+      createdAt: DateTime.now(), // ← Sẽ bị ghi đè bởi server timestamp
+      mediaIds: mediaIds,
+      status: 'sent',
+      type: 'text',
+    );
+    
+    // ✅ GỌI sendMessage() - BÊN TRONG SẼ DÙNG FieldValue.serverTimestamp()
+    await _chatRequest.sendMessage(chatId, message);
+    
+    _selectedMedia.clear();
+    messageController.clear();
+  } catch (e) {
+    _setError('Gửi tin nhắn thất bại: $e');
+  } finally {
+    _setLoading(false);
+  }
+}
 
   // ============================================================
   // SMART REPLY
