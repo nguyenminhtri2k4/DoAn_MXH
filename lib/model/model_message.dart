@@ -1,4 +1,3 @@
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class MessageModel {
@@ -26,7 +25,10 @@ class MessageModel {
     return MessageModel(
       id: id,
       content: map['content'] ?? '',
-      createdAt: (map['createdAt'] as Timestamp).toDate(),
+      // createdAt may be null immediately after a write that used
+      // FieldValue.serverTimestamp(). Fall back to now for UI until
+      // server timestamp is populated by Firestore.
+      createdAt: (map['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
       mediaIds: List<String>.from(map['mediaIds'] ?? []),
       senderId: map['senderId'] ?? '',
       status: map['status'] ?? 'sent',
