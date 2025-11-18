@@ -157,6 +157,13 @@ class UserService extends ChangeNotifier {
     print('🔍 [UserService] Has Retry Timer: ${_retryTimer != null}');
   }
 
+  // ✅ HÀM MỚI: Cập nhật user hiện tại và thông báo cho các widget nghe (listeners)
+  // Hàm này giúp cập nhật UI ngay lập tức (ví dụ khi bật/tắt toggle Gemini)
+  void setCurrentUser(UserModel user) {
+    _currentUser = user;
+    notifyListeners();
+  }
+
   @override
   void dispose() {
     print('🔧 [UserService] Disposing...');
