@@ -1,155 +1,305 @@
 
 import 'dart:async';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:mangxahoi/model/model_user.dart';
 import 'package:mangxahoi/model/model_post.dart';
 import 'package:mangxahoi/request/user_request.dart';
 import 'package:mangxahoi/request/post_request.dart';
-import 'package:mangxahoi/request/friend_request_manager.dart'; // Thêm import
+import 'package:mangxahoi/request/friend_request_manager.dart';
+import 'package:mangxahoi/request/storage_request.dart';
+import 'package:mangxahoi/request/group_request.dart';
+import 'package:mangxahoi/model/model_group.dart';
+import 'package:rxdart/rxdart.dart';
 
 class ProfileViewModel extends ChangeNotifier {
   final _auth = FirebaseAuth.instance;
   final _userRequest = UserRequest();
   final _postRequest = PostRequest();
-  final _friendManager = FriendRequestManager(); // Thêm FriendRequestManager
+  final _friendManager = FriendRequestManager();
+  final _groupRequest = GroupRequest();
+  final ImagePicker _picker = ImagePicker();
+  final StorageRequest _storageRequest = StorageRequest();
+
+  bool _isUpdatingImage = false;
+  bool get isUpdatingImage => _isUpdatingImage;
+
+  bool _isDisposed = false;
+  void _setUpdatingImage(bool value) {
+    if (_isDisposed) return;
+    _isUpdatingImage = value;
+    _safeNotifyListeners();
+  }
 
   UserModel? user;
-  UserModel? _currentUserData; // Thêm biến lưu data user hiện tại
+  UserModel? currentUserData;
   bool isLoading = true;
-  Stream<List<PostModel>>? userPostsStream;
   bool isCurrentUserProfile = false;
-  String friendshipStatus = 'loading'; // Trạng thái: loading, none, friends, pending_sent, pending_received
+  String friendshipStatus = 'loading';
+  bool _isBlocked = false;
+  bool get isBlocked => _isBlocked;
+  bool _isBlockedByOther = false;
+  bool get isBlockedByOther => _isBlockedByOther;
+
+  String? _currentStreamUserId;
+  StreamSubscription<UserModel?>? _userSubscription;
+  StreamSubscription<List<UserModel>>? _friendsSubscription;
+
+  final BehaviorSubject<List<PostModel>> _userPostsSubject = BehaviorSubject.seeded([]);
+  final BehaviorSubject<List<UserModel>> _friendsSubject = BehaviorSubject.seeded([]);
+  final BehaviorSubject<List<GroupModel>> _groupsSubject = BehaviorSubject.seeded([]);
+
+  Stream<List<PostModel>> get userPostsStream => _userPostsSubject.stream;
+  Stream<List<UserModel>> get friendsStream => _friendsSubject.stream;
+  Stream<List<GroupModel>> get groupsStream => _groupsSubject.stream;
+
+  int _streamsVersion = 0;
+  int get streamsVersion => _streamsVersion;
+
+  Timer? _loadProfileTimer;
+
+  @override
+  void dispose() {
+    print('[ProfileVM] Disposing...');
+    _isDisposed = true;
+    _loadProfileTimer?.cancel();
+    _userSubscription?.cancel();
+    _friendsSubscription?.cancel();
+    _userPostsSubject.close();
+    _friendsSubject.close();
+    _groupsSubject.close();
+    super.dispose();
+  }
+
+  void _safeNotifyListeners() {
+    if (!_isDisposed && hasListeners) {
+      try {
+        notifyListeners();
+      } catch (e) {
+        print('[ProfileVM] Error notifying: $e');
+      }
+    }
+  }
 
   Future<void> loadProfile({String? userId}) async {
+    if (_isDisposed) return;
+
+    _loadProfileTimer?.cancel();
+    final completer = Completer<void>();
+    _loadProfileTimer = Timer(const Duration(milliseconds: 300), () async {
+      await _loadProfileInternal(userId: userId);
+      if (!completer.isCompleted) completer.complete();
+    });
+    return completer.future;
+  }
+
+  Future<void> _loadProfileInternal({String? userId}) async {
+    if (_isDisposed) return;
+
     try {
       isLoading = true;
       friendshipStatus = 'loading';
-      notifyListeners();
+      _isBlocked = false;
+      _isBlockedByOther = false;
 
       final currentUserAuth = _auth.currentUser;
       String? targetUserId = userId;
 
-      // Lấy thông tin người dùng đang đăng nhập
-      if (currentUserAuth != null) {
-        _currentUserData = await _userRequest.getUserByUid(currentUserAuth.uid);
+      // LẤY CURRENT USER
+      if (currentUserData == null && currentUserAuth != null) {
+        currentUserData = await _userRequest.getUserByUid(currentUserAuth.uid);
+      }
+      if (_isDisposed) return;
+
+      if (targetUserId == null && currentUserData != null) {
+        targetUserId = currentUserData!.id;
       }
 
-      // Nếu không có userId, mặc định là xem trang của người dùng hiện tại
-      if (targetUserId == null && _currentUserData != null) {
-        targetUserId = _currentUserData!.id;
-      }
+      _safeNotifyListeners();
 
       if (targetUserId != null) {
-        user = await _userRequest.getUserData(targetUserId);
-        
-        if (_currentUserData != null && user != null) {
-          isCurrentUserProfile = user!.uid == _currentUserData!.uid;
-          if (!isCurrentUserProfile) {
-            // Lấy trạng thái bạn bè nếu không phải trang của mình
-            friendshipStatus = await _friendManager.getFriendshipStatus(_currentUserData!.id, user!.id);
-          } else {
-            friendshipStatus = 'self';
-          }
-        } else {
-          isCurrentUserProfile = false;
-          friendshipStatus = 'none';
-        }
+        // HỦY LẮNG NGHE CŨ
+        await _userSubscription?.cancel();
+        await _friendsSubscription?.cancel();
+
+        // LẮNG NGHE USER REAL-TIME
+        _userSubscription = _userRequest.getUserDataStream(targetUserId).listen(
+          (updatedUser) async {
+            if (_isDisposed || updatedUser == null) return;
+
+            user = updatedUser;
+
+            // CẬP NHẬT TRẠNG THÁI
+            if (currentUserData != null && user != null) {
+              isCurrentUserProfile = user!.uid == currentUserData!.uid;
+
+              if (!isCurrentUserProfile) {
+                friendshipStatus = await _friendManager.getFriendshipStatus(
+                  currentUserData!.id,
+                  user!.id,
+                );
+                _isBlocked = await _friendManager.isUserBlocked(currentUserData!.id, user!.id);
+                _isBlockedByOther = await _friendManager.isUserBlocked(user!.id, currentUserData!.id);
+              } else {
+                friendshipStatus = 'self';
+                _isBlocked = false;
+                _isBlockedByOther = false;
+              }
+            }
+
+            // CẬP NHẬT BÀI VIẾT, BẠN BÈ, NHÓM
+            if (user != null && !isBlocked && !isBlockedByOther) {
+              _setupStreams();
+            } else {
+              _groupsSubject.add([]);
+              _friendsSubject.add([]);
+            }
+
+            isLoading = false;
+            _safeNotifyListeners();
+          },
+          onError: (e) {
+            print('[ProfileVM] User stream error: $e');
+            friendshipStatus = 'none';
+            isLoading = false;
+            _safeNotifyListeners();
+          },
+        );
       } else {
         user = null;
         isCurrentUserProfile = false;
         friendshipStatus = 'none';
+        _isBlocked = false;
+        _isBlockedByOther = false;
+        isLoading = false;
+        _safeNotifyListeners();
       }
-      
-      if (user != null) {
-        userPostsStream = _postRequest.getPostsByAuthorId(user!.id);
-      }
-
     } catch (e) {
-      print('❌ Lỗi khi tải thông tin cá nhân: $e');
+      print('[ProfileVM] Load error: $e');
       friendshipStatus = 'none';
-    } finally {
       isLoading = false;
-      notifyListeners();
+      _safeNotifyListeners();
     }
   }
 
-  // ==================== THÊM CÁC HÀM HÀNH ĐỘNG ====================
-  Future<void> sendFriendRequest() async {
-    if (_currentUserData == null || user == null) return;
-    await _friendManager.sendRequest(_currentUserData!.id, user!.id);
-    await loadProfile(userId: user!.id); // Tải lại để cập nhật trạng thái
-  }
+  void _setupStreams() {
+    if (_isDisposed || user == null) return;
 
-  Future<void> unfriend() async {
-    if (_currentUserData == null || user == null) return;
-    await _friendManager.unfriend(_currentUserData!.id, user!.id);
-    await loadProfile(userId: user!.id);
-  }
-  
-  Future<void> blockUser() async {
-    if (_currentUserData == null || user == null) return;
-    await _friendManager.blockUser(_currentUserData!.id, user!.id);
-    await loadProfile(userId: user!.id);
-  }
-  // =================================================================
+    print('[ProfileVM] Setting up streams for: ${user!.id}');
+    _currentStreamUserId = user!.id;
 
-  UserModel _copyUserWith({
-    String? name,
-    String? bio,
-    String? phone,
-    String? gender,
-    String? relationship,
-    String? liveAt,
-    String? comeFrom,
-    DateTime? dateOfBirth,
-    List<String>? avatar,
-    Map<String, bool>? notificationSettings,
-  }) {
-    // ... (Giữ nguyên không thay đổi)
-        return UserModel(
-      id: user!.id,
-      uid: user!.uid,
-      name: name ?? user!.name,
-      email: user!.email,
-      password: user!.password,
-      phone: phone ?? user!.phone,
-      bio: bio ?? user!.bio,
-      gender: gender ?? user!.gender,
-      liveAt: liveAt ?? user!.liveAt,
-      comeFrom: comeFrom ?? user!.comeFrom,
-      role: user!.role,
-      relationship: relationship ?? user!.relationship,
-      statusAccount: user!.statusAccount,
-      followerCount: user!.followerCount,
-      followingCount: user!.followingCount,
-      createAt: user!.createAt,
-      dateOfBirth: dateOfBirth ?? user!.dateOfBirth,
-      lastActive: user!.lastActive,
-      avatar: avatar ?? user!.avatar,
-      friends: user!.friends,
-      groups: user!.groups,
-      posterList: user!.posterList,
-      notificationSettings: notificationSettings ?? user!.notificationSettings,
-    );
-  }
+    // === BÀI VIẾT (real-time) ===
+    _postRequest.getPostsByAuthorId(
+      user!.id,
+      currentUserId: currentUserData?.id,
+      friendIds: currentUserData?.friends ?? [],
+    ).listen((posts) {
+      _userPostsSubject.add(posts);
+    });
 
-  Future<void> updateAvatar(String newAvatarUrl) async {
-    if (user == null || newAvatarUrl.trim().isEmpty) return;
-
-    try {
-      final updatedUser = _copyUserWith(
-        avatar: [newAvatarUrl.trim()],
+    // === BẠN BÈ (real-time) ===
+    if (user!.friends.isEmpty) {
+      _friendsSubject.add([]);
+    } else {
+      final friendIds = user!.friends.take(9).toList();
+      _friendsSubscription?.cancel();
+      _friendsSubscription = _userRequest.getUsersByIdsStream(friendIds).listen(
+        (friends) {
+          _friendsSubject.add(friends);
+        },
+        onError: (e) {
+          print('[ProfileVM] Friends stream error: $e');
+          _friendsSubject.add([]);
+        },
       );
-      await _userRequest.updateUser(updatedUser);
-      user = updatedUser;
-      print('✅ Cập nhật avatar thành công');
-      notifyListeners();
+    }
+
+    // === NHÓM (load 1 lần) ===
+    if (user!.groups.isEmpty) {
+      _groupsSubject.add([]);
+    } else {
+      final groupIds = user!.groups.take(3).toList();
+      _loadGroupsOnce(groupIds).then((groups) {
+        _groupsSubject.add(groups);
+      }).catchError((e) {
+        print('[ProfileVM] Group error: $e');
+        _groupsSubject.add([]);
+      });
+    }
+
+    _streamsVersion++;
+    _safeNotifyListeners();
+  }
+
+  Future<List<GroupModel>> _loadGroupsOnce(List<String> groupIds) async {
+    try {
+      final List<GroupModel> postGroups = [];
+      for (final groupId in groupIds) {
+        final group = await _groupRequest.getGroupById(groupId);
+        if (group != null && group.type == 'post') {
+          postGroups.add(group);
+        }
+      }
+      return postGroups;
     } catch (e) {
-      print('❌ Lỗi khi cập nhật avatar: $e');
+      print('[ProfileVM] _loadGroupsOnce error: $e');
+      return [];
     }
   }
 
+  // ==================== FRIEND ACTIONS ====================
+  Future<void> sendFriendRequest() async => await _friendAction(() => _friendManager.sendRequest(currentUserData!.id, user!.id));
+  Future<void> unfriend() async => await _friendAction(() => _friendManager.unfriend(currentUserData!.id, user!.id));
+  Future<void> blockUser() async => await _friendAction(() async {
+    await _friendManager.blockUser(currentUserData!.id, user!.id);
+    _isBlocked = true;
+  });
+  Future<void> unblockUser() async => await _friendAction(() async {
+    await _friendManager.unblockUser(currentUserData!.id, user!.id);
+    _isBlocked = false;
+  });
+
+  Future<void> _friendAction(Future<void> Function() action) async {
+    if (currentUserData == null || user == null || _isDisposed) return;
+    try {
+      await action();
+      if (!_isDisposed) await loadProfile(userId: user!.id);
+    } catch (e) {
+      print('[ProfileVM] Friend action error: $e');
+      rethrow;
+    }
+  }
+
+  // ==================== IMAGE UPDATES ====================
+  Future<bool> pickAndUpdateAvatar() async => await _updateImage('user_avatars', (url) => user!.copyWith(avatar: [url]));
+  Future<bool> pickAndUpdateBackground() async => await _updateImage('user_backgrounds', (url) => user!.copyWith(backgroundImageUrl: url));
+
+  Future<bool> _updateImage(String folder, UserModel Function(String) updater) async {
+    if (_isDisposed) return false;
+    final image = await _picker.pickImage(source: ImageSource.gallery, imageQuality: 80);
+    if (image == null || _isDisposed) return false;
+
+    _setUpdatingImage(true);
+    try {
+      final file = File(image.path);
+      final url = await _storageRequest.uploadProfileImage(file, user!.uid, folder);
+      if (url == null || _isDisposed) return false;
+
+      user = updater(url);
+      await _userRequest.updateUser(user!);
+      _safeNotifyListeners();
+      return true;
+    } catch (e) {
+      print('[ProfileVM] Image update error: $e');
+      return false;
+    } finally {
+      if (!_isDisposed) _setUpdatingImage(false);
+    }
+  }
+
+  // ==================== PROFILE UPDATE ====================
   Future<void> updateProfile({
     String? name,
     String? bio,
@@ -160,13 +310,12 @@ class ProfileViewModel extends ChangeNotifier {
     String? comeFrom,
     DateTime? dateOfBirth,
   }) async {
-    if (user == null) return;
-
+    if (user == null || _isDisposed) return;
     try {
       isLoading = true;
-      notifyListeners();
+      _safeNotifyListeners();
 
-      final updatedUser = _copyUserWith(
+      final updated = user!.copyWith(
         name: name,
         bio: bio,
         phone: phone,
@@ -176,33 +325,29 @@ class ProfileViewModel extends ChangeNotifier {
         comeFrom: comeFrom,
         dateOfBirth: dateOfBirth,
       );
-
-      await _userRequest.updateUser(updatedUser);
-      user = updatedUser;
-      
-      print('✅ Cập nhật hồ sơ thành công');
+      await _userRequest.updateUser(updated);
+      user = updated;
     } catch (e) {
-      print('❌ Lỗi khi cập nhật hồ sơ: $e');
+      print('[ProfileVM] Update error: $e');
       rethrow;
     } finally {
-      isLoading = false;
-      notifyListeners();
+      if (!_isDisposed) {
+        isLoading = false;
+        _safeNotifyListeners();
+      }
     }
   }
 
   Future<void> updateNotificationSetting(String key, bool value) async {
-    if (user == null) return;
+    if (user == null || _isDisposed) return;
     try {
-      final updatedSettings = Map<String, bool>.from(user!.notificationSettings);
-      updatedSettings[key] = value;
-      final updatedUser = _copyUserWith(notificationSettings: updatedSettings);
-      user = updatedUser;
-      notifyListeners();
-      await _userRequest.updateUser(updatedUser);
-      print('✅ Cập nhật cài đặt thông báo $key: $value');
+      final settings = Map<String, bool>.from(user!.notificationSettings)..[key] = value;
+      user = user!.copyWith(notificationSettings: settings);
+      _safeNotifyListeners();
+      await _userRequest.updateUser(user!);
     } catch (e) {
-      print('❌ Lỗi khi cập nhật cài đặt thông báo: $e');
-      await loadProfile();
+      print('[ProfileVM] Notification error: $e');
+      if (!_isDisposed) await loadProfile();
     }
   }
 }

@@ -5,7 +5,18 @@ class NotificationService {
   factory NotificationService() => _instance;
   NotificationService._internal();
 
-  // Phương thức hiển thialog toàn cục
+  // Thêm phương thức cho SnackBar thành công
+  void showSuccessSnackBar(BuildContext context, String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.green,
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+
+  // Phương thức hiển thị dialog toàn cục
   Future<void> showGlobalDialog({
     required BuildContext context,
     required String title,

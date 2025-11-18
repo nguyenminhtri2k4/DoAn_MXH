@@ -1,3 +1,4 @@
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class GroupModel {
@@ -5,10 +6,12 @@ class GroupModel {
   final String ownerId;
   final String name;
   final String description;
+  final String coverImage; // <--- Đã thêm trường này
   final List<String> managers;
   final List<String> members;
   final String settings;
   final String status;
+  final String type;
   final DateTime? createdAt;
 
   GroupModel({
@@ -16,10 +19,12 @@ class GroupModel {
     required this.ownerId,
     required this.name,
     required this.description,
+    this.coverImage = '', // <--- Mặc định là chuỗi rỗng
     required this.managers,
     required this.members,
     required this.settings,
     required this.status,
+    this.type = 'post',
     this.createdAt,
   });
 
@@ -30,10 +35,12 @@ class GroupModel {
       ownerId: map['ownerId'] ?? '',
       name: map['name'] ?? '',
       description: map['description'] ?? '',
+      coverImage: map['coverImage'] ?? '', // <--- Đọc từ Firestore
       managers: List<String>.from(map['managers'] ?? []),
       members: List<String>.from(map['members'] ?? []),
       settings: map['settings'] ?? '',
       status: map['status'] ?? 'activate',
+      type: map['type'] ?? 'post',
       createdAt: map['createdAt'] != null
           ? (map['createdAt'] as Timestamp).toDate()
           : null,
@@ -46,10 +53,12 @@ class GroupModel {
       'ownerId': ownerId,
       'name': name,
       'description': description,
+      'coverImage': coverImage, // <--- Ghi lên Firestore
       'managers': managers,
       'members': members,
       'settings': settings,
       'status': status,
+      'type': type,
       'createdAt': createdAt ?? FieldValue.serverTimestamp(),
     };
   }

@@ -1,3 +1,4 @@
+
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:mangxahoi/request/login_request.dart';
@@ -89,6 +90,64 @@ class LoginViewModel extends ChangeNotifier {
     }
   }
 
+  // *** BẮT ĐẦU CODE MỚI ***
+  /// Đăng nhập bằng Google
+  Future<bool> loginWithGoogle() async {
+    if (_isLoading) return false;
+
+    _isLoading = true;
+    _errorMessage = null;
+    _safeNotify();
+
+    try {
+      _currentUser = await _loginRequest.signInWithGoogle();
+      if (_isDisposed) return false;
+
+      if (_currentUser != null) {
+        print('✅ Google login successful: ${_currentUser!.name}');
+        _isLoading = false;
+        _safeNotify();
+        return true;
+      } else {
+        // Người dùng có thể đã hủy (signInWithGoogle trả về null)
+        _errorMessage = 'Đăng nhập Google đã bị hủy';
+        _isLoading = false;
+        _safeNotify();
+        return false;
+      }
+    } catch (e) {
+      if (_isDisposed) return false;
+      _isLoading = false;
+      _errorMessage = 'Lỗi đăng nhập Google: ${e.toString()}';
+      _safeNotify();
+      return false;
+    }
+  }
+  // *** KẾT THÚC CODE MỚI ***
+  
+  /// Gửi email đặt lại mật khẩu
+  Future<bool> sendPasswordResetEmail(String email) async {
+    if (_isLoading) return false;
+    
+    _isLoading = true;
+    _errorMessage = null;
+    _safeNotify();
+
+    try {
+      await _loginRequest.sendPasswordResetEmail(email);
+      _isLoading = false;
+      _safeNotify();
+      return true;
+    } catch (e) {
+      if (_isDisposed) return false;
+      _isLoading = false;
+      // Lỗi đã được xử lý bởi LoginRequest
+      _errorMessage = e.toString();
+      _safeNotify();
+      return false;
+    }
+  }
+
   String _parseFirebaseError(FirebaseAuthException e) {
     switch (e.code) {
       case 'user-not-found':
@@ -101,6 +160,9 @@ class LoginViewModel extends ChangeNotifier {
         return 'Tài khoản đã bị vô hiệu hóa';
       case 'too-many-requests':
         return 'Quá nhiều lần thử. Vui lòng thử lại sau';
+      // Lỗi mới cho Google Sign-In
+      case 'account-exists-with-different-credential':
+        return 'Tài khoản đã tồn tại với phương thức đăng nhập khác';
       default:
         return 'Lỗi đăng nhập: ${e.message}';
     }

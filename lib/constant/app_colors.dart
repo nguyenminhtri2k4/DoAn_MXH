@@ -39,7 +39,7 @@ class AppColors {
 
  // ==================== ASSETS PATHS ====================
   static const String logosybau = 'assets/logosybau.png';
-
+  static const String defaultAvatar = 'https://firebasestorage.googleapis.com/v0/b/doanmxh-1015e.firebasestorage.app/o/user_avatars%2Flogoapp.png?alt=media&token=2da297eb-c060-47ca-a659-f0ad1b78e358';
   
   // ==================== DIVIDERS ====================
   static const Color divider = Color(0xFFE4E6EB);  // Light gray line

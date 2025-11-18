@@ -1,82 +1,113 @@
-
-// // lib/request/reaction_request.dart
-// import 'package:cloud_firestore/cloud_firestore.dart';
-// import 'package:mangxahoi/model/model_reaction.dart';
-
-// class ReactionRequest {
-//   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-//   final String _postCollection = 'Post';
-
-//   CollectionReference _getReactionsCollection(String postId) {
-//     return _firestore.collection(_postCollection).doc(postId).collection('reactions');
-//   }
-
-//   Future<void> addLike(String postId, String userDocId) async {
-//     // 1. Tạo đối tượng ReactionModel đầy đủ
-//     final newReaction = ReactionModel(
-//       id: userDocId,
-//       postId: postId,
-//       userId: userDocId, // Sử dụng userDocId
-//       type: 'like',
-//       time: DateTime.now(),
-//     );
-
-//     // 2. Dùng toMap() để lưu đúng cấu trúc với trường 'userId'
-//     await _getReactionsCollection(postId).doc(userDocId).set(newReaction.toMap());
-
-//     // 3. Tăng số lượt thích
-//     await _firestore.collection(_postCollection).doc(postId).update({
-//       'likesCount': FieldValue.increment(1),
-//     });
-//   }
-
-//   Future<void> removeLike(String postId, String userDocId) async {
-//     await _getReactionsCollection(postId).doc(userDocId).delete();
-//     await _firestore.collection(_postCollection).doc(postId).update({
-//       'likesCount': FieldValue.increment(-1),
-//     });
-//   }
-
-//   Future<bool> hasUserLikedPost(String postId, String userDocId) async {
-//     final doc = await _getReactionsCollection(postId).doc(userDocId).get();
-//     return doc.exists;
-//   }
-// }
 // lib/request/reaction_request.dart
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:mangxahoi/model/model_reaction.dart';
 
 class ReactionRequest {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final String _postCollection = 'Post';
+  final String _reactionSubcollection = 'reactions';
 
-  CollectionReference _getReactionsCollection(String postId) {
-    return _firestore.collection(_postCollection).doc(postId).collection('reactions');
+  /// Lấy loại reaction hiện tại của người dùng cho một bài viết.
+  /// Trả về 'like', 'love', v.v., hoặc null nếu chưa reaction.
+  Future<String?> getUserReactionType(String postId, String userDocId) async {
+    try {
+      final doc = await _firestore
+          .collection(_postCollection)
+          .doc(postId)
+          .collection(_reactionSubcollection)
+          .doc(userDocId)
+          .get();
+      
+      if (doc.exists) {
+        return doc.data()?['type'] as String?;
+      }
+      return null;
+    } catch (e) {
+      print("❌ Lỗi khi lấy reaction: $e");
+      return null;
+    }
   }
 
-  Future<void> addLike(String postId, String userDocId) async {
-    final newReaction = ReactionModel(
-      id: userDocId,
-      authorId: userDocId,
-      type: 'like',
-      time: DateTime.now(),
-    );
-    await _getReactionsCollection(postId).doc(userDocId).set(newReaction.toMap());
-    await _firestore.collection(_postCollection).doc(postId).update({
-      'likesCount': FieldValue.increment(1),
-    });
+  /// Đặt hoặc thay đổi một reaction.
+  Future<void> setReaction(
+    String postId, 
+    String userDocId, 
+    String reactionType, 
+    String? oldReactionType
+  ) async {
+    try {
+      final postRef = _firestore.collection(_postCollection).doc(postId);
+      final reactionRef = postRef.collection(_reactionSubcollection).doc(userDocId);
+      final batch = _firestore.batch();
+
+      // 1. Thêm/Cập nhật document reaction của user
+      batch.set(reactionRef, {
+        'type': reactionType,
+        'createdAt': FieldValue.serverTimestamp(),
+      });
+
+      // 2. Tăng đếm cho reaction mới
+      batch.update(postRef, {
+        'reactionsCount.$reactionType': FieldValue.increment(1),
+      });
+
+      // 3. Giảm đếm cho reaction cũ (nếu có và khác reaction mới)
+      if (oldReactionType != null && oldReactionType != reactionType) {
+        batch.update(postRef, {
+          'reactionsCount.$oldReactionType': FieldValue.increment(-1),
+        });
+      }
+
+      await batch.commit();
+      print('✅ Reaction đã được cập nhật: $reactionType');
+    } catch (e) {
+      print('❌ Lỗi khi set reaction: $e');
+      rethrow;
+    }
   }
 
-  Future<void> removeLike(String postId, String userDocId) async {
-    await _getReactionsCollection(postId).doc(userDocId).delete();
-    await _firestore.collection(_postCollection).doc(postId).update({
-      'likesCount': FieldValue.increment(-1),
-    });
+  /// Xóa một reaction (khi người dùng nhấn lại reaction đã chọn).
+  Future<void> removeReaction(
+    String postId, 
+    String userDocId, 
+    String oldReactionType
+  ) async {
+    try {
+      final postRef = _firestore.collection(_postCollection).doc(postId);
+      final reactionRef = postRef.collection(_reactionSubcollection).doc(userDocId);
+      final batch = _firestore.batch();
+
+      // 1. Xóa document reaction của user
+      batch.delete(reactionRef);
+
+      // 2. Giảm đếm cho reaction cũ
+      batch.update(postRef, {
+        'reactionsCount.$oldReactionType': FieldValue.increment(-1),
+      });
+
+      await batch.commit();
+      print('✅ Reaction đã được xóa');
+    } catch (e) {
+      print('❌ Lỗi khi xóa reaction: $e');
+      rethrow;
+    }
   }
 
-  Future<bool> hasUserLikedPost(String postId, String userDocId) async {
-    if (userDocId.isEmpty) return false;
-    final doc = await _getReactionsCollection(postId).doc(userDocId).get();
-    return doc.exists;
+  /// Stream để lắng nghe tất cả reactions của một bài viết
+  Stream<QuerySnapshot> getReactionsStream(String postId) {
+    return _firestore
+        .collection(_postCollection)
+        .doc(postId)
+        .collection(_reactionSubcollection)
+        .snapshots();
+  }
+
+  /// Stream để lắng nghe reaction của một user cụ thể
+  Stream<DocumentSnapshot> getUserReactionStream(String postId, String userDocId) {
+    return _firestore
+        .collection(_postCollection)
+        .doc(postId)
+        .collection(_reactionSubcollection)
+        .doc(userDocId)
+        .snapshots();
   }
 }

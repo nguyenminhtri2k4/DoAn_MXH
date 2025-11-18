@@ -3,38 +3,35 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 class MediaModel {
   final String id;
   final String url;
-  final String type; // image | video | audio | file
-  final String uploadedBy;
-  final DateTime? createdAt;
+  final String type; // 'image' or 'video'
+  final String uploaderId;
+  final DateTime createdAt;
 
   MediaModel({
     required this.id,
     required this.url,
     required this.type,
-    required this.uploadedBy,
-    this.createdAt,
+    required this.uploaderId,
+    required this.createdAt,
   });
 
-  /// 🔹 Firestore → Dart Object
-  factory MediaModel.fromMap(String id, Map<String, dynamic> map) {
+  factory MediaModel.fromFirestore(DocumentSnapshot doc) {
+    Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
     return MediaModel(
-      id: id,
-      url: map['url'] ?? '',
-      type: map['type'] ?? 'image',
-      uploadedBy: map['uploadedBy'] ?? '',
-      createdAt: map['createdAt'] != null
-          ? (map['createdAt'] as Timestamp).toDate()
-          : null,
+      id: doc.id,
+      url: data['url'] ?? '',
+      type: data['type'] ?? 'image',
+      uploaderId: data['uploaderId'] ?? '',
+      createdAt: (data['createdAt'] as Timestamp).toDate(),
     );
   }
 
-  /// 🔹 Dart Object → Firestore Map
   Map<String, dynamic> toMap() {
     return {
       'url': url,
       'type': type,
-      'uploadedBy': uploadedBy,
-      'createdAt': createdAt ?? FieldValue.serverTimestamp(),
+      'uploaderId': uploaderId,
+      'createdAt': Timestamp.fromDate(createdAt),
     };
   }
 }
