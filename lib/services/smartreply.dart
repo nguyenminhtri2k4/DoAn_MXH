@@ -6,7 +6,7 @@ import 'package:mangxahoi/model/model_message.dart';
 
 class SmartReplyService {
   // Gemini API Key
-  static const String _geminiApiKey = 'AIzaSyDVjQT-ETmjX4ZvXqas3bnFzju5UXOANlE';
+  static const String _geminiApiKey = 'AIzaSyA6gR8k5A_ywDEd8CMZw6DYFfGWa3sNMis';
   
   // Gemini Model
   GenerativeModel? _geminiModel;

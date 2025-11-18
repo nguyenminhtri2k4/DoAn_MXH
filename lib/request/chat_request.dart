@@ -15,77 +15,54 @@ class ChatRequest {
         .collection('messages')
         .orderBy('createdAt', descending: true)
         .snapshots()
-        .map((snapshot) => snapshot.docs
-            .map((doc) => MessageModel.fromMap(doc.data(), doc.id))
-            .toList());
+        .map(
+          (snapshot) =>
+              snapshot.docs
+                  .map((doc) => MessageModel.fromMap(doc.data(), doc.id))
+                  .toList(),
+        );
   }
 
-  // Gửi một tin nhắn
-  // Future<void> sendMessage(String chatId, MessageModel message) async {
-  //   await _firestore
-  //       .collection('Chat')
-  //       .doc(chatId)
-  //       .collection('messages')
-  //       .add(message.toMap());
-
-  //   // Tạo preview cho lastMessage
-  //   String lastMessagePreview;
-  //   if (message.type == 'share_post') {
-  //     lastMessagePreview = 'Đã chia sẻ một bài viết';
-  //   } else if (message.mediaIds.isNotEmpty) {
-  //     final mediaCount = message.mediaIds.length;
-  //     if (message.content.isNotEmpty) {
-  //       lastMessagePreview = '${message.content} 📷';
-  //     } else {
-  //       lastMessagePreview = mediaCount > 1 
-  //           ? '$mediaCount ảnh/video' 
-  //           : '1 ảnh/video';
-  //     }
-  //   } else {
-  //     lastMessagePreview = message.content.isNotEmpty 
-  //         ? message.content 
-  //         : 'Tin nhắn không có nội dung';
-  //   }
-
-  //   // Cập nhật tin nhắn cuối cùng
-  //   await _firestore.collection('Chat').doc(chatId).update({
-  //     'lastMessage': lastMessagePreview,
-  //     'updatedAt': FieldValue.serverTimestamp(),
-  //   });
-  // }
-  // Gửi một tin nhắn
   Future<void> sendMessage(String chatId, MessageModel message) async {
+    // Use server timestamp for createdAt to avoid relying on client device clocks
+    final messageMap = message.toMap();
+    // Override any client-side createdAt with server timestamp
+    messageMap['createdAt'] = FieldValue.serverTimestamp();
     await _firestore
         .collection('Chat')
         .doc(chatId)
         .collection('messages')
-        .add(message.toMap());
+        .add(messageMap);
 
     // Tạo preview cho lastMessage
     String lastMessagePreview;
 
     if (message.type == 'share_post') {
       lastMessagePreview = 'Đã chia sẻ một bài viết';
-    } 
+    }
     // === THÊM LOGIC MỚI ===
     else if (message.type == 'share_group_qr') {
-       try {
-         final qrData = QRInviteData.fromQRString(message.content);
-         lastMessagePreview = 'Lời mời tham gia nhóm ${qrData.groupName}';
-       } catch (e) {
-         lastMessagePreview = 'Đã gửi lời mời nhóm';
-       }
-    } 
-    else if (message.type == 'call_audio' || message.type == 'call_video') {
+      try {
+        final qrData = QRInviteData.fromQRString(message.content);
+        lastMessagePreview = 'Lời mời tham gia nhóm ${qrData.groupName}';
+      } catch (e) {
+        lastMessagePreview = 'Đã gửi lời mời nhóm';
+      }
+    } else if (message.type == 'call_audio' || message.type == 'call_video') {
       if (message.content == 'missed') {
         lastMessagePreview = 'Cuộc gọi nhỡ';
       } else if (message.content == 'declined') {
         lastMessagePreview = 'Cuộc gọi đã bị từ chối';
       } else if (message.content.startsWith('completed_')) {
         final duration = message.content.split('_').last; // Lấy "mm:ss"
-        lastMessagePreview = (message.type == 'call_audio' ? 'Cuộc gọi thoại' : 'Cuộc gọi video') + ' • $duration';
+        lastMessagePreview =
+            (message.type == 'call_audio'
+                ? 'Cuộc gọi thoại'
+                : 'Cuộc gọi video') +
+            ' • $duration';
       } else {
-        lastMessagePreview = message.type == 'call_audio' ? 'Cuộc gọi thoại' : 'Cuộc gọi video';
+        lastMessagePreview =
+            message.type == 'call_audio' ? 'Cuộc gọi thoại' : 'Cuộc gọi video';
       }
     }
     // === KẾT THÚC LOGIC MỚI ===
@@ -94,14 +71,14 @@ class ChatRequest {
       if (message.content.isNotEmpty) {
         lastMessagePreview = '${message.content} 📷';
       } else {
-        lastMessagePreview = mediaCount > 1 
-            ? '$mediaCount ảnh/video' 
-            : '1 ảnh/video';
+        lastMessagePreview =
+            mediaCount > 1 ? '$mediaCount ảnh/video' : '1 ảnh/video';
       }
     } else {
-      lastMessagePreview = message.content.isNotEmpty 
-          ? message.content 
-          : 'Tin nhắn không có nội dung';
+      lastMessagePreview =
+          message.content.isNotEmpty
+              ? message.content
+              : 'Tin nhắn không có nội dung';
     }
 
     // Cập nhật tin nhắn cuối cùng
@@ -112,7 +89,10 @@ class ChatRequest {
   }
 
   // Tạo hoặc lấy thông tin phòng chat của nhóm
-  Future<String> getOrCreateGroupChat(String groupId, List<String> memberIds) async {
+  Future<String> getOrCreateGroupChat(
+    String groupId,
+    List<String> memberIds,
+  ) async {
     final chatDoc = _firestore.collection('Chat').doc(groupId);
     final docSnapshot = await chatDoc.get();
 
@@ -159,9 +139,12 @@ class ChatRequest {
         .where('members', arrayContains: userId)
         .orderBy('updatedAt', descending: true)
         .snapshots()
-        .map((snapshot) => snapshot.docs
-            .map((doc) => ChatModel.fromMap(doc.data(), doc.id))
-            .toList());
+        .map(
+          (snapshot) =>
+              snapshot.docs
+                  .map((doc) => ChatModel.fromMap(doc.data(), doc.id))
+                  .toList(),
+        );
   }
 
   /// Thu hồi tin nhắn và cập nhật lastMessage nếu cần
@@ -278,13 +261,13 @@ class ChatRequest {
   //         if (messageModel.content.isNotEmpty) {
   //           newLastMessage = '${messageModel.content} 📷';
   //         } else {
-  //           newLastMessage = mediaCount > 1 
-  //               ? '$mediaCount ảnh/video' 
+  //           newLastMessage = mediaCount > 1
+  //               ? '$mediaCount ảnh/video'
   //               : '1 ảnh/video';
   //         }
   //       } else {
-  //         newLastMessage = messageModel.content.isNotEmpty 
-  //             ? messageModel.content 
+  //         newLastMessage = messageModel.content.isNotEmpty
+  //             ? messageModel.content
   //             : 'Tin nhắn không có nội dung';
   //       }
 
@@ -306,14 +289,15 @@ class ChatRequest {
   Future<void> _updateLastMessage(String chatId) async {
     try {
       // Lấy tin nhắn gần nhất không bị recalled/deleted
-      final messagesSnapshot = await _firestore
-          .collection('Chat')
-          .doc(chatId)
-          .collection('messages')
-          .where('status', whereNotIn: ['recalled', 'deleted'])
-          .orderBy('createdAt', descending: true)
-          .limit(1)
-          .get();
+      final messagesSnapshot =
+          await _firestore
+              .collection('Chat')
+              .doc(chatId)
+              .collection('messages')
+              .where('status', whereNotIn: ['recalled', 'deleted'])
+              .orderBy('createdAt', descending: true)
+              .limit(1)
+              .get();
 
       String newLastMessage = 'Không có tin nhắn';
       DateTime newUpdatedAt = DateTime.now();
@@ -329,40 +313,45 @@ class ChatRequest {
         // === SAO CHÉP LOGIC PREVIEW TỪ HÀM SENDMESSAGE ===
         if (messageModel.type == 'share_post') {
           newLastMessage = 'Đã chia sẻ một bài viết';
-        } 
-        else if (messageModel.type == 'share_group_qr') {
+        } else if (messageModel.type == 'share_group_qr') {
           try {
             final qrData = QRInviteData.fromQRString(messageModel.content);
             newLastMessage = 'Lời mời tham gia nhóm ${qrData.groupName}';
           } catch (e) {
             newLastMessage = 'Đã gửi lời mời nhóm';
           }
-        }
-        else if (messageModel.type == 'call_audio' || messageModel.type == 'call_video') {
+        } else if (messageModel.type == 'call_audio' ||
+            messageModel.type == 'call_video') {
           if (messageModel.content == 'missed') {
             newLastMessage = 'Cuộc gọi nhỡ';
           } else if (messageModel.content == 'declined') {
             newLastMessage = 'Cuộc gọi đã bị từ chối';
           } else if (messageModel.content.startsWith('completed_')) {
             final duration = messageModel.content.split('_').last;
-            newLastMessage = (messageModel.type == 'call_audio' ? 'Cuộc gọi thoại' : 'Cuộc gọi video') + ' • $duration';
+            newLastMessage =
+                (messageModel.type == 'call_audio'
+                    ? 'Cuộc gọi thoại'
+                    : 'Cuộc gọi video') +
+                ' • $duration';
           } else {
-            newLastMessage = messageModel.type == 'call_audio' ? 'Cuộc gọi thoại' : 'Cuộc gọi video';
+            newLastMessage =
+                messageModel.type == 'call_audio'
+                    ? 'Cuộc gọi thoại'
+                    : 'Cuộc gọi video';
           }
-        }
-        else if (messageModel.mediaIds.isNotEmpty) {
+        } else if (messageModel.mediaIds.isNotEmpty) {
           final mediaCount = messageModel.mediaIds.length;
           if (messageModel.content.isNotEmpty) {
             newLastMessage = '${messageModel.content} 📷';
           } else {
-            newLastMessage = mediaCount > 1 
-                ? '$mediaCount ảnh/video' 
-                : '1 ảnh/video';
+            newLastMessage =
+                mediaCount > 1 ? '$mediaCount ảnh/video' : '1 ảnh/video';
           }
         } else {
-          newLastMessage = messageModel.content.isNotEmpty 
-              ? messageModel.content 
-              : 'Tin nhắn không có nội dung';
+          newLastMessage =
+              messageModel.content.isNotEmpty
+                  ? messageModel.content
+                  : 'Tin nhắn không có nội dung';
         }
         // === KẾT THÚC SAO CHÉP ===
 
@@ -382,7 +371,11 @@ class ChatRequest {
   }
 
   /// Cập nhật trạng thái của tin nhắn (ví dụ: 'seen')
-  Future<void> updateMessageStatus(String chatId, String messageId, String status) async {
+  Future<void> updateMessageStatus(
+    String chatId,
+    String messageId,
+    String status,
+  ) async {
     await _firestore
         .collection('Chat')
         .doc(chatId)
