@@ -214,4 +214,16 @@ class UserRequest {
       return [];
     });
   }
+
+  Future<void> updateServiceGemini(String uid, bool isEnabled) async {
+    try {
+      await _firestore.collection('User').doc(uid).update({
+        'servicegemini': isEnabled, 
+      });
+    } catch (e) {
+      print('❌ Lỗi cập nhật Service Gemini: $e');
+      throw e;
+    }
+  }
+  
 }

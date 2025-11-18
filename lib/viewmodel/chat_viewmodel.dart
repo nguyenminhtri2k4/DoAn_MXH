@@ -259,36 +259,45 @@ String? _lastProcessedMessageIdForGeneration; // ← (tùy chọn, càng tốt h
   // SMART REPLY
   // ============================================================
 
-  Future<void> generateReplies(List<MessageModel> messages) async {
-  // 1. Nếu đang generating rồi thì bỏ qua luôn
+  // CẬP NHẬT HÀM NÀY
+  Future<void> generateReplies(List<MessageModel> messages, bool isGeminiEnabled) async {
+    
+    // 1. KIỂM TRA ĐIỀU KIỆN NGAY ĐẦU HÀM
+    if (!isGeminiEnabled) {
+      // Nếu user tắt tính năng, đảm bảo xóa sạch gợi ý cũ (nếu có) để không hiển thị rác
+      if (_smartReplyService.smartReplies.isNotEmpty) {
+        _smartReplyService.clearReplies();
+        notifyListeners();
+      }
+      return; // Dừng lại, không gọi AI
+    }
 
-  // 2. Nếu không có tin nhắn mới từ người khác → bỏ qua
-  if (messages.isEmpty) return;
-  final lastMessage = messages.first; // vì ListView reverse = true → first là tin mới nhất
+    // 2. Các logic kiểm tra cũ (giữ nguyên)
+    if (messages.isEmpty) return;
+    final lastMessage = messages.first;
 
-  if (lastMessage.senderId == currentUserId ||           // tin nhắn của mình
-      lastMessage.id == _lastProcessedMessageIdForGeneration || // đã xử lý rồi
-      isGroup ||                                          // group chat
-      isBlocked) {                                        // bị chặn
-    return;
+    if (lastMessage.senderId == currentUserId || 
+        lastMessage.id == _lastProcessedMessageIdForGeneration || 
+        isGroup || 
+        isBlocked) {
+      return;
+    }
+
+    // 3. Bắt đầu tạo gợi ý (giữ nguyên)
+    _isGeneratingReplies = true;
+    _lastProcessedMessageIdForGeneration = lastMessage.id;
+
+    try {
+      await _smartReplyService.generateReplies(
+        messages: messages,
+        isGroup: isGroup,
+        isBlocked: isBlocked,
+      );
+    } finally {
+      _isGeneratingReplies = false;
+      notifyListeners();
+    }
   }
-
-  // 3. Bắt đầu generating
-  _isGeneratingReplies = true;
-  _lastProcessedMessageIdForGeneration = lastMessage.id;
-
-  try {
-    await _smartReplyService.generateReplies(
-      messages: messages,
-      isGroup: isGroup,
-      isBlocked: isBlocked,
-    );
-  } finally {
-    _isGeneratingReplies = false;
-    // Chỉ notify 1 lần duy nhất khi có kết quả (hoặc không có)
-    notifyListeners();
-  }
-}
 
   void selectReply(String replyText) {
     messageController.text = replyText;

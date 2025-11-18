@@ -28,6 +28,7 @@ class UserModel {
   final DateTime createAt;
   final DateTime? dateOfBirth;
   final DateTime? lastActive;
+  final bool serviceGemini;
 
   final Map<String, bool> notificationSettings;
 
@@ -54,6 +55,7 @@ class UserModel {
     required this.followingCount,
     required this.createAt,
     this.dateOfBirth,
+    this.serviceGemini = false,
     this.lastActive,
     required this.notificationSettings,
     List<String>? locketFriends,
@@ -117,6 +119,7 @@ class UserModel {
       notificationSettings: (data['notificationSettings'] is Map)
           ? Map<String, bool>.from(data['notificationSettings'])
           : {},
+      serviceGemini: data['servicegemini'] ?? false,
     );
   }
 
@@ -146,6 +149,7 @@ class UserModel {
       'dateOfBirth': dateOfBirth != null ? Timestamp.fromDate(dateOfBirth!) : null,
       'lastActive': lastActive != null ? Timestamp.fromDate(lastActive!) : null,
       'notificationSettings': notificationSettings,
+      'servicegemini': serviceGemini,
     };
   }
 
@@ -169,6 +173,7 @@ class UserModel {
     DateTime? dateOfBirth,
     DateTime? lastActive,
     Map<String, bool>? notificationSettings,
+    bool? serviceGemini,
   }) {
     return UserModel(
       id: id ?? this.id,
@@ -196,6 +201,7 @@ class UserModel {
       dateOfBirth: dateOfBirth ?? this.dateOfBirth,
       lastActive: lastActive ?? this.lastActive,
       notificationSettings: notificationSettings ?? this.notificationSettings,
+      serviceGemini: serviceGemini ?? this.serviceGemini,
     );
   }
 }

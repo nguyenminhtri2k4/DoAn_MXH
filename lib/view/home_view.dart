@@ -20,6 +20,8 @@ import 'package:mangxahoi/authanet/firestore_listener.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:mangxahoi/view/story/story_viewer_screen.dart';
 import 'package:mangxahoi/view/group_chat/qr_scanner_view.dart';
+// 👇 1. THÊM IMPORT NÀY
+import 'package:mangxahoi/view/settings/general_settings_view.dart';
 
 class HomeView extends StatelessWidget {
   const HomeView({super.key});
@@ -382,6 +384,20 @@ class _HomeViewContentState extends State<_HomeViewContent> {
                         onTap: () {
                           Navigator.pop(context);
                           Navigator.pushNamed(context, '/notification_settings');
+                        },
+                      ),
+                      // 👇 2. THÊM MỤC CÀI ĐẶT CHUNG VÀO ĐÂY 👇
+                      _buildDrawerItem(
+                        icon: Icons.settings_outlined,
+                        text: 'Cài đặt chung',
+                        onTap: () {
+                          Navigator.pop(context); // Đóng Drawer
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const GeneralSettingsView(),
+                            ),
+                          );
                         },
                       ),
                     ],

@@ -50,6 +50,7 @@ class _ChatViewContent extends StatelessWidget {
   Widget build(BuildContext context) {
     final vm = context.watch<ChatViewModel>();
     final firestoreListener = context.watch<FirestoreListener>();
+    final currentUser = context.watch<UserService>().currentUser;
 
     if (vm.errorMessage != null) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -152,11 +153,23 @@ class _ChatViewContent extends StatelessWidget {
                 // Chỉ gọi generateReplies khi có tin nhắn mới từ người khác
                 if (messages.isNotEmpty) {
                   final lastMessage = messages.first;
+
+                  final bool isGeminiEnabled = currentUser?.serviceGemini ?? false;
+                  // 👇 THÊM ĐOẠN LOG NÀY ĐỂ KIỂM TRA 👇
+  print('--- DEBUG SMART REPLY ---');
+  print('1. SenderID tin cuối: ${lastMessage.senderId}');
+  print('2. My ID: ${vm.currentUserId}');
+  print('3. Is Group: ${vm.isGroup}');
+  print('4. Is Blocked: ${vm.isBlocked}');
+  print('5. Setting bật chưa: $isGeminiEnabled');
+  print('-------------------------');
                   if (lastMessage.senderId != vm.currentUserId && 
                       !vm.isGroup && 
                       !vm.isBlocked) {
+                        Future.microtask(() => vm.generateReplies(messages, isGeminiEnabled));
                     // Dùng Future.microtask để tránh stack overflow
-                    Future.microtask(() => vm.generateReplies(messages));
+                    //Future.microtask(() => vm.generateReplies(messages));
+                    
                   }
                 }
 
