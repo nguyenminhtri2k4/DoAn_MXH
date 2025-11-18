@@ -9,10 +9,10 @@ class NotificationModel {
   final String targetType;
   final bool isRead;
   final DateTime createdAt;
-
-  // (Tùy chọn — giúp hiển thị nhanh mà không cần fetch user)
-  final String? fromUserName;
-  final String? fromUserAvatar;
+  final String title;
+  final String content;
+  final String fromUserName;
+  final String fromUserAvatar;
 
   NotificationModel({
     required this.id,
@@ -23,13 +23,24 @@ class NotificationModel {
     required this.targetType,
     required this.isRead,
     required this.createdAt,
-    this.fromUserName,
-    this.fromUserAvatar,
+    required this.title,
+    required this.content,
+    required this.fromUserName,
+    required this.fromUserAvatar,
   });
 
-  /// Parse từ Firestore DocumentSnapshot
   factory NotificationModel.fromDoc(DocumentSnapshot doc) {
     final data = doc.data() as Map<String, dynamic>;
+
+    // 🔥 Hàm xử lý an toàn cho Avatar: Chấp nhận cả String lẫn List
+    String parseAvatar(dynamic value) {
+      if (value is String) return value; // Nếu là String thì dùng luôn
+      if (value is List && value.isNotEmpty) {
+        return value.first.toString(); // Nếu là List thì lấy phần tử đầu
+      }
+      return ''; // Còn lại trả về rỗng
+    }
+
     return NotificationModel(
       id: doc.id,
       fromUserId: data['fromUserId'] ?? '',
@@ -39,12 +50,13 @@ class NotificationModel {
       targetType: data['targetType'] ?? '',
       isRead: data['isRead'] ?? false,
       createdAt: (data['createdAt'] as Timestamp).toDate(),
-      fromUserName: data['fromUserName'],
-      fromUserAvatar: data['fromUserAvatar'],
+      title: data['title'] ?? '',
+      content: data['content'] ?? '',
+      fromUserName: data['fromUserName'] ?? '',
+      fromUserAvatar: parseAvatar(data['fromUserAvatar']), // 🔥 Dùng hàm parse an toàn
     );
   }
 
-  /// Convert sang JSON để lưu Firestore
   Map<String, dynamic> toJson() {
     return {
       'fromUserId': fromUserId,
@@ -54,8 +66,10 @@ class NotificationModel {
       'targetType': targetType,
       'isRead': isRead,
       'createdAt': Timestamp.fromDate(createdAt),
-      if (fromUserName != null) 'fromUserName': fromUserName,
-      if (fromUserAvatar != null) 'fromUserAvatar': fromUserAvatar,
+      'title': title,
+      'content': content,
+      'fromUserName': fromUserName,
+      'fromUserAvatar': fromUserAvatar,
     };
   }
 }

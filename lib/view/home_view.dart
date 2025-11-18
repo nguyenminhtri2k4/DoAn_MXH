@@ -362,14 +362,7 @@ class _HomeViewContentState extends State<_HomeViewContent> {
                           Navigator.pushNamed(context, '/trash');
                         },
                       ),
-                      _buildDrawerItem(
-                        icon: Icons.delete_sweep_outlined,
-                        text: 'Thùng rác Locket',
-                        onTap: () {
-                          Navigator.pop(context);
-                          Navigator.pushNamed(context, '/locket_trash');
-                        },
-                      ),
+                      
                        _buildDrawerItem(
                         icon: Icons.block,
                         text: 'Danh sách chặn',
