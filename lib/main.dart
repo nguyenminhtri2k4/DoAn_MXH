@@ -1,4 +1,3 @@
-
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -38,6 +37,7 @@ import 'firebase_options.dart';
 import 'package:flutter/foundation.dart';
 import 'package:mangxahoi/services/sound_service.dart';
 import 'package:mangxahoi/view/follow_viewer.dart';
+import 'package:mangxahoi/view/search_results_view.dart';
 
 import 'package:zego_express_engine/zego_express_engine.dart';
 import 'package:mangxahoi/view/group_chat/add_members_view.dart';
@@ -45,15 +45,12 @@ import 'package:mangxahoi/view/group_chat/group_management_view.dart';
 import 'package:mangxahoi/view/locket/locket_trash_view.dart';
 import 'package:mangxahoi/constant/app_colors.dart';
 
-// --- CÁC IMPORT STORY VÀ KHÁC ---
 import 'package:mangxahoi/view/story/create_story_view.dart';
 import 'package:mangxahoi/view/group_chat/qr_scanner_view.dart';
 import 'package:mangxahoi/view/group_chat/group_qr_code_view.dart';
 import 'package:mangxahoi/view/profile/friend_list_view.dart';
 import 'package:mangxahoi/view/profile/user_groups_view.dart';
-// --------------------------------
 
-// 🔥 IMPORT CHO PUSH NOTIFICATION
 import 'package:mangxahoi/notification/push_notification_service.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
@@ -65,11 +62,8 @@ final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
-  // 🔥 Khởi tạo Push Notification Service (Lắng nghe events)
   if (!kIsWeb) {
     await PushNotificationService().initialize();
   }
@@ -85,8 +79,7 @@ class MyApp extends StatefulWidget {
 }
 
 class _MyAppState extends State<MyApp> {
-  // Đổi tên biến để bao hàm cả CallService và FCM Token
-  bool _hasInitializedAppServices = false; 
+  bool _hasInitializedAppServices = false;
 
   @override
   Widget build(BuildContext context) {
@@ -107,12 +100,11 @@ class _MyAppState extends State<MyApp> {
       ],
       child: Consumer<UserService>(
         builder: (context, userService, _) {
-          // Khởi tạo các service cần thiết khi user đã được tải và chưa khởi tạo
           if (userService.currentUser != null &&
               !userService.isLoading &&
-              !_hasInitializedAppServices) { // 🔥 Đã đổi tên biến
+              !_hasInitializedAppServices) {
             WidgetsBinding.instance.addPostFrameCallback((_) {
-              _initAppServices(context, userService); // 🔥 Đã đổi tên hàm
+              _initAppServices(context, userService);
             });
           }
 
@@ -131,7 +123,7 @@ class _MyAppState extends State<MyApp> {
               ),
             ),
             home: _buildHomeScreen(userService),
-            // ... (onGenerateRoute và routes giữ nguyên logic)
+
             onGenerateRoute: (settings) {
               switch (settings.name) {
                 case '/profile':
@@ -139,6 +131,7 @@ class _MyAppState extends State<MyApp> {
                   return MaterialPageRoute(
                     builder: (context) => ProfileView(userId: userId),
                   );
+
                 case '/create_post':
                   if (settings.arguments is UserModel) {
                     final user = settings.arguments as UserModel;
@@ -147,137 +140,143 @@ class _MyAppState extends State<MyApp> {
                     );
                   } else if (settings.arguments is Map<String, dynamic>) {
                     final args = settings.arguments as Map<String, dynamic>;
-                    final user = args['currentUser'] as UserModel;
-                    final groupId = args['groupId'] as String?;
                     return MaterialPageRoute(
-                      builder: (context) => CreatePostView(
-                        currentUser: user,
-                        groupId: groupId,
-                      ),
+                      builder:
+                          (context) => CreatePostView(
+                            currentUser: args['currentUser'],
+                            groupId: args['groupId'],
+                          ),
                     );
                   }
                   return _buildErrorRoute();
+
                 case '/edit_post':
                   if (settings.arguments is PostModel) {
-                    final post = settings.arguments as PostModel;
                     return MaterialPageRoute(
-                      builder: (context) => EditPostView(post: post),
+                      builder:
+                          (context) => EditPostView(
+                            post: settings.arguments as PostModel,
+                          ),
                     );
                   }
                   return _buildErrorRoute();
+
                 case '/edit_profile':
                   if (settings.arguments is ProfileViewModel) {
-                    final viewModel = settings.arguments as ProfileViewModel;
                     return MaterialPageRoute(
-                      builder: (context) =>
-                          EditProfileView(viewModel: viewModel),
+                      builder:
+                          (context) => EditProfileView(
+                            viewModel: settings.arguments as ProfileViewModel,
+                          ),
                     );
                   }
                   return _buildErrorRoute();
+
                 case '/about':
                   if (settings.arguments is Map<String, dynamic>) {
                     final args = settings.arguments as Map<String, dynamic>;
-                    final viewModel = args['viewModel'] as ProfileViewModel;
-                    final isCurrentUser = args['isCurrentUser'] as bool;
                     return MaterialPageRoute(
-                      builder: (context) => AboutView(
-                        viewModel: viewModel,
-                        isCurrentUser: isCurrentUser,
-                      ),
+                      builder:
+                          (context) => AboutView(
+                            viewModel: args['viewModel'],
+                            isCurrentUser: args['isCurrentUser'],
+                          ),
                     );
                   }
                   return _buildErrorRoute();
+
                 case '/chat':
                   if (settings.arguments is Map<String, dynamic>) {
                     final args = settings.arguments as Map<String, dynamic>;
-                    final chatId = args['chatId'] as String?;
-                    final chatName = args['chatName'] as String?;
-                    if (chatId != null && chatName != null) {
-                      return MaterialPageRoute(
-                        builder: (context) => ChatView(
-                          chatId: chatId,
-                          chatName: chatName,
-                        ),
-                      );
-                    }
-                  }
-                  return _buildErrorRoute();
-                case '/post_group':
-                  if (settings.arguments is GroupModel) {
-                    final group = settings.arguments as GroupModel;
                     return MaterialPageRoute(
-                      builder: (context) => PostGroupView(group: group),
+                      builder:
+                          (context) => ChatView(
+                            chatId: args['chatId'],
+                            chatName: args['chatName'],
+                          ),
                     );
                   }
                   return _buildErrorRoute();
+
+                case '/post_group':
+                  if (settings.arguments is GroupModel) {
+                    return MaterialPageRoute(
+                      builder:
+                          (context) => PostGroupView(
+                            group: settings.arguments as GroupModel,
+                          ),
+                    );
+                  }
+                  return _buildErrorRoute();
+
                 case '/share_post':
                   if (settings.arguments is Map<String, dynamic>) {
                     final args = settings.arguments as Map<String, dynamic>;
-                    final originalPost = args['originalPost'] as PostModel?;
-                    final currentUser = args['currentUser'] as UserModel?;
-                    if (originalPost != null && currentUser != null) {
-                      return MaterialPageRoute(
-                        builder: (context) => SharePostView(
-                          originalPost: originalPost,
-                          currentUser: currentUser,
-                        ),
-                      );
-                    }
-                  }
-                  return _buildErrorRoute();
-                case '/share_to_messenger':
-                  if (settings.arguments is PostModel) {
-                    final post = settings.arguments as PostModel;
                     return MaterialPageRoute(
-                      builder: (context) =>
-                          ShareToMessengerView(postToShare: post),
+                      builder:
+                          (context) => SharePostView(
+                            originalPost: args['originalPost'],
+                            currentUser: args['currentUser'],
+                          ),
                     );
                   }
                   return _buildErrorRoute();
+
+                case '/share_to_messenger':
+                  if (settings.arguments is PostModel) {
+                    return MaterialPageRoute(
+                      builder:
+                          (context) => ShareToMessengerView(
+                            postToShare: settings.arguments as PostModel,
+                          ),
+                    );
+                  }
+                  return _buildErrorRoute();
+
                 case '/group_qr':
                   if (settings.arguments is Map<String, dynamic>) {
                     final args = settings.arguments as Map<String, dynamic>;
-                    final group = args['group'] as GroupModel;
-                    final userName = args['userName'] as String;
                     return MaterialPageRoute(
-                      builder: (context) => GroupQRCodeView(
-                        group: group,
-                        currentUserName: userName,
-                      ),
+                      builder:
+                          (context) => GroupQRCodeView(
+                            group: args['group'],
+                            currentUserName: args['userName'],
+                          ),
                     );
                   }
                   return _buildErrorRoute();
+
                 case '/post_detail':
                   if (settings.arguments is String) {
-                    final postId = settings.arguments as String;
                     return MaterialPageRoute(
-                      builder: (context) => PostDetailView(postId: postId),
+                      builder:
+                          (context) => PostDetailView(
+                            postId: settings.arguments as String,
+                          ),
                     );
                   }
                   return _buildErrorRoute();
+
                 default:
                   return _buildErrorRoute();
               }
             },
+
             routes: {
               '/login': (context) => const LoginView(),
               '/register': (context) => const RegisterView(),
               '/home': (context) => const HomeView(),
               '/search': (context) => const SearchView(),
+              '/search-results': (context) => const SearchResultsView(),
               '/friends': (context) {
-                final arguments = ModalRoute.of(context)?.settings.arguments;
-                int initialIndex = 0;
-                if (arguments is int) {
-                  initialIndex = arguments;
-                }
-                return FriendsView(initialIndex: initialIndex);
+                final args = ModalRoute.of(context)?.settings.arguments;
+                return FriendsView(initialIndex: args is int ? args : 0);
               },
               '/friend_list': (context) {
-                final args = ModalRoute.of(context)!.settings.arguments
-                    as Map<String, dynamic>?;
-                if (args != null &&
-                    args['userId'] != null &&
-                    args['userName'] != null) {
+                final args =
+                    ModalRoute.of(context)!.settings.arguments
+                        as Map<String, dynamic>?;
+                if (args != null) {
                   return FriendListView(
                     userId: args['userId'],
                     userName: args['userName'],
@@ -288,18 +287,19 @@ class _MyAppState extends State<MyApp> {
               '/groups': (context) => const GroupsView(),
               '/create_group': (context) => const CreateGroupView(),
               '/blocked_list': (context) => const BlockedListView(),
-              '/notification_settings': (context) =>
-                  const NotificationSettingsView(),
+              '/notification_settings':
+                  (context) => const NotificationSettingsView(),
               '/messages': (context) => const MessagesView(),
               '/trash': (context) => const TrashView(),
-              '/locket_manage_friends': (context) =>
-                  const LocketManageFriendsView(),
+              '/locket_manage_friends':
+                  (context) => const LocketManageFriendsView(),
               '/my_locket_history': (context) => const MyLocketHistoryView(),
               '/locket_trash': (context) => const LocketTrashView(),
               '/qr_scanner': (context) => const QRScannerView(),
               '/follow': (context) {
-                final args = ModalRoute.of(context)!.settings.arguments
-                    as Map<String, dynamic>?;
+                final args =
+                    ModalRoute.of(context)!.settings.arguments
+                        as Map<String, dynamic>?;
                 if (args != null) {
                   return FollowViewer(
                     userId: args['userId'],
@@ -309,12 +309,14 @@ class _MyAppState extends State<MyApp> {
                 return _buildErrorWidget();
               },
               '/user_groups': (context) {
-                  final args = ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>;
-                  return UserGroupsView(
-                    userId: args['userId'],
-                    userName: args['userName'],
-                  );
-                },
+                final args =
+                    ModalRoute.of(context)!.settings.arguments
+                        as Map<String, dynamic>;
+                return UserGroupsView(
+                  userId: args['userId'],
+                  userName: args['userName'],
+                );
+              },
               '/group_management': (context) {
                 final args = ModalRoute.of(context)!.settings.arguments;
                 if (args is String) {
@@ -337,64 +339,50 @@ class _MyAppState extends State<MyApp> {
     );
   }
 
-  // 🔥 HÀM MỚI: Khởi tạo tất cả các service (CallService, FCM Token)
   Future<void> _initAppServices(
-      BuildContext context, UserService userService) async {
+    BuildContext context,
+    UserService userService,
+  ) async {
     if (_hasInitializedAppServices || userService.currentUser == null) return;
 
     if (!kIsWeb) {
       try {
         final currentUser = userService.currentUser!;
-        
-        // 1. Khởi tạo CallService
+
         final callService = context.read<CallService>();
-        print("🚀 [MAIN] Đang init CallService...");
         await ZegoExpressEngine.destroyEngine();
         await callService.init(userService);
-        
-        // 2. LƯU FCM TOKEN (Quan trọng cho Push Notification)
+
         await _saveUserFcmToken(currentUser.uid);
 
         setState(() {
           _hasInitializedAppServices = true;
         });
-        print("✅ [MAIN] CallService & FCM Token đã init thành công");
       } catch (e) {
-        print("❌ [MAIN] Lỗi khi init CallService/FCM: $e");
+        print("Lỗi khi init app services: $e");
       }
-    } else {
-      print("⚠️ [MAIN] Bỏ qua init CallService/FCM trên Web.");
     }
   }
 
-  // 🔥 HÀM MỚI: Lưu Token vào Firestore
   Future<void> _saveUserFcmToken(String authUid) async {
     String? token = await FirebaseMessaging.instance.getToken();
-    
-    if (token != null) {
-      // 1. Tìm Document User ID (DocId) bằng Auth UID
-      final userQuery = await FirebaseFirestore.instance
-          .collection('User')
-          .where('uid', isEqualTo: authUid)
-          .limit(1)
-          .get();
 
-      if (userQuery.docs.isNotEmpty) {
-        final docId = userQuery.docs.first.id;
-        // 2. Cập nhật token vào Firestore
-        await FirebaseFirestore.instance.collection('User').doc(docId).update({
-          'fcmToken': token, 
-        }).catchError((e) => print("❌ Lỗi update FCM Token: $e"));
-      }
+    final userQuery =
+        await FirebaseFirestore.instance
+            .collection('User')
+            .where('uid', isEqualTo: authUid)
+            .limit(1)
+            .get();
+
+    if (userQuery.docs.isNotEmpty) {
+      final docId = userQuery.docs.first.id;
+      await FirebaseFirestore.instance.collection('User').doc(docId).update({
+        'fcmToken': token,
+      });
     }
   }
 
-
   Widget _buildHomeScreen(UserService userService) {
-    print('🔍 [MyApp] Building home screen:');
-    print('🔍 [MyApp] - isLoading: ${userService.isLoading}');
-    print('🔍 [MyApp] - currentUser: ${userService.currentUser?.name}');
-
     if (userService.isLoading) {
       return const Scaffold(
         body: Center(
@@ -411,30 +399,22 @@ class _MyAppState extends State<MyApp> {
     }
 
     if (userService.currentUser != null) {
-      print('✅ [MyApp] Đã có user, chuyển đến HomeView');
       return const HomeView();
     }
 
-    print('🔐 [MyApp] Chưa có user, chuyển đến LoginView');
     return const LoginView();
   }
 
-  // --- (C) TÁCH WIDGET LỖI RA ĐÂY ---
   Widget _buildErrorWidget() {
     return Scaffold(
       appBar: AppBar(title: const Text('Lỗi')),
-      body: const Center(
-        child: Text('Lỗi: Không thể tải trang'),
-      ),
+      body: const Center(child: Text('Lỗi: Không thể tải trang')),
     );
   }
 
   MaterialPageRoute _buildErrorRoute() {
-    return MaterialPageRoute(
-      builder: (context) => _buildErrorWidget(),
-    );
+    return MaterialPageRoute(builder: (context) => _buildErrorWidget());
   }
-  // ---------------------------------
 
   @override
   void dispose() {

@@ -5,19 +5,22 @@ import 'package:mangxahoi/model/model_post.dart';
 import 'package:mangxahoi/model/model_user.dart';
 import 'package:mangxahoi/request/post_request.dart';
 import 'package:mangxahoi/request/user_request.dart';
+import 'package:mangxahoi/request/group_request.dart';
 
 class PostGroupViewModel extends ChangeNotifier {
   final PostRequest _postRequest = PostRequest();
   final UserRequest _userRequest = UserRequest();
+  final GroupRequest _groupRequest = GroupRequest();
   final FirebaseAuth _auth = FirebaseAuth.instance;
+  bool get isGroupDeleted => group.status.toLowerCase() == 'deleted';
 
   final GroupModel group;
   UserModel? currentUserData;
   Stream<List<PostModel>>? postsStream;
   bool isLoading = true;
-  bool hasAccess = false; // Kiểm tra quyền truy cập
-  bool isMember = false; // Kiểm tra xem có phải thành viên không
-  bool _isDisposed = false; // Thêm flag để track dispose
+  bool hasAccess = false;
+  bool isMember = false;
+  bool _isDisposed = false;
 
   PostGroupViewModel({required this.group}) {
     _initialize();
@@ -41,22 +44,21 @@ class PostGroupViewModel extends ChangeNotifier {
       final firebaseUser = _auth.currentUser;
       if (firebaseUser != null) {
         currentUserData = await _userRequest.getUserByUid(firebaseUser.uid);
-        
-        // Kiểm tra quyền truy cập
+
         if (currentUserData != null) {
-          // Kiểm tra có phải thành viên không
           isMember = group.members.contains(currentUserData!.id);
-          
-          // hasAccess: kiểm tra quyền xem bài viết
           hasAccess = _checkAccess();
-          
+
           if (hasAccess) {
-            // Chỉ load bài viết nếu có quyền truy cập
-            // Dùng asBroadcastStream để tránh lỗi "already been listened to"
-            postsStream = _postRequest.getPostsByGroupId(group.id).asBroadcastStream();
-            print('✅ [PostGroupViewModel] User có quyền xem nhóm ${group.name}');
+            postsStream =
+                _postRequest.getPostsByGroupId(group.id).asBroadcastStream();
+            print(
+              '✅ [PostGroupViewModel] User có quyền xem nhóm ${group.name}',
+            );
           } else {
-            print('🔒 [PostGroupViewModel] User không có quyền xem nhóm ${group.name}');
+            print(
+              '🔒 [PostGroupViewModel] User không có quyền xem nhóm ${group.name}',
+            );
           }
         }
       }
@@ -68,25 +70,84 @@ class PostGroupViewModel extends ChangeNotifier {
     }
   }
 
-  /// Kiểm tra xem user có quyền xem bài viết trong nhóm không
   bool _checkAccess() {
     if (currentUserData == null) return false;
-    
-    // Nếu nhóm công khai (status != 'private'), ai cũng xem được bài viết
-    if (group.status != 'private') {
-      return true;
-    }
-    
-    // Nếu nhóm riêng tư, chỉ thành viên mới xem được
+    if (group.status != 'private') return true;
     return group.members.contains(currentUserData!.id);
   }
 
-  /// Getter để UI kiểm tra
   bool get isPrivateGroup => group.status == 'private';
-  
-  /// Kiểm tra xem user có phải là chủ nhóm không
-  bool get isOwner => currentUserData != null && group.ownerId == currentUserData!.id;
-  
-  /// Kiểm tra xem user có phải là quản lý không
-  bool get isManager => currentUserData != null && group.managers.contains(currentUserData!.id);
+  bool get isOwner =>
+      currentUserData != null && group.ownerId == currentUserData!.id;
+  bool get isManager =>
+      currentUserData != null && group.managers.contains(currentUserData!.id);
+
+  /// ✅ Phương thức rời nhóm với logic đầy đủ
+  Future<LeaveGroupResult> leaveGroup() async {
+    if (currentUserData == null) {
+      return LeaveGroupResult(
+        success: false,
+        message: 'Không thể xác định thông tin người dùng',
+      );
+    }
+
+    try {
+      print('🔄 [PostGroupViewModel] Starting leave group process...');
+      print('   User ID: ${currentUserData!.id}');
+      print('   Group ID: ${group.id}');
+      print('   Is Owner: $isOwner');
+      print('   Is Manager: $isManager');
+
+      // ✅ KIỂM TRA 1: Chủ nhóm không được rời
+      if (isOwner) {
+        print('❌ [PostGroupViewModel] Owner cannot leave group');
+        return LeaveGroupResult(
+          success: false,
+          message:
+              'Chủ nhóm không thể rời khỏi nhóm. Vui lòng chuyển quyền chủ nhóm trước.',
+        );
+      }
+
+      // ✅ KIỂM TRA 2: Nếu là Manager
+      if (isManager) {
+        print(
+          '🔄 [PostGroupViewModel] User is manager, removing from managers list...',
+        );
+        await _groupRequest.removeMemberFromGroup(
+          group.id,
+          currentUserData!.id,
+        );
+
+        print('✅ [PostGroupViewModel] Manager removed successfully');
+        return LeaveGroupResult(
+          success: true,
+          message: 'Bạn đã rời khỏi nhóm thành công',
+        );
+      }
+
+      // ✅ KIỂM TRA 3: Thành viên thường
+      print('🔄 [PostGroupViewModel] User is regular member, removing...');
+      await _groupRequest.removeMemberFromGroup(group.id, currentUserData!.id);
+
+      print('✅ [PostGroupViewModel] Member removed successfully');
+      return LeaveGroupResult(
+        success: true,
+        message: 'Bạn đã rời khỏi nhóm thành công',
+      );
+    } catch (e) {
+      print('❌ [PostGroupViewModel] Error leaving group: $e');
+      return LeaveGroupResult(
+        success: false,
+        message: 'Có lỗi xảy ra khi rời nhóm: ${e.toString()}',
+      );
+    }
+  }
+}
+
+/// Class để trả về kết quả của việc rời nhóm
+class LeaveGroupResult {
+  final bool success;
+  final String message;
+
+  LeaveGroupResult({required this.success, required this.message});
 }
