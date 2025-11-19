@@ -9,6 +9,7 @@ import 'package:mangxahoi/view/group_chat/add_members_view.dart';
 import 'package:mangxahoi/services/user_service.dart';
 import 'package:intl/intl.dart';
 import 'package:mangxahoi/view/group_chat/group_qr_code_view.dart';
+import 'package:mangxahoi/view/group_chat/group_members_list_view.dart';
 
 class GroupManagementView extends StatelessWidget {
   final String groupId;
@@ -536,7 +537,7 @@ class _GroupManagementContent extends StatelessWidget {
               ? Switch(
                 value: value,
                 onChanged: onChanged,
-                activeColor: AppColors.primary, // <-- Corrected line
+                activeThumbColor: AppColors.primary, // <-- Corrected line
               )
               : null),
     );
@@ -577,7 +578,12 @@ class _GroupManagementContent extends StatelessWidget {
                 ),
                 TextButton(
                   onPressed: () {
-                    // TODO: Show all members
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => GroupMembersView(groupId: vm.group!.id),
+                      ),
+                    );
                   },
                   style: TextButton.styleFrom(
                     foregroundColor: AppColors.primary,

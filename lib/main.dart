@@ -1,4 +1,3 @@
-
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -38,6 +37,7 @@ import 'firebase_options.dart';
 import 'package:flutter/foundation.dart';
 import 'package:mangxahoi/services/sound_service.dart';
 import 'package:mangxahoi/view/follow_viewer.dart';
+import 'package:mangxahoi/view/search_results_view.dart';
 
 import 'package:zego_express_engine/zego_express_engine.dart';
 import 'package:mangxahoi/view/group_chat/add_members_view.dart';
@@ -144,10 +144,11 @@ class _MyAppState extends State<MyApp> {
                     final user = args['currentUser'] as UserModel;
                     final groupId = args['groupId'] as String?;
                     return MaterialPageRoute(
-                      builder: (context) => CreatePostView(
-                        currentUser: user,
-                        groupId: groupId,
-                      ),
+                      builder:
+                          (context) => CreatePostView(
+                            currentUser: user,
+                            groupId: groupId,
+                          ),
                     );
                   }
                   return _buildErrorRoute();
@@ -165,8 +166,8 @@ class _MyAppState extends State<MyApp> {
                   if (settings.arguments is ProfileViewModel) {
                     final viewModel = settings.arguments as ProfileViewModel;
                     return MaterialPageRoute(
-                      builder: (context) =>
-                          EditProfileView(viewModel: viewModel),
+                      builder:
+                          (context) => EditProfileView(viewModel: viewModel),
                     );
                   }
                   return _buildErrorRoute();
@@ -177,10 +178,11 @@ class _MyAppState extends State<MyApp> {
                     final viewModel = args['viewModel'] as ProfileViewModel;
                     final isCurrentUser = args['isCurrentUser'] as bool;
                     return MaterialPageRoute(
-                      builder: (context) => AboutView(
-                        viewModel: viewModel,
-                        isCurrentUser: isCurrentUser,
-                      ),
+                      builder:
+                          (context) => AboutView(
+                            viewModel: viewModel,
+                            isCurrentUser: isCurrentUser,
+                          ),
                     );
                   }
                   return _buildErrorRoute();
@@ -192,10 +194,9 @@ class _MyAppState extends State<MyApp> {
                     final chatName = args['chatName'] as String?;
                     if (chatId != null && chatName != null) {
                       return MaterialPageRoute(
-                        builder: (context) => ChatView(
-                          chatId: chatId,
-                          chatName: chatName,
-                        ),
+                        builder:
+                            (context) =>
+                                ChatView(chatId: chatId, chatName: chatName),
                       );
                     }
                   }
@@ -217,10 +218,11 @@ class _MyAppState extends State<MyApp> {
                     final currentUser = args['currentUser'] as UserModel?;
                     if (originalPost != null && currentUser != null) {
                       return MaterialPageRoute(
-                        builder: (context) => SharePostView(
-                          originalPost: originalPost,
-                          currentUser: currentUser,
-                        ),
+                        builder:
+                            (context) => SharePostView(
+                              originalPost: originalPost,
+                              currentUser: currentUser,
+                            ),
                       );
                     }
                   }
@@ -230,8 +232,8 @@ class _MyAppState extends State<MyApp> {
                   if (settings.arguments is PostModel) {
                     final post = settings.arguments as PostModel;
                     return MaterialPageRoute(
-                      builder: (context) =>
-                          ShareToMessengerView(postToShare: post),
+                      builder:
+                          (context) => ShareToMessengerView(postToShare: post),
                     );
                   }
                   return _buildErrorRoute();
@@ -242,10 +244,11 @@ class _MyAppState extends State<MyApp> {
                     final group = args['group'] as GroupModel;
                     final userName = args['userName'] as String;
                     return MaterialPageRoute(
-                      builder: (context) => GroupQRCodeView(
-                        group: group,
-                        currentUserName: userName,
-                      ),
+                      builder:
+                          (context) => GroupQRCodeView(
+                            group: group,
+                            currentUserName: userName,
+                          ),
                     );
                   }
                   return _buildErrorRoute();
@@ -268,6 +271,7 @@ class _MyAppState extends State<MyApp> {
               '/register': (context) => const RegisterView(),
               '/home': (context) => const HomeView(),
               '/search': (context) => const SearchView(),
+              '/search-results': (context) => const SearchResultsView(),
               '/friends': (context) {
                 final arguments = ModalRoute.of(context)?.settings.arguments;
                 int initialIndex = 0; // Mặc định là tab 0
@@ -277,8 +281,9 @@ class _MyAppState extends State<MyApp> {
                 return FriendsView(initialIndex: initialIndex);
               },
               '/friend_list': (context) {
-                final args = ModalRoute.of(context)!.settings.arguments
-                    as Map<String, dynamic>?;
+                final args =
+                    ModalRoute.of(context)!.settings.arguments
+                        as Map<String, dynamic>?;
                 if (args != null &&
                     args['userId'] != null &&
                     args['userName'] != null) {
@@ -292,18 +297,19 @@ class _MyAppState extends State<MyApp> {
               '/groups': (context) => const GroupsView(),
               '/create_group': (context) => const CreateGroupView(),
               '/blocked_list': (context) => const BlockedListView(),
-              '/notification_settings': (context) =>
-                  const NotificationSettingsView(),
+              '/notification_settings':
+                  (context) => const NotificationSettingsView(),
               '/messages': (context) => const MessagesView(),
               '/trash': (context) => const TrashView(),
-              '/locket_manage_friends': (context) =>
-                  const LocketManageFriendsView(),
+              '/locket_manage_friends':
+                  (context) => const LocketManageFriendsView(),
               '/my_locket_history': (context) => const MyLocketHistoryView(),
               '/locket_trash': (context) => const LocketTrashView(),
               '/qr_scanner': (context) => const QRScannerView(),
               '/follow': (context) {
-                final args = ModalRoute.of(context)!.settings.arguments
-                    as Map<String, dynamic>?;
+                final args =
+                    ModalRoute.of(context)!.settings.arguments
+                        as Map<String, dynamic>?;
                 if (args != null) {
                   return FollowViewer(
                     userId: args['userId'],
@@ -313,12 +319,14 @@ class _MyAppState extends State<MyApp> {
                 return _buildErrorWidget(); // <-- SỬA: Gọi Widget
               },
               '/user_groups': (context) {
-                  final args = ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>;
-                  return UserGroupsView(
-                    userId: args['userId'],
-                    userName: args['userName'],
-                  );
-                },
+                final args =
+                    ModalRoute.of(context)!.settings.arguments
+                        as Map<String, dynamic>;
+                return UserGroupsView(
+                  userId: args['userId'],
+                  userName: args['userName'],
+                );
+              },
               '/group_management': (context) {
                 final args = ModalRoute.of(context)!.settings.arguments;
                 if (args is String) {
@@ -376,9 +384,11 @@ class _MyAppState extends State<MyApp> {
   // --- (C) TÁCH WIDGET LỖI RA ĐÂY ---
   /// Trả về một Widget lỗi (dùng cho 'routes')
   Widget _buildErrorWidget() {
-    return Scaffold( // <-- SỬA: Bỏ 'const'
+    return Scaffold(
+      // <-- SỬA: Bỏ 'const'
       appBar: AppBar(title: const Text('Lỗi')), // Thêm AppBar
-      body: const Center( // Thêm const
+      body: const Center(
+        // Thêm const
         child: Text('Lỗi: Không thể tải trang'), // Thêm const
       ),
     );
@@ -393,7 +403,9 @@ class _MyAppState extends State<MyApp> {
   // ---------------------------------
 
   Future<void> _initCallService(
-      BuildContext context, UserService userService) async {
+    BuildContext context,
+    UserService userService,
+  ) async {
     if (_hasInitializedCallService) return;
 
     if (!kIsWeb) {
