@@ -1,7 +1,7 @@
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
-    id("com.google.gms.google-services") // ✅ thêm plugin Firebase
+    id("com.google.gms.google-services") // Firebase
     id("dev.flutter.flutter-gradle-plugin")
 }
 
@@ -13,6 +13,8 @@ android {
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
+        // BẬT DESUGARING - BẮT BUỘC CHO flutter_local_notifications
+        isCoreLibraryDesugaringEnabled = true
     }
 
     kotlinOptions {
@@ -30,13 +32,13 @@ android {
     buildTypes {
         release {
             signingConfig = signingConfigs.getByName("debug")
-            // THÊM CÁC DÒNG NÀY ĐỂ BẬT PROGUARD CHO ZEGO
             isMinifyEnabled = false
             isShrinkResources = false
-            
+
+            // Nếu sau này bật minify thì dùng file này
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
-                "proguard-rules.pro" // <--- Báo cho Android dùng file bạn tạo
+                "proguard-rules.pro"
             )
         }
     }
@@ -47,8 +49,15 @@ flutter {
 }
 
 dependencies {
-    implementation(platform("com.google.firebase:firebase-bom:33.3.0")) // ✅ quản lý version firebase
+    // Bật desugaring core library (fix lỗi flutter_local_notifications)
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
+
+    // Firebase BoM (khuyên dùng cách này - tự động đồng bộ version)
+    implementation(platform("com.google.firebase:firebase-bom:33.5.1"))
     implementation("com.google.firebase:firebase-analytics")
     implementation("com.google.firebase:firebase-auth")
     implementation("com.google.firebase:firebase-firestore")
+    implementation("com.google.firebase:firebase-messaging") // thêm nếu chưa có
+
+    // Các dependency khác Flutter tự thêm (không cần đụng vào)
 }

@@ -22,6 +22,44 @@ import 'package:mangxahoi/view/story/story_viewer_screen.dart';
 import 'package:mangxahoi/view/group_chat/qr_scanner_view.dart';
 // 👇 1. THÊM IMPORT NÀY
 import 'package:mangxahoi/view/settings/general_settings_view.dart';
+import 'package:mangxahoi/services/notification_badge_service.dart';
+class NotificationBadge extends StatelessWidget {
+  final int count;
+  
+  const NotificationBadge({
+    super.key,
+    required this.count,
+  });
+  
+  @override
+  Widget build(BuildContext context) {
+    if (count == 0) return const SizedBox.shrink();
+    
+    return Positioned(
+      right: 4,
+      top: 4,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+        decoration: BoxDecoration(
+          color: Colors.red,
+          borderRadius: BorderRadius.circular(10),
+        ),
+        constraints: const BoxConstraints(minWidth: 20, minHeight: 20),
+        child: Center(
+          child: Text(
+            count > 99 ? '99+' : count.toString(),
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 12,
+              fontWeight: FontWeight.bold,
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ),
+      ),
+    );
+  }
+}
 
 class HomeView extends StatelessWidget {
   const HomeView({super.key});
@@ -213,15 +251,27 @@ class _HomeViewContentState extends State<_HomeViewContent> {
                     assetPath: 'assets/icon/search.png',
                     onPressed: () => Navigator.pushNamed(context, '/search'),
                   ),
-                  _buildCircularAssetButton(
-                    assetPath: 'assets/icon/ring.png',
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (context) => const NotificationView()),
-                      );
-                    },
-                  ),
+                   Stack(
+                        children: [
+                          _buildCircularAssetButton(
+                            assetPath: 'assets/icon/ring.png',
+                            onPressed: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(builder: (context) => const NotificationView()),
+                              );
+                            },
+                          ),
+                          // 📢 BADGE THÔNG BÁO
+                          StreamBuilder<int>(
+                            stream: context.read<NotificationBadgeService>().getUnreadCountStream(),
+                            builder: (context, snapshot) {
+                              final unreadCount = snapshot.data ?? 0;
+                              return NotificationBadge(count: unreadCount);
+                            },
+                          ),
+                        ],
+                      ),
                   _buildCircularAssetButton(
                     assetPath: 'assets/icon/message.png',
                     onPressed: () => Navigator.pushNamed(context, '/messages'),
