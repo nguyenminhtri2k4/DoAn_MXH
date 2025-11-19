@@ -10,6 +10,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:mangxahoi/view/group_chat/add_members_view.dart';
 import 'package:mangxahoi/view/group_chat/group_management_view.dart';
 import 'package:mangxahoi/view/group_chat/search_post_group_view.dart';
+import 'package:mangxahoi/view/group_chat/group_members_list_view.dart';
 
 class PostGroupView extends StatelessWidget {
   final GroupModel group;
@@ -270,9 +271,9 @@ class _PostGroupViewContent extends StatelessWidget {
                               : [], // ✅ Không hiện actions nếu không phải thành viên
 
                       flexibleSpace: FlexibleSpaceBar(
-                        centerTitle: false,
+                        centerTitle: true,
                         titlePadding: const EdgeInsets.only(
-                          left: 16,
+                          // left: 16,
                           bottom: 16,
                         ),
                         title: AnimatedOpacity(
@@ -285,6 +286,7 @@ class _PostGroupViewContent extends StatelessWidget {
                               fontWeight: FontWeight.bold,
                               fontSize: 18,
                             ),
+                            textAlign: TextAlign.center, //
                           ),
                         ),
                         background: Stack(
@@ -457,34 +459,158 @@ class _PostGroupViewContent extends StatelessWidget {
 
   // ✅ Thêm dialog xác nhận rời nhóm
   void _showLeaveGroupDialog(BuildContext context, PostGroupViewModel vm) {
-    showDialog(
+    showModalBottomSheet(
       context: context,
+      backgroundColor: Colors.transparent,
       builder:
-          (context) => AlertDialog(
-            title: const Text('Rời khỏi nhóm'),
-            content: Text(
-              'Bạn có chắc chắn muốn rời khỏi nhóm "${vm.group.name}"?',
+          (bottomSheetContext) => Container(
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.only(
+                topLeft: Radius.circular(20),
+                topRight: Radius.circular(20),
+              ),
             ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('Hủy'),
-              ),
-              TextButton(
-                onPressed: () {
-                  Navigator.pop(context); // Đóng dialog
-                  // TODO: Implement leave group logic
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Tính năng rời nhóm đang được phát triển'),
-                      duration: Duration(seconds: 2),
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Icon cảnh báo
+                Container(
+                  width: 56,
+                  height: 56,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFFEBEE),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.warning_rounded,
+                    color: Color(0xFFE53935),
+                    size: 32,
+                  ),
+                ),
+
+                const SizedBox(height: 20),
+
+                // Tiêu đề và nội dung
+                RichText(
+                  textAlign: TextAlign.center,
+                  text: TextSpan(
+                    style: const TextStyle(
+                      fontSize: 16,
+                      color: Color(0xFF1A1A1A),
+                      height: 1.4,
                     ),
-                  );
-                },
-                style: TextButton.styleFrom(foregroundColor: Colors.red),
-                child: const Text('Rời nhóm'),
-              ),
-            ],
+                    children: [
+                      const TextSpan(text: 'Bạn có chắc muốn rời nhóm '),
+                      TextSpan(
+                        text: vm.group.name,
+                        style: const TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      const TextSpan(text: '?'),
+                    ],
+                  ),
+                ),
+
+                const SizedBox(height: 24),
+
+                // Buttons
+                Row(
+                  children: [
+                    // Nút Hủy
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: () => Navigator.pop(bottomSheetContext),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: const Color(0xFF666666),
+                          side: const BorderSide(
+                            color: Color(0xFFE0E0E0),
+                            width: 1,
+                          ),
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                        ),
+                        child: const Text(
+                          'Hủy',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ),
+
+                    const SizedBox(width: 12),
+
+                    // Nút Bỏ chặn (hoặc Rời nhóm)
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: () async {
+                          Navigator.pop(
+                            bottomSheetContext,
+                          ); // Đóng bottom sheet
+
+                          // Hiển thị loading
+                          if (!context.mounted) return;
+                          showDialog(
+                            context: context,
+                            barrierDismissible: false,
+                            builder:
+                                (ctx) => const Center(
+                                  child: CircularProgressIndicator(),
+                                ),
+                          );
+
+                          // Thực hiện rời nhóm
+                          final result = await vm.leaveGroup();
+
+                          // Đóng loading
+                          if (!context.mounted) return;
+                          Navigator.pop(context);
+
+                          // Hiển thị kết quả
+                          if (!context.mounted) return;
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(result.message),
+                              backgroundColor:
+                                  result.success ? Colors.green : Colors.red,
+                              duration: const Duration(seconds: 3),
+                            ),
+                          );
+
+                          // Nếu thành công, quay lại màn hình trước
+                          if (result.success && context.mounted) {
+                            Navigator.pop(context);
+                          }
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFFE53935),
+                          foregroundColor: Colors.white,
+                          elevation: 0,
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                        ),
+                        child: const Text(
+                          'Rời nhóm',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+
+                // Thêm padding bottom để tránh bị che bởi navigation bar
+                SizedBox(height: MediaQuery.of(context).padding.bottom),
+              ],
+            ),
           ),
     );
   }
@@ -514,7 +640,7 @@ class _PostGroupViewContent extends StatelessWidget {
                   color: Colors.grey[400],
                 ),
               ),
-              const SizedBox(height: 24),
+              //const SizedBox(height: 24),
               const Text(
                 'Nhóm riêng tư',
                 style: TextStyle(
@@ -523,7 +649,7 @@ class _PostGroupViewContent extends StatelessWidget {
                   color: Color(0xFF1A1A1A),
                 ),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 20),
               Text(
                 'Bạn cần là thành viên của nhóm này để xem các bài viết.',
                 textAlign: TextAlign.center,
@@ -533,7 +659,7 @@ class _PostGroupViewContent extends StatelessWidget {
                   height: 1.4,
                 ),
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: 10),
               ElevatedButton.icon(
                 onPressed: () => Navigator.pop(context),
                 icon: const Icon(Icons.arrow_back),
@@ -579,10 +705,11 @@ class _PostGroupViewContent extends StatelessWidget {
               if (vm.isMember) _buildQuickActions(context, vm),
               if (posts.isNotEmpty) const SizedBox(height: 8),
               if (posts.isEmpty)
-                Padding(
-                  padding: const EdgeInsets.only(top: 40.0),
+                Container(
+                  padding: const EdgeInsets.symmetric(vertical: 40),
+                  alignment: Alignment.center,
                   child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
+                    mainAxisSize: MainAxisSize.min,
                     children: [
                       Icon(
                         Icons.article_outlined,
@@ -604,6 +731,7 @@ class _PostGroupViewContent extends StatelessWidget {
                     ],
                   ),
                 ),
+
               ...posts.map(
                 (post) => Padding(
                   padding: const EdgeInsets.only(bottom: 8.0),
@@ -718,10 +846,11 @@ class _PostGroupViewContent extends StatelessWidget {
               icon: Icons.people_outline,
               label: 'Thành viên',
               onTap: () {
-                Navigator.pushNamed(
+                Navigator.push(
                   context,
-                  '/group_management',
-                  arguments: vm.group.id,
+                  MaterialPageRoute(
+                    builder: (_) => GroupMembersView(groupId: vm.group.id),
+                  ),
                 );
               },
             ),
