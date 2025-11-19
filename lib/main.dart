@@ -45,30 +45,33 @@ import 'package:mangxahoi/view/group_chat/group_management_view.dart';
 import 'package:mangxahoi/view/locket/locket_trash_view.dart';
 import 'package:mangxahoi/constant/app_colors.dart';
 
-// --- THÊM CÁC IMPORT STORY ---
+// --- CÁC IMPORT STORY VÀ KHÁC ---
 import 'package:mangxahoi/view/story/create_story_view.dart';
 import 'package:mangxahoi/view/group_chat/qr_scanner_view.dart';
 import 'package:mangxahoi/view/group_chat/group_qr_code_view.dart';
-// ------------------------------
-
-// --- (A) THÊM IMPORT MỚI ---
 import 'package:mangxahoi/view/profile/friend_list_view.dart';
 import 'package:mangxahoi/view/profile/user_groups_view.dart';
-// -------------------------
+// --------------------------------
+
+// 🔥 IMPORT CHO PUSH NOTIFICATION
+import 'package:mangxahoi/notification/push_notification_service.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:mangxahoi/services/notification_badge_service.dart';
+import 'package:mangxahoi/viewmodel/notification_view_model.dart';
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  if (kIsWeb) {
-    await Firebase.initializeApp(
-      options: DefaultFirebaseOptions.currentPlatform,
-    );
-  } else {
-    await Firebase.initializeApp(
-      options: DefaultFirebaseOptions.currentPlatform,
-    );
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
+
+  // 🔥 Khởi tạo Push Notification Service (Lắng nghe events)
+  if (!kIsWeb) {
+    await PushNotificationService().initialize();
   }
 
   runApp(MyApp());
@@ -82,7 +85,8 @@ class MyApp extends StatefulWidget {
 }
 
 class _MyAppState extends State<MyApp> {
-  bool _hasInitializedCallService = false;
+  // Đổi tên biến để bao hàm cả CallService và FCM Token
+  bool _hasInitializedAppServices = false; 
 
   @override
   Widget build(BuildContext context) {
@@ -91,6 +95,8 @@ class _MyAppState extends State<MyApp> {
         ChangeNotifierProvider(create: (_) => FirestoreListener()),
         ChangeNotifierProvider(create: (_) => UserService()),
         ChangeNotifierProvider(create: (_) => VideoCacheManager()),
+        ChangeNotifierProvider(create: (_) => NotificationBadgeService()),
+        ChangeNotifierProvider(create: (_) => NotificationViewModel()),
         ChangeNotifierProvider(
           create: (_) => CallService(navigatorKey: navigatorKey),
         ),
@@ -101,12 +107,12 @@ class _MyAppState extends State<MyApp> {
       ],
       child: Consumer<UserService>(
         builder: (context, userService, _) {
-          // Khởi tạo call service khi user đã được tải
+          // Khởi tạo các service cần thiết khi user đã được tải và chưa khởi tạo
           if (userService.currentUser != null &&
               !userService.isLoading &&
-              !_hasInitializedCallService) {
+              !_hasInitializedAppServices) { // 🔥 Đã đổi tên biến
             WidgetsBinding.instance.addPostFrameCallback((_) {
-              _initCallService(context, userService);
+              _initAppServices(context, userService); // 🔥 Đã đổi tên hàm
             });
           }
 
@@ -125,6 +131,7 @@ class _MyAppState extends State<MyApp> {
               ),
             ),
             home: _buildHomeScreen(userService),
+            // ... (onGenerateRoute và routes giữ nguyên logic)
             onGenerateRoute: (settings) {
               switch (settings.name) {
                 case '/profile':
@@ -132,7 +139,6 @@ class _MyAppState extends State<MyApp> {
                   return MaterialPageRoute(
                     builder: (context) => ProfileView(userId: userId),
                   );
-
                 case '/create_post':
                   if (settings.arguments is UserModel) {
                     final user = settings.arguments as UserModel;
@@ -151,7 +157,6 @@ class _MyAppState extends State<MyApp> {
                     );
                   }
                   return _buildErrorRoute();
-
                 case '/edit_post':
                   if (settings.arguments is PostModel) {
                     final post = settings.arguments as PostModel;
@@ -160,7 +165,6 @@ class _MyAppState extends State<MyApp> {
                     );
                   }
                   return _buildErrorRoute();
-
                 case '/edit_profile':
                   if (settings.arguments is ProfileViewModel) {
                     final viewModel = settings.arguments as ProfileViewModel;
@@ -170,7 +174,6 @@ class _MyAppState extends State<MyApp> {
                     );
                   }
                   return _buildErrorRoute();
-
                 case '/about':
                   if (settings.arguments is Map<String, dynamic>) {
                     final args = settings.arguments as Map<String, dynamic>;
@@ -184,7 +187,6 @@ class _MyAppState extends State<MyApp> {
                     );
                   }
                   return _buildErrorRoute();
-
                 case '/chat':
                   if (settings.arguments is Map<String, dynamic>) {
                     final args = settings.arguments as Map<String, dynamic>;
@@ -200,7 +202,6 @@ class _MyAppState extends State<MyApp> {
                     }
                   }
                   return _buildErrorRoute();
-
                 case '/post_group':
                   if (settings.arguments is GroupModel) {
                     final group = settings.arguments as GroupModel;
@@ -209,7 +210,6 @@ class _MyAppState extends State<MyApp> {
                     );
                   }
                   return _buildErrorRoute();
-
                 case '/share_post':
                   if (settings.arguments is Map<String, dynamic>) {
                     final args = settings.arguments as Map<String, dynamic>;
@@ -225,7 +225,6 @@ class _MyAppState extends State<MyApp> {
                     }
                   }
                   return _buildErrorRoute();
-
                 case '/share_to_messenger':
                   if (settings.arguments is PostModel) {
                     final post = settings.arguments as PostModel;
@@ -235,7 +234,6 @@ class _MyAppState extends State<MyApp> {
                     );
                   }
                   return _buildErrorRoute();
-
                 case '/group_qr':
                   if (settings.arguments is Map<String, dynamic>) {
                     final args = settings.arguments as Map<String, dynamic>;
@@ -249,7 +247,6 @@ class _MyAppState extends State<MyApp> {
                     );
                   }
                   return _buildErrorRoute();
-
                 case '/post_detail':
                   if (settings.arguments is String) {
                     final postId = settings.arguments as String;
@@ -258,7 +255,6 @@ class _MyAppState extends State<MyApp> {
                     );
                   }
                   return _buildErrorRoute();
-
                 default:
                   return _buildErrorRoute();
               }
@@ -270,9 +266,9 @@ class _MyAppState extends State<MyApp> {
               '/search': (context) => const SearchView(),
               '/friends': (context) {
                 final arguments = ModalRoute.of(context)?.settings.arguments;
-                int initialIndex = 0; // Mặc định là tab 0
+                int initialIndex = 0;
                 if (arguments is int) {
-                  initialIndex = arguments; // Gán index nếu được truyền vào
+                  initialIndex = arguments;
                 }
                 return FriendsView(initialIndex: initialIndex);
               },
@@ -310,7 +306,7 @@ class _MyAppState extends State<MyApp> {
                     initialIndex: args['initialIndex'] ?? 0,
                   );
                 }
-                return _buildErrorWidget(); // <-- SỬA: Gọi Widget
+                return _buildErrorWidget();
               },
               '/user_groups': (context) {
                   final args = ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>;
@@ -324,14 +320,14 @@ class _MyAppState extends State<MyApp> {
                 if (args is String) {
                   return GroupManagementView(groupId: args);
                 }
-                return _buildErrorWidget(); // <-- SỬA: Gọi Widget
+                return _buildErrorWidget();
               },
               '/add_members': (context) {
                 final args = ModalRoute.of(context)!.settings.arguments;
                 if (args is String) {
                   return AddMembersView(groupId: args);
                 }
-                return _buildErrorWidget(); // <-- SỬA: Gọi Widget
+                return _buildErrorWidget();
               },
               '/create_story': (context) => const CreateStoryView(),
             },
@@ -341,12 +337,64 @@ class _MyAppState extends State<MyApp> {
     );
   }
 
+  // 🔥 HÀM MỚI: Khởi tạo tất cả các service (CallService, FCM Token)
+  Future<void> _initAppServices(
+      BuildContext context, UserService userService) async {
+    if (_hasInitializedAppServices || userService.currentUser == null) return;
+
+    if (!kIsWeb) {
+      try {
+        final currentUser = userService.currentUser!;
+        
+        // 1. Khởi tạo CallService
+        final callService = context.read<CallService>();
+        print("🚀 [MAIN] Đang init CallService...");
+        await ZegoExpressEngine.destroyEngine();
+        await callService.init(userService);
+        
+        // 2. LƯU FCM TOKEN (Quan trọng cho Push Notification)
+        await _saveUserFcmToken(currentUser.uid);
+
+        setState(() {
+          _hasInitializedAppServices = true;
+        });
+        print("✅ [MAIN] CallService & FCM Token đã init thành công");
+      } catch (e) {
+        print("❌ [MAIN] Lỗi khi init CallService/FCM: $e");
+      }
+    } else {
+      print("⚠️ [MAIN] Bỏ qua init CallService/FCM trên Web.");
+    }
+  }
+
+  // 🔥 HÀM MỚI: Lưu Token vào Firestore
+  Future<void> _saveUserFcmToken(String authUid) async {
+    String? token = await FirebaseMessaging.instance.getToken();
+    
+    if (token != null) {
+      // 1. Tìm Document User ID (DocId) bằng Auth UID
+      final userQuery = await FirebaseFirestore.instance
+          .collection('User')
+          .where('uid', isEqualTo: authUid)
+          .limit(1)
+          .get();
+
+      if (userQuery.docs.isNotEmpty) {
+        final docId = userQuery.docs.first.id;
+        // 2. Cập nhật token vào Firestore
+        await FirebaseFirestore.instance.collection('User').doc(docId).update({
+          'fcmToken': token, 
+        }).catchError((e) => print("❌ Lỗi update FCM Token: $e"));
+      }
+    }
+  }
+
+
   Widget _buildHomeScreen(UserService userService) {
     print('🔍 [MyApp] Building home screen:');
     print('🔍 [MyApp] - isLoading: ${userService.isLoading}');
     print('🔍 [MyApp] - currentUser: ${userService.currentUser?.name}');
 
-    // Đang loading
     if (userService.isLoading) {
       return const Scaffold(
         body: Center(
@@ -362,61 +410,34 @@ class _MyAppState extends State<MyApp> {
       );
     }
 
-    // Đã có user -> HomeView
     if (userService.currentUser != null) {
       print('✅ [MyApp] Đã có user, chuyển đến HomeView');
       return const HomeView();
     }
 
-    // Không có user -> LoginView
     print('🔐 [MyApp] Chưa có user, chuyển đến LoginView');
     return const LoginView();
   }
 
   // --- (C) TÁCH WIDGET LỖI RA ĐÂY ---
-  /// Trả về một Widget lỗi (dùng cho 'routes')
   Widget _buildErrorWidget() {
-    return Scaffold( // <-- SỬA: Bỏ 'const'
-      appBar: AppBar(title: const Text('Lỗi')), // Thêm AppBar
-      body: const Center( // Thêm const
-        child: Text('Lỗi: Không thể tải trang'), // Thêm const
+    return Scaffold(
+      appBar: AppBar(title: const Text('Lỗi')),
+      body: const Center(
+        child: Text('Lỗi: Không thể tải trang'),
       ),
     );
   }
 
-  /// Trả về một Route lỗi (dùng cho 'onGenerateRoute')
   MaterialPageRoute _buildErrorRoute() {
     return MaterialPageRoute(
-      builder: (context) => _buildErrorWidget(), // Gọi lại widget lỗi
+      builder: (context) => _buildErrorWidget(),
     );
   }
   // ---------------------------------
 
-  Future<void> _initCallService(
-      BuildContext context, UserService userService) async {
-    if (_hasInitializedCallService) return;
-
-    if (!kIsWeb) {
-      try {
-        final callService = context.read<CallService>();
-        print("🚀 [MAIN] Đang init CallService...");
-        await ZegoExpressEngine.destroyEngine();
-        await callService.init(userService);
-        setState(() {
-          _hasInitializedCallService = true;
-        });
-        print("✅ [MAIN] CallService đã được init thành công");
-      } catch (e) {
-        print("❌ [MAIN] Lỗi khi init CallService: $e");
-      }
-    } else {
-      print("⚠️ [MAIN] Bỏ qua init CallService trên Web.");
-    }
-  }
-
   @override
   void dispose() {
-    // Cleanup khi app bị dispose
     if (!kIsWeb) {
       ZegoExpressEngine.destroyEngine();
     }
