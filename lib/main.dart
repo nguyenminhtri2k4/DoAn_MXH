@@ -45,33 +45,30 @@ import 'package:mangxahoi/view/group_chat/group_management_view.dart';
 import 'package:mangxahoi/view/locket/locket_trash_view.dart';
 import 'package:mangxahoi/constant/app_colors.dart';
 
-// --- THÊM CÁC IMPORT STORY ---
 import 'package:mangxahoi/view/story/create_story_view.dart';
 import 'package:mangxahoi/view/group_chat/qr_scanner_view.dart';
 import 'package:mangxahoi/view/group_chat/group_qr_code_view.dart';
-// ------------------------------
-
-// --- (A) THÊM IMPORT MỚI ---
 import 'package:mangxahoi/view/profile/friend_list_view.dart';
 import 'package:mangxahoi/view/profile/user_groups_view.dart';
-// -------------------------
+
+import 'package:mangxahoi/notification/push_notification_service.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:mangxahoi/services/notification_badge_service.dart';
+import 'package:mangxahoi/viewmodel/notification_view_model.dart';
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  if (kIsWeb) {
-    await Firebase.initializeApp(
-      options: DefaultFirebaseOptions.currentPlatform,
-    );
-  } else {
-    await Firebase.initializeApp(
-      options: DefaultFirebaseOptions.currentPlatform,
-    );
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+
+  if (!kIsWeb) {
+    await PushNotificationService().initialize();
   }
 
-  runApp(MyApp());
+  runApp(const MyApp());
 }
 
 class MyApp extends StatefulWidget {
@@ -82,7 +79,7 @@ class MyApp extends StatefulWidget {
 }
 
 class _MyAppState extends State<MyApp> {
-  bool _hasInitializedCallService = false;
+  bool _hasInitializedAppServices = false;
 
   @override
   Widget build(BuildContext context) {
@@ -91,6 +88,8 @@ class _MyAppState extends State<MyApp> {
         ChangeNotifierProvider(create: (_) => FirestoreListener()),
         ChangeNotifierProvider(create: (_) => UserService()),
         ChangeNotifierProvider(create: (_) => VideoCacheManager()),
+        ChangeNotifierProvider(create: (_) => NotificationBadgeService()),
+        ChangeNotifierProvider(create: (_) => NotificationViewModel()),
         ChangeNotifierProvider(
           create: (_) => CallService(navigatorKey: navigatorKey),
         ),
@@ -101,12 +100,11 @@ class _MyAppState extends State<MyApp> {
       ],
       child: Consumer<UserService>(
         builder: (context, userService, _) {
-          // Khởi tạo call service khi user đã được tải
           if (userService.currentUser != null &&
               !userService.isLoading &&
-              !_hasInitializedCallService) {
+              !_hasInitializedAppServices) {
             WidgetsBinding.instance.addPostFrameCallback((_) {
-              _initCallService(context, userService);
+              _initAppServices(context, userService);
             });
           }
 
@@ -125,6 +123,7 @@ class _MyAppState extends State<MyApp> {
               ),
             ),
             home: _buildHomeScreen(userService),
+
             onGenerateRoute: (settings) {
               switch (settings.name) {
                 case '/profile':
@@ -141,13 +140,11 @@ class _MyAppState extends State<MyApp> {
                     );
                   } else if (settings.arguments is Map<String, dynamic>) {
                     final args = settings.arguments as Map<String, dynamic>;
-                    final user = args['currentUser'] as UserModel;
-                    final groupId = args['groupId'] as String?;
                     return MaterialPageRoute(
                       builder:
                           (context) => CreatePostView(
-                            currentUser: user,
-                            groupId: groupId,
+                            currentUser: args['currentUser'],
+                            groupId: args['groupId'],
                           ),
                     );
                   }
@@ -155,19 +152,22 @@ class _MyAppState extends State<MyApp> {
 
                 case '/edit_post':
                   if (settings.arguments is PostModel) {
-                    final post = settings.arguments as PostModel;
                     return MaterialPageRoute(
-                      builder: (context) => EditPostView(post: post),
+                      builder:
+                          (context) => EditPostView(
+                            post: settings.arguments as PostModel,
+                          ),
                     );
                   }
                   return _buildErrorRoute();
 
                 case '/edit_profile':
                   if (settings.arguments is ProfileViewModel) {
-                    final viewModel = settings.arguments as ProfileViewModel;
                     return MaterialPageRoute(
                       builder:
-                          (context) => EditProfileView(viewModel: viewModel),
+                          (context) => EditProfileView(
+                            viewModel: settings.arguments as ProfileViewModel,
+                          ),
                     );
                   }
                   return _buildErrorRoute();
@@ -175,13 +175,11 @@ class _MyAppState extends State<MyApp> {
                 case '/about':
                   if (settings.arguments is Map<String, dynamic>) {
                     final args = settings.arguments as Map<String, dynamic>;
-                    final viewModel = args['viewModel'] as ProfileViewModel;
-                    final isCurrentUser = args['isCurrentUser'] as bool;
                     return MaterialPageRoute(
                       builder:
                           (context) => AboutView(
-                            viewModel: viewModel,
-                            isCurrentUser: isCurrentUser,
+                            viewModel: args['viewModel'],
+                            isCurrentUser: args['isCurrentUser'],
                           ),
                     );
                   }
@@ -190,23 +188,23 @@ class _MyAppState extends State<MyApp> {
                 case '/chat':
                   if (settings.arguments is Map<String, dynamic>) {
                     final args = settings.arguments as Map<String, dynamic>;
-                    final chatId = args['chatId'] as String?;
-                    final chatName = args['chatName'] as String?;
-                    if (chatId != null && chatName != null) {
-                      return MaterialPageRoute(
-                        builder:
-                            (context) =>
-                                ChatView(chatId: chatId, chatName: chatName),
-                      );
-                    }
+                    return MaterialPageRoute(
+                      builder:
+                          (context) => ChatView(
+                            chatId: args['chatId'],
+                            chatName: args['chatName'],
+                          ),
+                    );
                   }
                   return _buildErrorRoute();
 
                 case '/post_group':
                   if (settings.arguments is GroupModel) {
-                    final group = settings.arguments as GroupModel;
                     return MaterialPageRoute(
-                      builder: (context) => PostGroupView(group: group),
+                      builder:
+                          (context) => PostGroupView(
+                            group: settings.arguments as GroupModel,
+                          ),
                     );
                   }
                   return _buildErrorRoute();
@@ -214,26 +212,23 @@ class _MyAppState extends State<MyApp> {
                 case '/share_post':
                   if (settings.arguments is Map<String, dynamic>) {
                     final args = settings.arguments as Map<String, dynamic>;
-                    final originalPost = args['originalPost'] as PostModel?;
-                    final currentUser = args['currentUser'] as UserModel?;
-                    if (originalPost != null && currentUser != null) {
-                      return MaterialPageRoute(
-                        builder:
-                            (context) => SharePostView(
-                              originalPost: originalPost,
-                              currentUser: currentUser,
-                            ),
-                      );
-                    }
+                    return MaterialPageRoute(
+                      builder:
+                          (context) => SharePostView(
+                            originalPost: args['originalPost'],
+                            currentUser: args['currentUser'],
+                          ),
+                    );
                   }
                   return _buildErrorRoute();
 
                 case '/share_to_messenger':
                   if (settings.arguments is PostModel) {
-                    final post = settings.arguments as PostModel;
                     return MaterialPageRoute(
                       builder:
-                          (context) => ShareToMessengerView(postToShare: post),
+                          (context) => ShareToMessengerView(
+                            postToShare: settings.arguments as PostModel,
+                          ),
                     );
                   }
                   return _buildErrorRoute();
@@ -241,13 +236,11 @@ class _MyAppState extends State<MyApp> {
                 case '/group_qr':
                   if (settings.arguments is Map<String, dynamic>) {
                     final args = settings.arguments as Map<String, dynamic>;
-                    final group = args['group'] as GroupModel;
-                    final userName = args['userName'] as String;
                     return MaterialPageRoute(
                       builder:
                           (context) => GroupQRCodeView(
-                            group: group,
-                            currentUserName: userName,
+                            group: args['group'],
+                            currentUserName: args['userName'],
                           ),
                     );
                   }
@@ -255,9 +248,11 @@ class _MyAppState extends State<MyApp> {
 
                 case '/post_detail':
                   if (settings.arguments is String) {
-                    final postId = settings.arguments as String;
                     return MaterialPageRoute(
-                      builder: (context) => PostDetailView(postId: postId),
+                      builder:
+                          (context) => PostDetailView(
+                            postId: settings.arguments as String,
+                          ),
                     );
                   }
                   return _buildErrorRoute();
@@ -266,6 +261,7 @@ class _MyAppState extends State<MyApp> {
                   return _buildErrorRoute();
               }
             },
+
             routes: {
               '/login': (context) => const LoginView(),
               '/register': (context) => const RegisterView(),
@@ -273,20 +269,14 @@ class _MyAppState extends State<MyApp> {
               '/search': (context) => const SearchView(),
               '/search-results': (context) => const SearchResultsView(),
               '/friends': (context) {
-                final arguments = ModalRoute.of(context)?.settings.arguments;
-                int initialIndex = 0; // Mặc định là tab 0
-                if (arguments is int) {
-                  initialIndex = arguments; // Gán index nếu được truyền vào
-                }
-                return FriendsView(initialIndex: initialIndex);
+                final args = ModalRoute.of(context)?.settings.arguments;
+                return FriendsView(initialIndex: args is int ? args : 0);
               },
               '/friend_list': (context) {
                 final args =
                     ModalRoute.of(context)!.settings.arguments
                         as Map<String, dynamic>?;
-                if (args != null &&
-                    args['userId'] != null &&
-                    args['userName'] != null) {
+                if (args != null) {
                   return FriendListView(
                     userId: args['userId'],
                     userName: args['userName'],
@@ -316,7 +306,7 @@ class _MyAppState extends State<MyApp> {
                     initialIndex: args['initialIndex'] ?? 0,
                   );
                 }
-                return _buildErrorWidget(); // <-- SỬA: Gọi Widget
+                return _buildErrorWidget();
               },
               '/user_groups': (context) {
                 final args =
@@ -332,14 +322,14 @@ class _MyAppState extends State<MyApp> {
                 if (args is String) {
                   return GroupManagementView(groupId: args);
                 }
-                return _buildErrorWidget(); // <-- SỬA: Gọi Widget
+                return _buildErrorWidget();
               },
               '/add_members': (context) {
                 final args = ModalRoute.of(context)!.settings.arguments;
                 if (args is String) {
                   return AddMembersView(groupId: args);
                 }
-                return _buildErrorWidget(); // <-- SỬA: Gọi Widget
+                return _buildErrorWidget();
               },
               '/create_story': (context) => const CreateStoryView(),
             },
@@ -349,12 +339,50 @@ class _MyAppState extends State<MyApp> {
     );
   }
 
-  Widget _buildHomeScreen(UserService userService) {
-    print('🔍 [MyApp] Building home screen:');
-    print('🔍 [MyApp] - isLoading: ${userService.isLoading}');
-    print('🔍 [MyApp] - currentUser: ${userService.currentUser?.name}');
+  Future<void> _initAppServices(
+    BuildContext context,
+    UserService userService,
+  ) async {
+    if (_hasInitializedAppServices || userService.currentUser == null) return;
 
-    // Đang loading
+    if (!kIsWeb) {
+      try {
+        final currentUser = userService.currentUser!;
+
+        final callService = context.read<CallService>();
+        await ZegoExpressEngine.destroyEngine();
+        await callService.init(userService);
+
+        await _saveUserFcmToken(currentUser.uid);
+
+        setState(() {
+          _hasInitializedAppServices = true;
+        });
+      } catch (e) {
+        print("Lỗi khi init app services: $e");
+      }
+    }
+  }
+
+  Future<void> _saveUserFcmToken(String authUid) async {
+    String? token = await FirebaseMessaging.instance.getToken();
+
+    final userQuery =
+        await FirebaseFirestore.instance
+            .collection('User')
+            .where('uid', isEqualTo: authUid)
+            .limit(1)
+            .get();
+
+    if (userQuery.docs.isNotEmpty) {
+      final docId = userQuery.docs.first.id;
+      await FirebaseFirestore.instance.collection('User').doc(docId).update({
+        'fcmToken': token,
+      });
+    }
+  }
+
+  Widget _buildHomeScreen(UserService userService) {
     if (userService.isLoading) {
       return const Scaffold(
         body: Center(
@@ -370,65 +398,26 @@ class _MyAppState extends State<MyApp> {
       );
     }
 
-    // Đã có user -> HomeView
     if (userService.currentUser != null) {
-      print('✅ [MyApp] Đã có user, chuyển đến HomeView');
       return const HomeView();
     }
 
-    // Không có user -> LoginView
-    print('🔐 [MyApp] Chưa có user, chuyển đến LoginView');
     return const LoginView();
   }
 
-  // --- (C) TÁCH WIDGET LỖI RA ĐÂY ---
-  /// Trả về một Widget lỗi (dùng cho 'routes')
   Widget _buildErrorWidget() {
     return Scaffold(
-      // <-- SỬA: Bỏ 'const'
-      appBar: AppBar(title: const Text('Lỗi')), // Thêm AppBar
-      body: const Center(
-        // Thêm const
-        child: Text('Lỗi: Không thể tải trang'), // Thêm const
-      ),
+      appBar: AppBar(title: const Text('Lỗi')),
+      body: const Center(child: Text('Lỗi: Không thể tải trang')),
     );
   }
 
-  /// Trả về một Route lỗi (dùng cho 'onGenerateRoute')
   MaterialPageRoute _buildErrorRoute() {
-    return MaterialPageRoute(
-      builder: (context) => _buildErrorWidget(), // Gọi lại widget lỗi
-    );
-  }
-  // ---------------------------------
-
-  Future<void> _initCallService(
-    BuildContext context,
-    UserService userService,
-  ) async {
-    if (_hasInitializedCallService) return;
-
-    if (!kIsWeb) {
-      try {
-        final callService = context.read<CallService>();
-        print("🚀 [MAIN] Đang init CallService...");
-        await ZegoExpressEngine.destroyEngine();
-        await callService.init(userService);
-        setState(() {
-          _hasInitializedCallService = true;
-        });
-        print("✅ [MAIN] CallService đã được init thành công");
-      } catch (e) {
-        print("❌ [MAIN] Lỗi khi init CallService: $e");
-      }
-    } else {
-      print("⚠️ [MAIN] Bỏ qua init CallService trên Web.");
-    }
+    return MaterialPageRoute(builder: (context) => _buildErrorWidget());
   }
 
   @override
   void dispose() {
-    // Cleanup khi app bị dispose
     if (!kIsWeb) {
       ZegoExpressEngine.destroyEngine();
     }
