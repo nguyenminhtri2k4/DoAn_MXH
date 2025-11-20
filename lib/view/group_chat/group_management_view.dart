@@ -10,6 +10,7 @@ import 'package:mangxahoi/services/user_service.dart';
 import 'package:intl/intl.dart';
 import 'package:mangxahoi/view/group_chat/group_qr_code_view.dart';
 import 'package:mangxahoi/view/group_chat/group_members_list_view.dart';
+import 'package:mangxahoi/view/group_chat/group_disbanded_view.dart';
 
 class GroupManagementView extends StatelessWidget {
   final String groupId;
@@ -26,7 +27,15 @@ class GroupManagementView extends StatelessWidget {
             groupId: groupId,
             currentUserId: currentUserId,
           ),
-      child: const _GroupManagementContent(),
+      //child: const _GroupManagementContent(),
+      child: Consumer<GroupManagementViewModel>(
+        builder: (context, vm, _) {
+          if (!vm.isLoading && vm.group?.status == 'deleted') {
+            return GroupDisbandedView(groupId: groupId);
+          }
+          return const _GroupManagementContent();
+        },
+      ),
     );
   }
 }
@@ -1561,7 +1570,7 @@ class _GroupManagementContent extends StatelessWidget {
     showDialog(
       context: context,
       builder:
-          (context) => AlertDialog(
+          (dialogContext) => AlertDialog(
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(16),
             ),
@@ -1572,19 +1581,33 @@ class _GroupManagementContent extends StatelessWidget {
                 Text('Giải tán nhóm'),
               ],
             ),
-            content: const Text(
-              'Bạn có chắc chắn muốn giải tán nhóm này? Tất cả dữ liệu sẽ bị xóa vĩnh viễn.',
-            ),
+            content: const Text('Bạn có chắc chắn muốn giải tán nhóm này?'),
             actions: [
               TextButton(
-                onPressed: () => Navigator.pop(context),
+                onPressed: () => Navigator.pop(dialogContext),
                 child: Text('Hủy', style: TextStyle(color: Colors.grey[700])),
               ),
               ElevatedButton(
-                onPressed: () {
-                  vm.disbandGroup();
-                  Navigator.pop(context);
-                  Navigator.pop(context);
+                onPressed: () async {
+                  final scaffoldContext = context;
+                  Navigator.pop(dialogContext);
+                  showDialog(
+                    context: scaffoldContext,
+                    barrierDismissible: false,
+                    builder:
+                        (loadingContext) =>
+                            const Center(child: CircularProgressIndicator()),
+                  );
+                  await vm.disbandGroup();
+                  Navigator.pop(scaffoldContext);
+                  Navigator.pop(scaffoldContext);
+                  Navigator.pop(scaffoldContext);
+                  ScaffoldMessenger.of(scaffoldContext).showSnackBar(
+                    const SnackBar(
+                      content: Text('Đã giải tán nhóm thành công'),
+                      backgroundColor: Colors.green,
+                    ),
+                  );
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.red,

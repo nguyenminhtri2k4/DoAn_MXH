@@ -18,7 +18,6 @@ class GroupManagementViewModel extends ChangeNotifier {
   List<UserModel> members = [];
   Set<String> mutedMembers = {};
 
-  // ✅ THÊM BIẾN NÀY
   UserModel? currentUser;
 
   bool isLoading = true;
@@ -37,7 +36,6 @@ class GroupManagementViewModel extends ChangeNotifier {
       await _loadMembers();
       await _loadMutedMembers();
 
-      // ✅ SỬA DÒNG NÀY: Kiểm tra null trước khi gọi
       if (currentUserId != null) {
         currentUser = await _userRequest.getUserData(currentUserId!);
       }
@@ -89,7 +87,6 @@ class GroupManagementViewModel extends ChangeNotifier {
     }
   }
 
-  // Check permissions
   bool get isOwner => group?.ownerId == currentUserId;
   bool get isManager => group?.managers.contains(currentUserId) ?? false;
   bool get canEdit => isOwner || isManager;
@@ -97,7 +94,7 @@ class GroupManagementViewModel extends ChangeNotifier {
   bool get canInviteMembers {
     if (isOwner || isManager) return true;
     if (isPrivate) return false;
-    return true; // Public group, anyone can invite
+    return true;
   }
 
   bool get isPrivate => group?.status == 'private';
@@ -109,7 +106,6 @@ class GroupManagementViewModel extends ChangeNotifier {
     return 'all';
   }
 
-  // Update group name
   Future<void> updateGroupName(String newName) async {
     if (newName.isEmpty || !canEdit) return;
 
@@ -125,7 +121,6 @@ class GroupManagementViewModel extends ChangeNotifier {
     }
   }
 
-  // Update group description
   Future<void> updateGroupDescription(String newDescription) async {
     if (!canEdit) return;
 
@@ -141,7 +136,6 @@ class GroupManagementViewModel extends ChangeNotifier {
     }
   }
 
-  // Update cover image
   Future<void> updateCoverImage(BuildContext context) async {
     if (!canEdit) return;
 
@@ -150,7 +144,6 @@ class GroupManagementViewModel extends ChangeNotifier {
       final XFile? image = await picker.pickImage(source: ImageSource.gallery);
 
       if (image != null && currentUserId != null) {
-        // Show loading
         showDialog(
           context: context,
           barrierDismissible: false,
@@ -158,7 +151,6 @@ class GroupManagementViewModel extends ChangeNotifier {
               (context) => const Center(child: CircularProgressIndicator()),
         );
 
-        // Upload image
         final files = [File(image.path)];
         final mediaIds = await _storageRequest.uploadFilesAndCreateMedia(
           files,
@@ -166,14 +158,12 @@ class GroupManagementViewModel extends ChangeNotifier {
         );
 
         if (mediaIds.isNotEmpty) {
-          // Get media URL
           final mediaDoc =
               await _firestore.collection('Media').doc(mediaIds.first).get();
 
           if (mediaDoc.exists) {
             final imageUrl = mediaDoc.data()?['url'] ?? '';
 
-            // Update group
             await _firestore.collection('Group').doc(groupId).update({
               'coverImage': imageUrl,
             });
@@ -183,7 +173,6 @@ class GroupManagementViewModel extends ChangeNotifier {
           }
         }
 
-        // Hide loading
         if (context.mounted) Navigator.pop(context);
       }
     } catch (e) {
@@ -192,7 +181,6 @@ class GroupManagementViewModel extends ChangeNotifier {
     }
   }
 
-  // Toggle privacy
   Future<void> togglePrivacy(bool isPrivate) async {
     if (!isOwner) return;
 
@@ -210,21 +198,18 @@ class GroupManagementViewModel extends ChangeNotifier {
     }
   }
 
-  // Update messaging permission
   Future<void> updateMessagingPermission(String permission) async {
     if (!canEdit) return;
 
     try {
       String newSettings = group?.settings ?? '';
 
-      // Remove old messaging settings
       newSettings = newSettings
           .replaceAll('messaging:owner', '')
           .replaceAll('messaging:managers', '')
           .replaceAll('messaging:all', '')
           .replaceAll(',,', ',');
 
-      // Add new setting
       if (permission != 'all') {
         newSettings += ',messaging:$permission';
       }
@@ -240,7 +225,6 @@ class GroupManagementViewModel extends ChangeNotifier {
     }
   }
 
-  // Promote to manager
   Future<void> promoteToManager(String userId) async {
     if (!isOwner) return;
 
@@ -256,7 +240,6 @@ class GroupManagementViewModel extends ChangeNotifier {
     }
   }
 
-  // Demote from manager
   Future<void> demoteFromManager(String userId) async {
     if (!isOwner) return;
 
@@ -272,7 +255,6 @@ class GroupManagementViewModel extends ChangeNotifier {
     }
   }
 
-  // Toggle mute member
   Future<void> toggleMuteMember(String userId) async {
     if (!canManageMembers) return;
 
@@ -297,7 +279,6 @@ class GroupManagementViewModel extends ChangeNotifier {
     }
   }
 
-  // Remove member
   Future<void> removeMember(String userId) async {
     if (!canManageMembers) return;
 
@@ -306,7 +287,6 @@ class GroupManagementViewModel extends ChangeNotifier {
         'members': FieldValue.arrayRemove([userId]),
       });
 
-      // Also remove from managers if applicable
       if (group?.managers.contains(userId) ?? false) {
         await _firestore.collection('Group').doc(groupId).update({
           'managers': FieldValue.arrayRemove([userId]),
@@ -321,17 +301,23 @@ class GroupManagementViewModel extends ChangeNotifier {
     }
   }
 
-  // Disband group
   Future<void> disbandGroup() async {
-    if (!isOwner) return;
+    if (!isOwner || currentUserId == null) return;
 
     try {
-      // Update group status to deleted
+      print('🔥 [GroupManagementVM] Bắt đầu giải tán nhóm $groupId');
       await _firestore.collection('Group').doc(groupId).update({
         'status': 'deleted',
+        'managers': FieldValue.arrayRemove([currentUserId!]),
+        'members': FieldValue.arrayRemove([currentUserId!]),
       });
-
-      // Delete group chat if exists
+      print(
+        '   ✓ Đã đổi status thành deleted và xóa owner khỏi managers/members',
+      );
+      await _firestore.collection('User').doc(currentUserId).update({
+        'groups': FieldValue.arrayRemove([groupId]),
+      });
+      print('   ✓ Đã xóa groupId khỏi User collection của owner');
       final chatQuery =
           await _firestore
               .collection('Chat')
@@ -341,13 +327,15 @@ class GroupManagementViewModel extends ChangeNotifier {
       for (var doc in chatQuery.docs) {
         await doc.reference.delete();
       }
+      print('   ✓ Đã xóa ${chatQuery.docs.length} chat documents');
+
+      print('✅ [GroupManagementVM] Giải tán nhóm thành công');
     } catch (e) {
-      print('Error disbanding group: $e');
+      print('❌ [GroupManagementVM] Lỗi khi giải tán nhóm: $e');
     }
   }
 }
 
-// Extension to help with copying GroupModel
 extension GroupModelCopyWith on GroupModel {
   GroupModel copyWith({String? name, String? description, String? coverImage}) {
     return GroupModel(

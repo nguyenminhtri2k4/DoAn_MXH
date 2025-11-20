@@ -4,6 +4,7 @@ import 'package:mangxahoi/request/group_request.dart';
 import 'package:mangxahoi/request/user_request.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:mangxahoi/constant/app_colors.dart';
+import 'package:mangxahoi/view/group_chat/group_status_check_widget.dart';
 
 class GroupMembersView extends StatefulWidget {
   final String groupId;
@@ -63,96 +64,94 @@ class _GroupMembersViewState extends State<GroupMembersView> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: AppBar(
-        title: const Text(
-          "Thành viên nhóm",
-          style: TextStyle(fontWeight: FontWeight.bold),
+    return GroupStatusCheckWidget(
+      groupId: widget.groupId,
+      child: Scaffold(
+        backgroundColor: AppColors.background,
+        appBar: AppBar(
+          title: const Text(
+            "Thành viên nhóm",
+            style: TextStyle(fontWeight: FontWeight.bold),
+          ),
+          backgroundColor: Colors.white,
+          foregroundColor: Colors.black,
+          elevation: 0,
         ),
-        backgroundColor: Colors.white,
-        foregroundColor: Colors.black,
-        elevation: 0,
-      ),
-
-      body:
-          _loading
-              ? const Center(child: CircularProgressIndicator())
-              : Column(
-                children: [
-                  // ==== Ô tìm kiếm ====
-                  Padding(
-                    padding: const EdgeInsets.all(12),
-                    child: TextField(
-                      decoration: InputDecoration(
-                        hintText: "Tìm thành viên...",
-                        prefixIcon: const Icon(Icons.search),
-                        filled: true,
-                        fillColor: Colors.grey.shade200,
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(30),
-                          borderSide: BorderSide.none,
+        body:
+            _loading
+                ? const Center(child: CircularProgressIndicator())
+                : Column(
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.all(12),
+                      child: TextField(
+                        decoration: InputDecoration(
+                          hintText: "Tìm thành viên...",
+                          prefixIcon: const Icon(Icons.search),
+                          filled: true,
+                          fillColor: Colors.grey.shade200,
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(30),
+                            borderSide: BorderSide.none,
+                          ),
                         ),
+                        onChanged: _filterSearch,
                       ),
-                      onChanged: _filterSearch,
                     ),
-                  ),
-
-                  // ==== Phần đếm số thành viên ====
-                  Container(
-                    padding: const EdgeInsets.all(16),
-                    color: Colors.white,
-                    child: Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            color: AppColors.primary.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Icon(
-                            Icons.group,
-                            color: AppColors.primary,
-                            size: 20,
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Text(
-                          '${_filteredMembers.length} thành viên',
-                          style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  Expanded(
-                    child:
-                        _filteredMembers.isEmpty
-                            ? const Center(
-                              child: Text("Không tìm thấy thành viên"),
-                            )
-                            : ListView.builder(
-                              padding: const EdgeInsets.all(12),
-                              itemCount: _filteredMembers.length,
-                              itemBuilder: (context, index) {
-                                return Padding(
-                                  padding: const EdgeInsets.only(bottom: 12),
-                                  child: _buildMemberCard(
-                                    _filteredMembers[index],
-                                  ),
-                                );
-                              },
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      color: Colors.white,
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: AppColors.primary.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(8),
                             ),
-                  ),
-                ],
-              ),
+                            child: Icon(
+                              Icons.group,
+                              color: AppColors.primary,
+                              size: 20,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Text(
+                            '${_filteredMembers.length} thành viên',
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    Expanded(
+                      child:
+                          _filteredMembers.isEmpty
+                              ? const Center(
+                                child: Text("Không tìm thấy thành viên"),
+                              )
+                              : ListView.builder(
+                                padding: const EdgeInsets.all(12),
+                                itemCount: _filteredMembers.length,
+                                itemBuilder: (context, index) {
+                                  return Padding(
+                                    padding: const EdgeInsets.only(bottom: 12),
+                                    child: _buildMemberCard(
+                                      _filteredMembers[index],
+                                    ),
+                                  );
+                                },
+                              ),
+                    ),
+                  ],
+                ),
+      ),
     );
   }
 
-  // ====== CARD THÀNH VIÊN (giống y FriendListView) ======
   Widget _buildMemberCard(UserModel user) {
     final hasAvatar = user.avatar.isNotEmpty;
 
@@ -179,7 +178,6 @@ class _GroupMembersViewState extends State<GroupMembersView> {
             padding: const EdgeInsets.all(16),
             child: Row(
               children: [
-                // ==== Avatar ====
                 Container(
                   width: 72,
                   height: 72,
@@ -222,8 +220,6 @@ class _GroupMembersViewState extends State<GroupMembersView> {
                 ),
 
                 const SizedBox(width: 16),
-
-                // ==== Thông tin ====
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -238,8 +234,6 @@ class _GroupMembersViewState extends State<GroupMembersView> {
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
-
-                      // ==== BIO ====
                       if (user.bio.isNotEmpty && user.bio != "No") ...[
                         const SizedBox(height: 8),
                         Row(
@@ -268,7 +262,6 @@ class _GroupMembersViewState extends State<GroupMembersView> {
                   ),
                 ),
 
-                // Mũi tên
                 Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(

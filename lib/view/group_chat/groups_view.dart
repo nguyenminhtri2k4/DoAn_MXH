@@ -1,11 +1,11 @@
-
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:mangxahoi/viewmodel/groups_viewmodel.dart';
 import 'package:mangxahoi/model/model_group.dart';
 import 'package:mangxahoi/request/chat_request.dart';
 import 'package:mangxahoi/constant/app_colors.dart';
-import 'package:cached_network_image/cached_network_image.dart'; // <-- THÊM IMPORT NÀY
+import 'package:cached_network_image/cached_network_image.dart';
+import 'package:mangxahoi/view/group_chat/group_disbanded_view.dart';
 
 class GroupsView extends StatelessWidget {
   const GroupsView({super.key});
@@ -89,26 +89,33 @@ class _GroupsViewContent extends StatelessWidget {
                 ),
               ),
             ),
-            body: snapshot.connectionState == ConnectionState.waiting
-                ? const Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
+            body:
+                snapshot.connectionState == ConnectionState.waiting
+                    ? const Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          CircularProgressIndicator(),
+                          SizedBox(height: 16),
+                          Text(
+                            'Đang tải danh sách nhóm...',
+                            style: TextStyle(color: Colors.grey, fontSize: 14),
+                          ),
+                        ],
+                      ),
+                    )
+                    : TabBarView(
                       children: [
-                        CircularProgressIndicator(),
-                        SizedBox(height: 16),
-                        Text(
-                          'Đang tải danh sách nhóm...',
-                          style: TextStyle(color: Colors.grey, fontSize: 14),
+                        _GroupsList(
+                          type: 'chat',
+                          allGroups: snapshot.data ?? [],
+                        ),
+                        _GroupsList(
+                          type: 'post',
+                          allGroups: snapshot.data ?? [],
                         ),
                       ],
                     ),
-                  )
-                : TabBarView(
-                    children: [
-                      _GroupsList(type: 'chat', allGroups: snapshot.data ?? []),
-                      _GroupsList(type: 'post', allGroups: snapshot.data ?? []),
-                    ],
-                  ),
             floatingActionButton: FloatingActionButton.extended(
               onPressed: () => Navigator.pushNamed(context, '/create_group'),
               backgroundColor: AppColors.primary,
@@ -135,7 +142,6 @@ class _GroupsList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Lọc nhóm theo type
     final groups = allGroups.where((g) => g.type == type).toList();
 
     if (groups.isEmpty) {
@@ -177,17 +183,13 @@ class _GroupsList extends StatelessWidget {
           const SizedBox(height: 8),
           Text(
             'Nhấn nút "Tạo nhóm" để bắt đầu',
-            style: TextStyle(
-              fontSize: 14,
-              color: Colors.grey[500],
-            ),
+            style: TextStyle(fontSize: 14, color: Colors.grey[500]),
           ),
         ],
       ),
     );
   }
 
-  // --- HÀM MỚI ĐỂ HIỂN THỊ ICON MẶC ĐỊNH ---
   Widget _buildDefaultIcon(String type) {
     return Icon(
       type == 'chat' ? Icons.chat_bubble : Icons.article,
@@ -197,16 +199,20 @@ class _GroupsList extends StatelessWidget {
   }
 
   Widget _buildGroupCard(BuildContext context, GroupModel group) {
-    // Kiểm tra xem có ảnh bìa không
     final bool hasCoverImage = group.coverImage.isNotEmpty;
-    
+    final bool isDeleted = group.status == 'deleted';
+
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
+        border:
+            isDeleted
+                ? Border.all(color: Colors.red.withOpacity(0.5), width: 2)
+                : null,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.04),
+            color: (isDeleted ? Colors.red : Colors.black).withOpacity(0.04),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -221,104 +227,184 @@ class _GroupsList extends StatelessWidget {
             padding: const EdgeInsets.all(16),
             child: Row(
               children: [
-                
-                // --- SỬA ĐỔI PHẦN AVATAR/ICON NHÓM ---
-                Container(
-                  width: 56,
-                  height: 56,
-                  decoration: BoxDecoration(
-                    // Chỉ hiện gradient nếu KHÔNG có ảnh
-                    gradient: !hasCoverImage
-                        ? LinearGradient(
-                            colors: type == 'chat'
-                                ? [Colors.blue[400]!, Colors.blue[600]!]
-                                : [Colors.purple[400]!, Colors.purple[600]!],
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                          )
-                        : null,
-                    // Màu nền xám cho lúc tải ảnh
-                    color: Colors.grey[200],
-                    borderRadius: BorderRadius.circular(14),
-                    boxShadow: [
-                      BoxShadow(
-                        color: (type == 'chat' ? Colors.blue : Colors.purple)
-                            .withOpacity(0.3),
-                        blurRadius: 8,
-                        offset: const Offset(0, 4),
+                Stack(
+                  children: [
+                    Container(
+                      width: 56,
+                      height: 56,
+                      decoration: BoxDecoration(
+                        gradient:
+                            !hasCoverImage
+                                ? LinearGradient(
+                                  colors:
+                                      isDeleted
+                                          ? [
+                                            Colors.grey[400]!,
+                                            Colors.grey[600]!,
+                                          ]
+                                          : type == 'chat'
+                                          ? [
+                                            Colors.blue[400]!,
+                                            Colors.blue[600]!,
+                                          ]
+                                          : [
+                                            Colors.purple[400]!,
+                                            Colors.purple[600]!,
+                                          ],
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                )
+                                : null,
+                        color: Colors.grey[200],
+                        borderRadius: BorderRadius.circular(14),
+                        boxShadow: [
+                          BoxShadow(
+                            color: (isDeleted
+                                    ? Colors.grey
+                                    : type == 'chat'
+                                    ? Colors.blue
+                                    : Colors.purple)
+                                .withOpacity(0.3),
+                            blurRadius: 8,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
                       ),
-                    ],
-                  ),
-                  // ClipRRect để bo tròn ảnh
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(14),
-                    child: hasCoverImage
-                        // Nếu có ảnh, dùng CachedNetworkImage
-                        ? CachedNetworkImage(
-                            imageUrl: group.coverImage,
-                            fit: BoxFit.cover,
-                            placeholder: (context, url) =>
-                                Container(color: Colors.grey[200]),
-                            // Nếu ảnh lỗi, quay về icon mặc định
-                            errorWidget: (context, url, error) =>
-                                _buildDefaultIcon(group.type),
-                          )
-                        // Nếu không có ảnh, dùng icon mặc định
-                        : _buildDefaultIcon(group.type),
-                  ),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(14),
+                        child:
+                            hasCoverImage
+                                ? Stack(
+                                  fit: StackFit.expand,
+                                  children: [
+                                    CachedNetworkImage(
+                                      imageUrl: group.coverImage,
+                                      fit: BoxFit.cover,
+                                      placeholder:
+                                          (context, url) => Container(
+                                            color: Colors.grey[200],
+                                          ),
+                                      errorWidget:
+                                          (context, url, error) =>
+                                              _buildDefaultIcon(group.type),
+                                    ),
+                                    // ✅ Overlay tối cho ảnh deleted
+                                    if (isDeleted)
+                                      Container(
+                                        color: Colors.black.withOpacity(0.5),
+                                      ),
+                                  ],
+                                )
+                                : _buildDefaultIcon(group.type),
+                      ),
+                    ),
+                    if (isDeleted)
+                      Positioned(
+                        right: 0,
+                        bottom: 0,
+                        child: Container(
+                          padding: const EdgeInsets.all(4),
+                          decoration: BoxDecoration(
+                            color: Colors.red,
+                            shape: BoxShape.circle,
+                            border: Border.all(color: Colors.white, width: 2),
+                          ),
+                          child: const Icon(
+                            Icons.warning_rounded,
+                            size: 12,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                  ],
                 ),
-                // --- KẾT THÚC SỬA ĐỔI ---
 
                 const SizedBox(width: 16),
 
-                // Thông tin nhóm
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
                         group.name,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
-                          color: Colors.black87,
+                          color: isDeleted ? Colors.grey[600] : Colors.black87,
+                          decoration:
+                              isDeleted ? TextDecoration.lineThrough : null,
                         ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
                       const SizedBox(height: 6),
-                      Row(
-                        children: [
-                          Icon(
-                            Icons.people_outline,
-                            size: 16,
-                            color: Colors.grey[600],
-                          ),
-                          const SizedBox(width: 4),
-                          Text(
-                            '${group.members.length} thành viên',
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: Colors.grey[600],
+                      isDeleted
+                          ? Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 4,
                             ),
+                            decoration: BoxDecoration(
+                              color: Colors.red.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(
+                                color: Colors.red.withOpacity(0.3),
+                              ),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: const [
+                                Icon(
+                                  Icons.group_off,
+                                  size: 14,
+                                  color: Colors.red,
+                                ),
+                                SizedBox(width: 4),
+                                Text(
+                                  'Đã giải tán',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.red,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          )
+                          : Row(
+                            children: [
+                              Icon(
+                                Icons.people_outline,
+                                size: 16,
+                                color: Colors.grey[600],
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                '${group.members.length} thành viên',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  color: Colors.grey[600],
+                                ),
+                              ),
+                            ],
                           ),
-                        ],
-                      ),
                     ],
                   ),
                 ),
 
-                // Icon mũi tên
                 Container(
                   width: 32,
                   height: 32,
                   decoration: BoxDecoration(
-                    color: Colors.grey[100],
+                    color:
+                        isDeleted
+                            ? Colors.red.withOpacity(0.1)
+                            : Colors.grey[100],
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Icon(
                     Icons.chevron_right,
-                    color: Colors.grey[600],
+                    color: isDeleted ? Colors.red : Colors.grey[600],
                     size: 20,
                   ),
                 ),
@@ -331,6 +417,15 @@ class _GroupsList extends StatelessWidget {
   }
 
   Future<void> _onGroupTap(BuildContext context, GroupModel group) async {
+    if (group.status == 'deleted') {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => GroupDisbandedView(groupId: group.id),
+        ),
+      );
+      return;
+    }
     if (group.type == 'chat') {
       final chatId = await ChatRequest().getOrCreateGroupChat(
         group.id,
@@ -340,10 +435,7 @@ class _GroupsList extends StatelessWidget {
         Navigator.pushNamed(
           context,
           '/chat',
-          arguments: {
-            'chatId': chatId,
-            'chatName': group.name,
-          },
+          arguments: {'chatId': chatId, 'chatName': group.name},
         );
       }
     } else {
