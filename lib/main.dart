@@ -246,13 +246,12 @@ class _MyAppState extends State<MyApp> {
                   }
                   return _buildErrorRoute();
 
-                case '/post_detail':
+                  case '/post_detail':
                   if (settings.arguments is String) {
                     return MaterialPageRoute(
-                      builder:
-                          (context) => PostDetailView(
-                            postId: settings.arguments as String,
-                          ),
+                      builder: (context) => PostDetailView(
+                        postId: settings.arguments as String,
+                      ),
                     );
                   }
                   return _buildErrorRoute();

@@ -1,13 +1,15 @@
-// lib/request/reaction_request.dart
+
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:mangxahoi/request/post_activity_request.dart'; // 🔥 Import mới
 
 class ReactionRequest {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final PostActivityRequest _postActivityRequest = PostActivityRequest(); // 🔥 Tạo instance
+  
   final String _postCollection = 'Post';
   final String _reactionSubcollection = 'reactions';
 
   /// Lấy loại reaction hiện tại của người dùng cho một bài viết.
-  /// Trả về 'like', 'love', v.v., hoặc null nếu chưa reaction.
   Future<String?> getUserReactionType(String postId, String userDocId) async {
     try {
       final doc = await _firestore
@@ -59,6 +61,15 @@ class ReactionRequest {
 
       await batch.commit();
       print('✅ Reaction đã được cập nhật: $reactionType');
+
+      // 🔥 GỬI THÔNG BÁO (chỉ khi là reaction mới lần đầu)
+      if (oldReactionType == null) {
+        await _postActivityRequest.onReactionAdded(
+          postId: postId,
+          userId: userDocId,
+          reactionType: reactionType,
+        );
+      }
     } catch (e) {
       print('❌ Lỗi khi set reaction: $e');
       rethrow;
@@ -86,6 +97,12 @@ class ReactionRequest {
 
       await batch.commit();
       print('✅ Reaction đã được xóa');
+
+      // 🔥 GỌI HÀM XÓA THÔNG BÁO (nếu cần)
+      await _postActivityRequest.onReactionRemoved(
+        postId: postId,
+        userId: userDocId,
+      );
     } catch (e) {
       print('❌ Lỗi khi xóa reaction: $e');
       rethrow;
