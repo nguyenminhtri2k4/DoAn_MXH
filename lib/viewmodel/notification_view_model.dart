@@ -1,20 +1,18 @@
+
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:mangxahoi/model/model_notification.dart';
 import 'package:mangxahoi/request/user_request.dart';
 import 'package:mangxahoi/request/notification_request.dart';
-import 'package:mangxahoi/view/profile/profile_view.dart'; // 🔥 Import ProfileView
-// import 'package:mangxahoi/view/friend_request_view.dart';
-// import 'package:mangxahoi/view/post/post_detail_view.dart';
+import 'package:mangxahoi/view/profile/profile_view.dart';
+import 'package:mangxahoi/view/post/post_detail_view.dart'; // 🔥 Import PostDetailView
 
 class NotificationViewModel extends ChangeNotifier {
   final UserRequest _userRequest = UserRequest();
   final NotificationRequest _notificationRequest = NotificationRequest();
 
-  // Cache ID người dùng thực để dùng cho các hàm xóa/đọc
   String? _realUserDocId;
 
-  // 1. Stream lấy danh sách thông báo
   Stream<List<NotificationModel>> get notificationsStream async* {
     final String authUid = FirebaseAuth.instance.currentUser?.uid ?? '';
 
@@ -23,7 +21,6 @@ class NotificationViewModel extends ChangeNotifier {
       return;
     }
 
-    // Nếu chưa có ID thực, đi lấy từ UserRequest
     if (_realUserDocId == null) {
       final userModel = await _userRequest.getUserByUid(authUid);
       if (userModel == null) {
@@ -35,7 +32,6 @@ class NotificationViewModel extends ChangeNotifier {
       print('✅ [VM] Đã xác định User DocID: $_realUserDocId');
     }
 
-    // Gọi Stream từ NotificationRequest
     yield* _notificationRequest.getNotificationsStream(_realUserDocId!);
   }
 
@@ -49,7 +45,6 @@ class NotificationViewModel extends ChangeNotifier {
     await _notificationRequest.deleteNotification(notificationId);
   }
 
-  // Xóa tất cả
   Future<void> deleteAllNotifications() async {
     if (_realUserDocId != null) {
       await _notificationRequest.deleteAllNotifications(_realUserDocId!);
@@ -57,25 +52,44 @@ class NotificationViewModel extends ChangeNotifier {
     }
   }
 
-  // 2. Xử lý khi nhấn vào nội dung thông báo
+  // 🔥 XỬ LÝ KHI NHẤN VÀO NỘI DUNG THÔNG BÁO
   void handleNotificationTap(BuildContext context, NotificationModel notification) {
+    // Đánh dấu đã đọc
     if (!notification.isRead) {
       markAsRead(notification.id);
     }
-    print("👉 Tap nội dung thông báo loại: ${notification.targetType}");
-    
-    // Logic điều hướng (Bỏ comment và import file tương ứng)
-    if (notification.targetType == 'request') {
+
+    print("👉 Tap nội dung thông báo - Type: ${notification.type}, TargetType: ${notification.targetType}");
+
+    // Điều hướng dựa trên targetType
+    if (notification.targetType == 'post') {
+      // 🔥 Điều hướng đến PostDetailView
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => PostDetailView(postId: notification.targetId),
+        ),
+      );
+      print('✅ [Handle] Mở Post: ${notification.targetId}');
+    } 
+    else if (notification.targetType == 'request') {
+      // Điều hướng đến danh sách friend request (bỏ comment nếu chưa có)
       // Navigator.pushNamed(context, '/friend_requests');
-      // Hoặc: Navigator.push(context, MaterialPageRoute(builder: (_) => const FriendRequestView()));
-    } else if (notification.targetType == 'user' || notification.type == 'accept_friend') {
-      // Navigator.push(context, MaterialPageRoute(builder: (_) => ProfileView(userId: notification.targetId)));
-    } else if (notification.targetType == 'post') {
-      // Navigator.push(context, MaterialPageRoute(builder: (_) => PostDetailView(postId: notification.targetId)));
+      print('✅ [Handle] Mở Friend Requests');
+    } 
+    else if (notification.targetType == 'user') {
+      // Mở profile người gửi
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => ProfileView(userId: notification.fromUserId),
+        ),
+      );
+      print('✅ [Handle] Mở Profile: ${notification.fromUserId}');
     }
   }
 
-  // 3. 🔥 Xử lý khi nhấn vào AVATAR -> Luôn mở Profile người gửi
+  // 🔥 XỬ LÝ KHI NHẤN VÀO AVATAR -> Luôn mở Profile người gửi
   void handleAvatarTap(BuildContext context, String fromUserId) {
     if (fromUserId.isEmpty) return;
     print("👉 Tap Avatar -> Mở Profile User: $fromUserId");
