@@ -546,7 +546,7 @@ class _GroupManagementContent extends StatelessWidget {
               ? Switch(
                 value: value,
                 onChanged: onChanged,
-                activeThumbColor: AppColors.primary, // <-- Corrected line
+                activeColor: AppColors.primary, // <-- Corrected line
               )
               : null),
     );
