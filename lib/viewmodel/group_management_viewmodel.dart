@@ -4,6 +4,7 @@ import 'package:mangxahoi/model/model_group.dart';
 import 'package:mangxahoi/model/model_user.dart';
 import 'package:mangxahoi/request/user_request.dart';
 import 'package:mangxahoi/request/storage_request.dart';
+import 'package:mangxahoi/request/group_request.dart';
 import 'package:mangxahoi/services/user_service.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
@@ -13,6 +14,7 @@ class GroupManagementViewModel extends ChangeNotifier {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final UserRequest _userRequest = UserRequest();
   final StorageRequest _storageRequest = StorageRequest();
+  final GroupRequest _groupRequest = GroupRequest();
 
   GroupModel? group;
   List<UserModel> members = [];
@@ -279,26 +281,60 @@ class GroupManagementViewModel extends ChangeNotifier {
     }
   }
 
+  //  UPDATED: XÓA THÀNH VIÊN - SỬ DỤNG GroupRequest
   Future<void> removeMember(String userId) async {
-    if (!canManageMembers) return;
+    print('🔥 [GroupManagementVM] removeMember called for userId: $userId');
+
+    if (!canManageMembers) {
+      print('❌ [GroupManagementVM] User không có quyền xóa thành viên');
+      return;
+    }
+
+    final isTargetManager = group?.managers.contains(userId) ?? false;
+    if (isManager && !isOwner && isTargetManager) {
+      print('❌ [GroupManagementVM] Manager không thể xóa Manager khác');
+      return;
+    }
+
+    if (userId == currentUserId) {
+      print('❌ [GroupManagementVM] Không thể tự xóa chính mình');
+      return;
+    }
 
     try {
-      await _firestore.collection('Group').doc(groupId).update({
-        'members': FieldValue.arrayRemove([userId]),
-      });
+      print('🔄 [GroupManagementVM] Bắt đầu xóa thành viên...');
 
-      if (group?.managers.contains(userId) ?? false) {
-        await _firestore.collection('Group').doc(groupId).update({
-          'managers': FieldValue.arrayRemove([userId]),
-        });
-      }
+      await _groupRequest.removeMemberFromGroup(groupId, userId);
 
+      print(
+        '✅ [GroupManagementVM] GroupRequest.removeMemberFromGroup thành công',
+      );
       await _loadGroup();
       await _loadMembers();
+
+      print('✅ [GroupManagementVM] Đã reload group và members');
+
       notifyListeners();
+
+      print('✅ [GroupManagementVM] removeMember hoàn tất thành công');
     } catch (e) {
-      print('Error removing member: $e');
+      print('❌ [GroupManagementVM] Lỗi khi xóa thành viên: $e');
+      rethrow;
     }
+  }
+
+  // KIỂM TRA QUYỀN XÓA THÀNH VIÊN CỤ THỂ
+
+  bool canRemoveMember(String userId) {
+    if (userId == currentUserId) return false;
+    if (userId == group?.ownerId) return false;
+    if (isOwner) return true;
+    if (isManager) {
+      final isTargetManager = group?.managers.contains(userId) ?? false;
+      return !isTargetManager;
+    }
+
+    return false;
   }
 
   Future<void> disbandGroup() async {
