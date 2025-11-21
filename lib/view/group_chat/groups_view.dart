@@ -26,8 +26,8 @@ class _GroupsViewContent extends StatelessWidget {
   Widget build(BuildContext context) {
     final vm = context.watch<GroupsViewModel>();
 
-    return StreamBuilder<List<GroupModel>>(
-      stream: vm.groupsStream,
+    return StreamBuilder<List<GroupWithStatus>>(
+      stream: vm.groupsWithStatusStream,
       builder: (context, snapshot) {
         return DefaultTabController(
           length: 2,
@@ -89,33 +89,32 @@ class _GroupsViewContent extends StatelessWidget {
                 ),
               ),
             ),
-            body:
-                snapshot.connectionState == ConnectionState.waiting
-                    ? const Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          CircularProgressIndicator(),
-                          SizedBox(height: 16),
-                          Text(
-                            'Đang tải danh sách nhóm...',
-                            style: TextStyle(color: Colors.grey, fontSize: 14),
-                          ),
-                        ],
-                      ),
-                    )
-                    : TabBarView(
+            body: snapshot.connectionState == ConnectionState.waiting
+                ? const Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        _GroupsList(
-                          type: 'chat',
-                          allGroups: snapshot.data ?? [],
-                        ),
-                        _GroupsList(
-                          type: 'post',
-                          allGroups: snapshot.data ?? [],
+                        CircularProgressIndicator(),
+                        SizedBox(height: 16),
+                        Text(
+                          'Đang tải danh sách nhóm...',
+                          style: TextStyle(color: Colors.grey, fontSize: 14),
                         ),
                       ],
                     ),
+                  )
+                : TabBarView(
+                    children: [
+                      _GroupsList(
+                        type: 'chat',
+                        allGroups: snapshot.data ?? [],
+                      ),
+                      _GroupsList(
+                        type: 'post',
+                        allGroups: snapshot.data ?? [],
+                      ),
+                    ],
+                  ),
             floatingActionButton: FloatingActionButton.extended(
               onPressed: () => Navigator.pushNamed(context, '/create_group'),
               backgroundColor: AppColors.primary,
@@ -136,7 +135,7 @@ class _GroupsViewContent extends StatelessWidget {
 
 class _GroupsList extends StatelessWidget {
   final String type;
-  final List<GroupModel> allGroups;
+  final List<GroupWithStatus> allGroups;
 
   const _GroupsList({required this.type, required this.allGroups});
 
@@ -153,8 +152,8 @@ class _GroupsList extends StatelessWidget {
       itemCount: groups.length,
       separatorBuilder: (context, index) => const SizedBox(height: 12),
       itemBuilder: (context, index) {
-        final group = groups[index];
-        return _buildGroupCard(context, group);
+        final groupWithStatus = groups[index];
+        return _buildGroupCard(context, groupWithStatus);
       },
     );
   }
@@ -198,21 +197,29 @@ class _GroupsList extends StatelessWidget {
     );
   }
 
-  Widget _buildGroupCard(BuildContext context, GroupModel group) {
+  Widget _buildGroupCard(
+    BuildContext context,
+    GroupWithStatus groupWithStatus,
+  ) {
+    final bool isDisbanded = groupWithStatus.isDisbanded;
+    if (isDisbanded) {
+      return _buildDisbandedGroupCard(
+        context,
+        groupWithStatus.groupId,
+        groupWithStatus.name,
+        groupWithStatus.type,
+      );
+    }
+    final GroupModel group = groupWithStatus.group!;
     final bool hasCoverImage = group.coverImage.isNotEmpty;
-    final bool isDeleted = group.status == 'deleted';
 
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border:
-            isDeleted
-                ? Border.all(color: Colors.red.withOpacity(0.5), width: 2)
-                : null,
         boxShadow: [
           BoxShadow(
-            color: (isDeleted ? Colors.red : Colors.black).withOpacity(0.04),
+            color: Colors.black.withOpacity(0.04),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -227,184 +234,242 @@ class _GroupsList extends StatelessWidget {
             padding: const EdgeInsets.all(16),
             child: Row(
               children: [
-                Stack(
-                  children: [
-                    Container(
-                      width: 56,
-                      height: 56,
-                      decoration: BoxDecoration(
-                        gradient:
-                            !hasCoverImage
-                                ? LinearGradient(
-                                  colors:
-                                      isDeleted
-                                          ? [
-                                            Colors.grey[400]!,
-                                            Colors.grey[600]!,
-                                          ]
-                                          : type == 'chat'
-                                          ? [
-                                            Colors.blue[400]!,
-                                            Colors.blue[600]!,
-                                          ]
-                                          : [
-                                            Colors.purple[400]!,
-                                            Colors.purple[600]!,
-                                          ],
-                                  begin: Alignment.topLeft,
-                                  end: Alignment.bottomRight,
-                                )
-                                : null,
-                        color: Colors.grey[200],
-                        borderRadius: BorderRadius.circular(14),
-                        boxShadow: [
-                          BoxShadow(
-                            color: (isDeleted
-                                    ? Colors.grey
-                                    : type == 'chat'
-                                    ? Colors.blue
-                                    : Colors.purple)
-                                .withOpacity(0.3),
-                            blurRadius: 8,
-                            offset: const Offset(0, 4),
-                          ),
-                        ],
-                      ),
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(14),
-                        child:
-                            hasCoverImage
-                                ? Stack(
-                                  fit: StackFit.expand,
-                                  children: [
-                                    CachedNetworkImage(
-                                      imageUrl: group.coverImage,
-                                      fit: BoxFit.cover,
-                                      placeholder:
-                                          (context, url) => Container(
-                                            color: Colors.grey[200],
-                                          ),
-                                      errorWidget:
-                                          (context, url, error) =>
-                                              _buildDefaultIcon(group.type),
-                                    ),
-                                    // ✅ Overlay tối cho ảnh deleted
-                                    if (isDeleted)
-                                      Container(
-                                        color: Colors.black.withOpacity(0.5),
-                                      ),
+                Container(
+                  width: 56,
+                  height: 56,
+                  decoration: BoxDecoration(
+                    gradient: !hasCoverImage
+                        ? LinearGradient(
+                            colors: group.type == 'chat'
+                                ? [Colors.blue[400]!, Colors.blue[600]!]
+                                : [
+                                    Colors.purple[400]!,
+                                    Colors.purple[600]!,
                                   ],
-                                )
-                                : _buildDefaultIcon(group.type),
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          )
+                        : null,
+                    color: Colors.grey[200],
+                    borderRadius: BorderRadius.circular(14),
+                    boxShadow: [
+                      BoxShadow(
+                        color:
+                            (group.type == 'chat' ? Colors.blue : Colors.purple)
+                                .withOpacity(0.3),
+                        blurRadius: 8,
+                        offset: const Offset(0, 4),
                       ),
-                    ),
-                    if (isDeleted)
-                      Positioned(
-                        right: 0,
-                        bottom: 0,
-                        child: Container(
-                          padding: const EdgeInsets.all(4),
-                          decoration: BoxDecoration(
-                            color: Colors.red,
-                            shape: BoxShape.circle,
-                            border: Border.all(color: Colors.white, width: 2),
-                          ),
-                          child: const Icon(
-                            Icons.warning_rounded,
-                            size: 12,
-                            color: Colors.white,
-                          ),
-                        ),
-                      ),
-                  ],
+                    ],
+                  ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(14),
+                    child: hasCoverImage
+                        ? CachedNetworkImage(
+                            imageUrl: group.coverImage,
+                            fit: BoxFit.cover,
+                            placeholder: (context, url) =>
+                                Container(color: Colors.grey[200]),
+                            errorWidget: (context, url, error) =>
+                                _buildDefaultIcon(group.type),
+                          )
+                        : _buildDefaultIcon(group.type),
+                  ),
                 ),
-
                 const SizedBox(width: 16),
-
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
                         group.name,
-                        style: TextStyle(
+                        style: const TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
-                          color: isDeleted ? Colors.grey[600] : Colors.black87,
-                          decoration:
-                              isDeleted ? TextDecoration.lineThrough : null,
+                          color: Colors.black87,
                         ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
                       const SizedBox(height: 6),
-                      isDeleted
-                          ? Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 4,
-                            ),
-                            decoration: BoxDecoration(
-                              color: Colors.red.withOpacity(0.1),
-                              borderRadius: BorderRadius.circular(8),
-                              border: Border.all(
-                                color: Colors.red.withOpacity(0.3),
-                              ),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: const [
-                                Icon(
-                                  Icons.group_off,
-                                  size: 14,
-                                  color: Colors.red,
-                                ),
-                                SizedBox(width: 4),
-                                Text(
-                                  'Đã giải tán',
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: Colors.red,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          )
-                          : Row(
-                            children: [
-                              Icon(
-                                Icons.people_outline,
-                                size: 16,
-                                color: Colors.grey[600],
-                              ),
-                              const SizedBox(width: 4),
-                              Text(
-                                '${group.members.length} thành viên',
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  color: Colors.grey[600],
-                                ),
-                              ),
-                            ],
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.people_outline,
+                            size: 16,
+                            color: Colors.grey[600],
                           ),
+                          const SizedBox(width: 4),
+                          Text(
+                            '${group.members.length} thành viên',
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: Colors.grey[600],
+                            ),
+                          ),
+                        ],
+                      ),
                     ],
                   ),
                 ),
-
                 Container(
                   width: 32,
                   height: 32,
                   decoration: BoxDecoration(
-                    color:
-                        isDeleted
-                            ? Colors.red.withOpacity(0.1)
-                            : Colors.grey[100],
+                    color: Colors.grey[100],
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Icon(
                     Icons.chevron_right,
-                    color: isDeleted ? Colors.red : Colors.grey[600],
+                    color: Colors.grey[600],
+                    size: 20,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// ✅ Card cho nhóm đã bị giải tán - HIỂN THỊ TÊN NHÓM
+  Widget _buildDisbandedGroupCard(
+    BuildContext context,
+    String groupId,
+    String groupName,
+    String groupType,
+  ) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.red.withOpacity(0.5), width: 2),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.red.withOpacity(0.04),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(16),
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => GroupDisbandedView(
+                  groupId: groupId,
+                  groupName: groupName,
+                ),
+              ),
+            );
+          },
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              children: [
+                // Avatar với icon warning
+                Stack(
+                  children: [
+                    Container(
+                      width: 56,
+                      height: 56,
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [Colors.grey[400]!, Colors.grey[600]!],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      child: Icon(
+                        groupType == 'chat' ? Icons.chat_bubble : Icons.article,
+                        color: Colors.white,
+                        size: 28,
+                      ),
+                    ),
+                    Positioned(
+                      right: 0,
+                      bottom: 0,
+                      child: Container(
+                        padding: const EdgeInsets.all(4),
+                        decoration: BoxDecoration(
+                          color: Colors.red,
+                          shape: BoxShape.circle,
+                          border: Border.all(color: Colors.white, width: 2),
+                        ),
+                        child: const Icon(
+                          Icons.warning_rounded,
+                          size: 12,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // ✅ Hiển thị tên nhóm
+                      Text(
+                        groupName,
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.grey[600],
+                          decoration: TextDecoration.lineThrough,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 6),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.red.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                            color: Colors.red.withOpacity(0.3),
+                          ),
+                        ),
+                        child: const Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.group_off, size: 14, color: Colors.red),
+                            SizedBox(width: 4),
+                            Text(
+                              'Đã giải tán',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.red,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Container(
+                  width: 32,
+                  height: 32,
+                  decoration: BoxDecoration(
+                    color: Colors.red.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Icon(
+                    Icons.chevron_right,
+                    color: Colors.red,
                     size: 20,
                   ),
                 ),
@@ -417,15 +482,6 @@ class _GroupsList extends StatelessWidget {
   }
 
   Future<void> _onGroupTap(BuildContext context, GroupModel group) async {
-    if (group.status == 'deleted') {
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => GroupDisbandedView(groupId: group.id),
-        ),
-      );
-      return;
-    }
     if (group.type == 'chat') {
       final chatId = await ChatRequest().getOrCreateGroupChat(
         group.id,
