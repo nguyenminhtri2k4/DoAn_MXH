@@ -1122,6 +1122,9 @@ class _GroupManagementContent extends StatelessWidget {
     bool isManager,
     bool isMuted,
   ) {
+    // ✅ Kiểm tra quyền xóa thành viên
+    final canRemove = vm.canRemoveMember(member.id);
+
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
@@ -1193,7 +1196,9 @@ class _GroupManagementContent extends StatelessWidget {
                   const SizedBox(height: 20),
                   Divider(height: 1, color: Colors.grey[300]),
                   const SizedBox(height: 20),
-                  if (vm.isOwner && !isManager)
+
+                  // ✅ Cấp quyền quản lý (chỉ owner mới thấy)
+                  if (vm.isOwner && !isManager && !isOwner)
                     _buildOptionTile(
                       icon: Icons.shield_outlined,
                       iconColor: AppColors.primary,
@@ -1204,6 +1209,8 @@ class _GroupManagementContent extends StatelessWidget {
                         vm.promoteToManager(member.id);
                       },
                     ),
+
+                  // ✅ Gỡ quyền quản lý (chỉ owner mới thấy)
                   if (vm.isOwner && isManager && !isOwner)
                     _buildOptionTile(
                       icon: Icons.remove_circle_outline,
@@ -1215,6 +1222,8 @@ class _GroupManagementContent extends StatelessWidget {
                         vm.demoteFromManager(member.id);
                       },
                     ),
+
+                  // ✅ Tắt tiếng / Bỏ tắt tiếng
                   _buildOptionTile(
                     icon:
                         isMuted
@@ -1231,7 +1240,9 @@ class _GroupManagementContent extends StatelessWidget {
                       vm.toggleMuteMember(member.id);
                     },
                   ),
-                  if (!isOwner)
+
+                  // ✅ Xóa khỏi nhóm (kiểm tra quyền)
+                  if (canRemove)
                     _buildOptionTile(
                       icon: Icons.person_remove_outlined,
                       iconColor: Colors.red,
@@ -1242,6 +1253,7 @@ class _GroupManagementContent extends StatelessWidget {
                         _confirmRemoveMember(context, vm, member);
                       },
                     ),
+
                   const SizedBox(height: 20),
                 ],
               ),
@@ -1437,6 +1449,9 @@ class _GroupManagementContent extends StatelessWidget {
     GroupManagementViewModel vm,
     UserModel member,
   ) {
+    final isTargetManager = vm.group?.managers.contains(member.id) ?? false;
+    final String memberRole = isTargetManager ? 'quản lý' : 'thành viên';
+
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
@@ -1452,24 +1467,25 @@ class _GroupManagementContent extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Row(
-                //   mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                //   children: [
-                //     const Text(
-                //       'Xóa thành viên',
-                //       style: TextStyle(
-                //         fontSize: 20,
-                //         fontWeight: FontWeight.bold,
-                //       ),
-                //     ),
-                //     IconButton(
-                //       icon: const Icon(Icons.close),
-                //       onPressed: () => Navigator.pop(context),
-                //       padding: EdgeInsets.zero,
-                //       constraints: const BoxConstraints(),
-                //     ),
-                //   ],
-                // ),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Xóa $memberRole',
+                      style: const TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.red,
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.close),
+                      onPressed: () => Navigator.pop(context),
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
+                    ),
+                  ],
+                ),
                 const SizedBox(height: 16),
                 Container(
                   padding: const EdgeInsets.all(16),
@@ -1497,13 +1513,228 @@ class _GroupManagementContent extends StatelessWidget {
                       ),
                       const SizedBox(width: 12),
                       Expanded(
-                        child: Text(
-                          'Bạn có chắc muốn xóa ${member.name} khỏi nhóm?',
-                          style: const TextStyle(
-                            fontSize: 14,
-                            color: Color(0xFF1A1A1A),
-                            height: 1.4,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Bạn có chắc muốn xóa ${member.name} khỏi nhóm?',
+                              style: const TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w600,
+                                color: Color(0xFF1A1A1A),
+                                height: 1.4,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              isTargetManager
+                                  ? '• Quyền quản lý sẽ bị gỡ bỏ\n• Thành viên sẽ bị xóa khỏi nhóm'
+                                  : '• Thành viên sẽ bị xóa khỏi nhóm',
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: Colors.grey[700],
+                                height: 1.5,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 20),
+
+                Row(
+                  children: [
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: () => Navigator.pop(context),
+                        style: ElevatedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          backgroundColor: Colors.grey[200],
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
                           ),
+                          elevation: 0,
+                        ),
+                        child: Text(
+                          'Hủy',
+                          style: TextStyle(
+                            color: Colors.grey[700],
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: () async {
+                          final navigator = Navigator.of(context);
+                          final scaffoldMessenger = ScaffoldMessenger.of(
+                            context,
+                          );
+
+                          navigator.pop();
+                          showDialog(
+                            context: context,
+                            barrierDismissible: false,
+                            builder:
+                                (ctx) => const Center(
+                                  child: CircularProgressIndicator(),
+                                ),
+                          );
+
+                          try {
+                            await vm.removeMember(member.id);
+                            navigator.pop();
+                            scaffoldMessenger.showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                  'Đã xóa ${member.name} khỏi nhóm',
+                                ),
+                                backgroundColor: Colors.green,
+                                duration: const Duration(seconds: 2),
+                              ),
+                            );
+                            await Future.delayed(
+                              const Duration(milliseconds: 300),
+                            );
+
+                            if (context.mounted) {}
+                          } catch (e) {
+                            navigator.pop();
+                            scaffoldMessenger.showSnackBar(
+                              SnackBar(
+                                content: Text('Lỗi: ${e.toString()}'),
+                                backgroundColor: Colors.red,
+                                duration: const Duration(seconds: 3),
+                              ),
+                            );
+                          }
+                        },
+                        style: ElevatedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          backgroundColor: Colors.red,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          elevation: 0,
+                        ),
+                        child: const Text(
+                          'Xóa',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+              ],
+            ),
+          ),
+    );
+  }
+
+  void _confirmDisbandGroup(BuildContext context, GroupManagementViewModel vm) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder:
+          (context) => Container(
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+            ),
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Row(
+                      children: [
+                        Icon(
+                          Icons.warning_amber_rounded,
+                          color: Colors.red,
+                          size: 24,
+                        ),
+                        SizedBox(width: 8),
+                        Text(
+                          'Giải tán nhóm',
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.red,
+                          ),
+                        ),
+                      ],
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.close),
+                      onPressed: () => Navigator.pop(context),
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.red.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: Colors.red.withOpacity(0.3),
+                      width: 1,
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: Colors.red.withOpacity(0.2),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.delete_forever_outlined,
+                          color: Colors.red,
+                          size: 24,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'Bạn có chắc chắn muốn giải tán nhóm này?',
+                              style: TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w600,
+                                color: Color(0xFF1A1A1A),
+                                height: 1.4,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              '• Tất cả thành viên sẽ bị xóa\n• Dữ liệu nhóm sẽ bị xóa vĩnh viễn',
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: Colors.grey[700],
+                                height: 1.5,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ],
@@ -1536,9 +1767,42 @@ class _GroupManagementContent extends StatelessWidget {
                     const SizedBox(width: 12),
                     Expanded(
                       child: ElevatedButton(
-                        onPressed: () {
-                          vm.removeMember(member.id);
-                          Navigator.pop(context);
+                        onPressed: () async {
+                          final navigator = Navigator.of(context);
+                          final scaffoldMessenger = ScaffoldMessenger.of(
+                            context,
+                          );
+                          navigator.pop();
+                          showDialog(
+                            context: context,
+                            barrierDismissible: false,
+                            builder:
+                                (ctx) => const Center(
+                                  child: CircularProgressIndicator(),
+                                ),
+                          );
+
+                          try {
+                            await vm.disbandGroup();
+                            navigator.pop();
+                            navigator.pop();
+                            scaffoldMessenger.showSnackBar(
+                              const SnackBar(
+                                content: Text('Đã giải tán nhóm thành công'),
+                                backgroundColor: Colors.green,
+                                duration: Duration(seconds: 2),
+                              ),
+                            );
+                          } catch (e) {
+                            navigator.pop();
+                            scaffoldMessenger.showSnackBar(
+                              SnackBar(
+                                content: Text('Lỗi: ${e.toString()}'),
+                                backgroundColor: Colors.red,
+                                duration: const Duration(seconds: 3),
+                              ),
+                            );
+                          }
                         },
                         style: ElevatedButton.styleFrom(
                           padding: const EdgeInsets.symmetric(vertical: 14),
@@ -1549,7 +1813,7 @@ class _GroupManagementContent extends StatelessWidget {
                           elevation: 0,
                         ),
                         child: const Text(
-                          'Xóa',
+                          'Giải tán',
                           style: TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.w600,
@@ -1560,64 +1824,9 @@ class _GroupManagementContent extends StatelessWidget {
                     ),
                   ],
                 ),
+                const SizedBox(height: 8),
               ],
             ),
-          ),
-    );
-  }
-
-  void _confirmDisbandGroup(BuildContext context, GroupManagementViewModel vm) {
-    showDialog(
-      context: context,
-      builder:
-          (dialogContext) => AlertDialog(
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
-            ),
-            title: const Row(
-              children: [
-                Icon(Icons.warning_amber_rounded, color: Colors.red),
-                SizedBox(width: 8),
-                Text('Giải tán nhóm'),
-              ],
-            ),
-            content: const Text('Bạn có chắc chắn muốn giải tán nhóm này?'),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(dialogContext),
-                child: Text('Hủy', style: TextStyle(color: Colors.grey[700])),
-              ),
-              ElevatedButton(
-                onPressed: () async {
-                  final scaffoldContext = context;
-                  Navigator.pop(dialogContext);
-                  showDialog(
-                    context: scaffoldContext,
-                    barrierDismissible: false,
-                    builder:
-                        (loadingContext) =>
-                            const Center(child: CircularProgressIndicator()),
-                  );
-                  await vm.disbandGroup();
-                  Navigator.pop(scaffoldContext);
-                  Navigator.pop(scaffoldContext);
-                  Navigator.pop(scaffoldContext);
-                  ScaffoldMessenger.of(scaffoldContext).showSnackBar(
-                    const SnackBar(
-                      content: Text('Đã giải tán nhóm thành công'),
-                      backgroundColor: Colors.green,
-                    ),
-                  );
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.red,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                ),
-                child: const Text('Giải tán'),
-              ),
-            ],
           ),
     );
   }
