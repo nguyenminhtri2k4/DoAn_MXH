@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:mangxahoi/services/user_service.dart';
 import 'package:mangxahoi/request/user_request.dart';
 import 'package:mangxahoi/constant/app_colors.dart';
+import 'package:firebase_app_check/firebase_app_check.dart';
 
 class GeneralSettingsView extends StatefulWidget {
   const GeneralSettingsView({super.key});
@@ -92,6 +93,7 @@ class _GeneralSettingsViewState extends State<GeneralSettingsView> {
                           userService.setCurrentUser(
                             currentUser!.copyWith(serviceGemini: value), // 👈 QUAN TRỌNG: Thêm dấu ! vào đây
                           );
+                          inCaiTokenRaChoToiXem(); // Gọi hàm in token ra console
                           
                           if (mounted) {
                             ScaffoldMessenger.of(context).showSnackBar(
@@ -130,3 +132,27 @@ class _GeneralSettingsViewState extends State<GeneralSettingsView> {
     );
   }
 }
+// 1. Import thư viện
+
+
+// 2. Tạo hàm lấy token
+void inCaiTokenRaChoToiXem() async {
+  try {
+    // Lệnh này ép App lấy Token hiện tại (hoặc xin cái mới)
+    String? token = await FirebaseAppCheck.instance.getToken(true);
+    
+    if (token != null) {
+      print("✅✅✅ ĐÂY LÀ APP CHECK TOKEN CỦA BẠN:");
+      print(token);
+      print("--------------------------------------");
+      print("Độ dài token: ${token.length} ký tự");
+    } else {
+      print("❌ Không lấy được Token (Null)");
+    }
+  } catch (e) {
+    print("❌ Lỗi khi lấy Token: $e");
+  }
+}
+
+// 3. Gọi hàm này (ví dụ trong initState hoặc khi bấm nút)
+// inCaiTokenRaChoToiXem();

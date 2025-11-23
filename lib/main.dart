@@ -56,6 +56,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:mangxahoi/services/notification_badge_service.dart';
 import 'package:mangxahoi/viewmodel/notification_view_model.dart';
+import 'package:firebase_app_check/firebase_app_check.dart'; // <--- Thêm dòng này
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
@@ -63,7 +64,15 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  print("👉👉👉👉👉👉👉👉👉👉👉GIAI_DOAN_1: Bắt đầu kích hoạt App Check...");
 
+  await FirebaseAppCheck.instance.activate(
+    
+    androidProvider: AndroidProvider.debug,
+    
+    appleProvider: AppleProvider.appAttest, 
+  );
+print("👉👉👉👉👉👉👉👉👉👉👉GIAI_DOAN_2: Đã kích hoạt xong! Hãy tìm Token ngay.");
   if (!kIsWeb) {
     await PushNotificationService().initialize();
   }
