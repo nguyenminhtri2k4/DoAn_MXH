@@ -157,11 +157,12 @@ class _ChatListItem extends StatelessWidget {
           }
 
           if (snapshot.hasError || !snapshot.hasData || !snapshot.data!.exists) {
-            return ListTile(
-              leading: const CircleAvatar(child: Icon(Icons.error_outline)),
-              title: const Text("Nhóm không tồn tại"),
-              subtitle: _buildSummary(chat.lastMessage),
-            );
+            // return ListTile(
+            //   leading: const CircleAvatar(child: Icon(Icons.error_outline)),
+            //   title: const Text("Nhóm không tồn tại"),
+            //   subtitle: _buildSummary(chat.lastMessage),
+            // );
+            return const SizedBox.shrink();
           }
 
           final groupData = snapshot.data!.data() as Map<String, dynamic>;

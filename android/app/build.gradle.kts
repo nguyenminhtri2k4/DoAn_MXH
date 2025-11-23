@@ -58,6 +58,7 @@ dependencies {
     implementation("com.google.firebase:firebase-auth")
     implementation("com.google.firebase:firebase-firestore")
     implementation("com.google.firebase:firebase-messaging") // thêm nếu chưa có
+    implementation("com.google.firebase:firebase-appcheck-debug")
 
     // Các dependency khác Flutter tự thêm (không cần đụng vào)
 }

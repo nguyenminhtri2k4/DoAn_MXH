@@ -4,6 +4,7 @@ import 'package:mangxahoi/model/model_qr_invite.dart';
 import 'package:mangxahoi/constant/app_colors.dart';
 import 'package:mangxahoi/viewmodel/qr_scanner_viewmodel.dart';
 import 'package:provider/provider.dart';
+import 'dart:convert';
 
 class QRScannerView extends StatefulWidget {
   const QRScannerView({Key? key}) : super(key: key);
@@ -22,6 +23,43 @@ class _QRScannerViewState extends State<QRScannerView> {
     super.dispose();
   }
 
+  // Future<void> _handleQRDetection(
+  //   BuildContext context,
+  //   BarcodeCapture capture,
+  // ) async {
+  //   if (isProcessing) return;
+
+  //   final List<Barcode> barcodes = capture.barcodes;
+  //   if (barcodes.isEmpty) return;
+
+  //   final String? code = barcodes.first.rawValue;
+  //   if (code == null) return;
+
+  //   setState(() => isProcessing = true);
+
+  //   try {
+  //     // Parse QR data
+  //     final qrData = QRInviteData.fromQRString(code);
+
+  //     // Kiểm tra hết hạn
+  //     if (qrData.isExpired) {
+  //       _showErrorBottomSheet(context, 'Mã QR đã hết hạn');
+  //       setState(() => isProcessing = false);
+  //       return;
+  //     }
+
+  //     // Tạm dừng camera
+  //     await cameraController.stop();
+
+  //     // Hiển thị bottom sheet xác nhận
+  //     if (mounted) {
+  //       _showJoinConfirmBottomSheet(context, qrData);
+  //     }
+  //   } catch (e) {
+  //     _showErrorBottomSheet(context, 'Mã QR không hợp lệ');
+  //     setState(() => isProcessing = false);
+  //   }
+  // }
   Future<void> _handleQRDetection(
     BuildContext context,
     BarcodeCapture capture,
@@ -37,24 +75,56 @@ class _QRScannerViewState extends State<QRScannerView> {
     setState(() => isProcessing = true);
 
     try {
-      // Parse QR data
+      // 1. Thử Parse JSON để kiểm tra xem có phải QR User không
+      try {
+        final Map<String, dynamic> data = jsonDecode(code);
+        
+        // NẾU LÀ USER QR
+        if (data['type'] == 'user' && data['id'] != null) {
+          final String userId = data['id'];
+          
+          await cameraController.stop(); // Dừng camera
+          
+          if (mounted) {
+            // Chuyển hướng đến trang Profile
+            // Lưu ý: Bạn cần thay '/profile' bằng route thực tế hoặc Widget trang Profile của bạn
+            // Ví dụ: 
+            /*
+            Navigator.push(context, MaterialPageRoute(
+               builder: (_) => ProfileView(userId: userId) 
+            ));
+            */
+            
+            // Giả sử bạn dùng Navigator names:
+            Navigator.pushNamed(context, '/profile', arguments: userId).then((_) {
+               // Khi quay lại thì bật lại camera
+               cameraController.start();
+               setState(() => isProcessing = false);
+            });
+            
+            return; // Kết thúc xử lý
+          }
+        }
+      } catch (e) {
+        // Không phải JSON hoặc không đúng format User, bỏ qua để chạy logic Group bên dưới
+      }
+
+      // 2. Logic cũ cho GROUP QR (Giữ nguyên phần này)
       final qrData = QRInviteData.fromQRString(code);
 
-      // Kiểm tra hết hạn
       if (qrData.isExpired) {
         _showErrorBottomSheet(context, 'Mã QR đã hết hạn');
         setState(() => isProcessing = false);
         return;
       }
 
-      // Tạm dừng camera
       await cameraController.stop();
 
-      // Hiển thị bottom sheet xác nhận
       if (mounted) {
         _showJoinConfirmBottomSheet(context, qrData);
       }
     } catch (e) {
+      // Nếu cả 2 đều lỗi
       _showErrorBottomSheet(context, 'Mã QR không hợp lệ');
       setState(() => isProcessing = false);
     }
