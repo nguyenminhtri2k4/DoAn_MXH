@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:mangxahoi/viewmodel/profile_view_model.dart';
 import 'package:mangxahoi/constant/app_colors.dart';
 import 'package:intl/intl.dart';
+import 'package:mangxahoi/view/profile/user_qr_code_view.dart';
 
 class AboutView extends StatelessWidget {
   final ProfileViewModel viewModel;
@@ -74,6 +75,21 @@ class AboutView extends StatelessWidget {
         title: const Text('Giới thiệu'),
         backgroundColor: AppColors.backgroundLight,
         elevation: 1,
+        actions: [
+          if (isCurrentUser) // Chỉ hiện nút QR nếu đây là trang của chính mình
+            IconButton(
+              icon: const Icon(Icons.qr_code, color: Colors.black87),
+              tooltip: 'Mã QR của tôi',
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => UserQRCodeView(user: user),
+                  ),
+                );
+              },
+            ),
+        ],
       ),
       backgroundColor: AppColors.background,
       body: SingleChildScrollView(
