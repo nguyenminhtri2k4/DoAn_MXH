@@ -15,6 +15,7 @@ import 'package:mangxahoi/services/call_service.dart';
 import 'package:mangxahoi/view/call/outgoing_call_screen.dart';
 import 'package:mangxahoi/request/friend_request_manager.dart';
 import 'package:mangxahoi/services/smartreply.dart';
+import 'package:geolocator/geolocator.dart';
 
 class ChatViewModel extends ChangeNotifier {
   final String chatId;
@@ -336,6 +337,72 @@ String? _lastProcessedMessageIdForGeneration; // ← (tùy chọn, càng tốt h
       }
     } catch (e) {
       _setError("Lỗi khi tạo cuộc gọi: $e");
+    }
+  }
+
+  // ============================================================
+  // Google map - CHIA SẺ VỊ TRÍ HIỆN TẠI
+  // ============================================================
+  Future<void> sendCurrentLocation() async {
+    if (isBlocked) {
+      _setError("Bạn không thể gửi tin nhắn do đang bị chặn.");
+      return;
+    }
+
+    _setLoading(true);
+    _clearError();
+
+    try {
+      // 1. Kiểm tra quyền và dịch vụ vị trí
+      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        _setError('Dịch vụ vị trí chưa được bật.');
+        _setLoading(false);
+        return;
+      }
+
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+        if (permission == LocationPermission.denied) {
+          _setError('Quyền truy cập vị trí bị từ chối.');
+          _setLoading(false);
+          return;
+        }
+      }
+
+      if (permission == LocationPermission.deniedForever) {
+        _setError('Quyền truy cập vị trí bị từ chối vĩnh viễn. Vui lòng cấp quyền trong Cài đặt.');
+        _setLoading(false);
+        return;
+      }
+
+      // 2. Lấy vị trí hiện tại
+      Position position = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high,
+      );
+
+      // 3. Tạo nội dung tin nhắn dạng "latitude,longitude"
+      String locationContent = "${position.latitude},${position.longitude}";
+
+      // 4. Tạo MessageModel
+      final message = MessageModel(
+        id: '',
+        senderId: currentUserId!,
+        content: locationContent, // Lưu tọa độ vào content
+        createdAt: DateTime.now(),
+        mediaIds: [],
+        status: 'sent',
+        type: 'location', // Đặt loại tin nhắn mới là location
+      );
+
+      // 5. Gửi tin nhắn
+      await _chatRequest.sendMessage(chatId, message);
+
+    } catch (e) {
+      _setError('Lỗi khi chia sẻ vị trí: $e');
+    } finally {
+      _setLoading(false);
     }
   }
 

@@ -10,6 +10,7 @@ import 'package:mangxahoi/authanet/firestore_listener.dart';
 import 'package:mangxahoi/services/user_service.dart';
 import 'package:mangxahoi/view/widgets/full_screen_image_viewer.dart';
 import 'package:mangxahoi/view/widgets/full_screen_video_player.dart';
+import 'package:mangxahoi/view/widgets/chat/message_variants/location_message_bubble.dart';
 // Import sub-components
 import 'package:mangxahoi/view/widgets/chat/message_variants/call_message_bubble.dart';
 import 'package:mangxahoi/view/widgets/chat/message_variants/qr_user_bubble.dart';
@@ -32,6 +33,7 @@ class MessageBubble extends StatelessWidget {
   Widget build(BuildContext context) {
     if (message.status == 'recalled') return _buildRecalledMessageBubble();
     if (message.type == 'qr_user') return QRUserBubble(message: message, sender: sender, isMe: isMe);
+    if (message.type == 'location') return LocationMessageBubble(message: message, sender: sender, isMe: isMe);
     if (message.type == 'share_post' && message.sharedPostId != null)
       return SharedPostBubble(message: message, sender: sender, isMe: isMe);
     if (message.type == 'share_group_qr' && message.sharedPostId != null)
