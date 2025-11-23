@@ -46,6 +46,8 @@ dependencies:
   google_generative_ai: ^0.4.0
   firebase_messaging: ^16.0.0  # Đã dùng
   flutter_local_notifications: ^19.0.0
+  geolocator: ^11.0.0
+  url_launcher: ^6.2.5
 
 dev_dependencies:
   flutter_test:

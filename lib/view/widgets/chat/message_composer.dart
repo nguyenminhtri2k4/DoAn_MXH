@@ -144,8 +144,8 @@ class MessageComposer extends StatelessWidget {
                     Icons.location_on_outlined,
                     color: Theme.of(context).primaryColor,
                   ),
-                  onPressed: vm.isLoading ? null : () {
-                    // TODO: Thêm logic chọn vị trí
+                  onPressed: vm.isLoading ? null : () async {
+                    await vm.sendCurrentLocation();
                   },
                 ),
                 Expanded(

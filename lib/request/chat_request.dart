@@ -40,6 +40,9 @@ class ChatRequest {
     if (message.type == 'share_post') {
       lastMessagePreview = 'Đã chia sẻ một bài viết';
     }
+    else if (message.type == 'location') {
+      lastMessagePreview = '📍 Đã chia sẻ vị trí';
+    }
     // === THÊM LOGIC MỚI ===
     else if (message.type == 'share_group_qr') {
       try {
@@ -313,7 +316,11 @@ class ChatRequest {
         // === SAO CHÉP LOGIC PREVIEW TỪ HÀM SENDMESSAGE ===
         if (messageModel.type == 'share_post') {
           newLastMessage = 'Đã chia sẻ một bài viết';
-        } else if (messageModel.type == 'share_group_qr') {
+        }
+        else if (messageModel.type == 'location') {
+          newLastMessage = '📍 Đã chia sẻ vị trí';
+          }
+        else if (messageModel.type == 'share_group_qr') {
           try {
             final qrData = QRInviteData.fromQRString(messageModel.content);
             newLastMessage = 'Lời mời tham gia nhóm ${qrData.groupName}';
