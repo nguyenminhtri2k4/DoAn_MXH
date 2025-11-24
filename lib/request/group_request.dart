@@ -62,10 +62,6 @@ class GroupRequest {
     }
   }
 
-  // =====================================================================
-  // =============== JOIN / LEAVE GROUP – ĐỒNG BỘ 2 CHIỀU ================
-  // =====================================================================
-
   Future<void> joinGroup(String groupId, String userId) async {
     try {
       print('🔄 [GroupRequest] User $userId joining group $groupId');
@@ -111,53 +107,47 @@ class GroupRequest {
     }
   }
 
-  /// ✅ HƯỚNG DẪN: Tìm phương thức removeMemberFromGroup trong file group_request.dart của bạn
-  /// và THAY THẾ nó bằng phương thức này:
-
-  /// ✅ UPDATED: Xóa thành viên khỏi nhóm - Đồng bộ cả managers và members
+  ///UPDATED: Xóa thành viên khỏi nhóm
   Future<void> removeMemberFromGroup(String groupId, String userId) async {
     try {
-      print('🔄 [GroupRequest] Removing user $userId from group $groupId');
+      print('🔄 [GroupRequest] ========================================');
+      print('🔄 [GroupRequest] Removing user from group');
+      print('   └─ GroupId: $groupId');
+      print('   └─ UserId: $userId');
 
-      // 1. Lấy thông tin nhóm để kiểm tra xem user có phải manager không
-      final groupDoc =
-          await _firestore.collection(_collectionName).doc(groupId).get();
+      final WriteBatch batch = _firestore.batch();
+      final groupRef = _firestore.collection(_collectionName).doc(groupId);
+      final groupDoc = await groupRef.get();
+      if (groupDoc.exists) {
+        final groupData = groupDoc.data()!;
+        final managers = List<String>.from(groupData['managers'] ?? []);
+        final isManager = managers.contains(userId);
 
-      if (!groupDoc.exists) {
-        throw Exception('Group not found');
+        if (isManager) {
+          batch.update(groupRef, {
+            'managers': FieldValue.arrayRemove([userId]),
+            'members': FieldValue.arrayRemove([userId]),
+          });
+          print('   └─ User is MANAGER -> Remove from managers + members');
+        } else {
+          batch.update(groupRef, {
+            'members': FieldValue.arrayRemove([userId]),
+          });
+          print('   └─ User is MEMBER -> Remove from members only');
+        }
+      } else {
+        print('   └─ Group not found, skipping group update');
       }
-
-      final groupData = groupDoc.data()!;
-      final managers = List<String>.from(groupData['managers'] ?? []);
-      final isManager = managers.contains(userId);
-
-      // 2. Xóa khỏi group (cả members và managers nếu là manager)
-      final Map<String, dynamic> updateData = {
-        'members': FieldValue.arrayRemove([userId]),
-      };
-
-      // Nếu là manager thì cũng xóa khỏi danh sách managers
-      if (isManager) {
-        print('   └─ User is manager, removing from managers list too');
-        updateData['managers'] = FieldValue.arrayRemove([userId]);
-      }
-
-      await _firestore
-          .collection(_collectionName)
-          .doc(groupId)
-          .update(updateData);
-
-      print('   ✓ Removed from group collection');
-
-      // 3. Xóa groupId khỏi user.groups
-      await _firestore.collection(_userCollectionName).doc(userId).update({
+      final userRef = _firestore.collection(_userCollectionName).doc(userId);
+      batch.update(userRef, {
         'groups': FieldValue.arrayRemove([groupId]),
       });
-
-      print('   ✓ Removed from user collection');
-      print('✅ [GroupRequest] Remove member sync completed successfully');
+      print('   └─ Remove groupId from User.groups');
+      await batch.commit();
+      print('✅ [GroupRequest] Remove member completed!');
+      print('🔄 [GroupRequest] ========================================');
     } catch (e) {
-      print('❌ [GroupRequest] Error removing member: $e');
+      print('❌ [GroupRequest] Error: $e');
       rethrow;
     }
   }
@@ -165,10 +155,6 @@ class GroupRequest {
   Future<void> leaveGroup(String groupId, String userId) async {
     await removeMemberFromGroup(groupId, userId);
   }
-
-  // =====================================================================
-  // ======================= GET / STREAM GROUPS =========================
-  // =====================================================================
 
   Stream<List<GroupModel>> getGroupsByUserId(String userId) {
     return _firestore
@@ -194,6 +180,111 @@ class GroupRequest {
     } catch (e) {
       print('❌ Error getGroupById: $e');
       return null;
+    }
+  }
+
+  //Chuyển quyền sở hữu nhóm//
+  Future<void> transferOwnership(
+    String groupId,
+    String currentOwnerId,
+    String newOwnerId,
+  ) async {
+    try {
+      print('🔄 [GroupRequest] Transfer Ownership');
+      final groupRef = _firestore.collection(_collectionName).doc(groupId);
+      await groupRef.update({
+        'managers': FieldValue.arrayUnion([newOwnerId]),
+      });
+      await groupRef.update({
+        'managers': FieldValue.arrayRemove([currentOwnerId]),
+      });
+      await groupRef.update({'ownerId': newOwnerId});
+
+      print('✅ [GroupRequest] Transfer completed');
+    } catch (e) {
+      print('❌ [GroupRequest] Error: $e');
+      rethrow;
+    }
+  }
+
+  //Cấp quyền quản lý//
+  Future<void> promoteToManager(String groupId, String userId) async {
+    try {
+      await _firestore.collection(_collectionName).doc(groupId).update({
+        'managers': FieldValue.arrayUnion([userId]),
+      });
+      print('✅ Promoted to manager');
+    } catch (e) {
+      print('❌ Error: $e');
+      rethrow;
+    }
+  }
+
+  //Gỡ quyền quản lý//
+  Future<void> demoteFromManager(String groupId, String userId) async {
+    try {
+      await _firestore.collection(_collectionName).doc(groupId).update({
+        'managers': FieldValue.arrayRemove([userId]),
+      });
+      print('✅ Demoted from manager');
+    } catch (e) {
+      print('❌ Error: $e');
+      rethrow;
+    }
+  }
+
+  // Giải tán nhóm //
+  Future<void> disbandGroup(String groupId, String ownerId) async {
+    try {
+      print('🔥 Disbanding group $groupId');
+      final groupRef = _firestore.collection(_collectionName).doc(groupId);
+      final groupDoc = await groupRef.get();
+      if (!groupDoc.exists) throw Exception('Group not found');
+      final groupData = groupDoc.data()!;
+      final groupName = groupData['name'] as String;
+      final groupType = groupData['type'] as String;
+      final memberIds = List<String>.from(groupData['members'] ?? []);
+      final batch = _firestore.batch();
+      for (String memberId in memberIds) {
+        if (memberId != ownerId) {
+          final ref = _firestore
+              .collection(_userCollectionName)
+              .doc(memberId)
+              .collection('disbandedGroups')
+              .doc(groupId);
+          batch.set(ref, {
+            'groupId': groupId,
+            'name': groupName,
+            'type': groupType,
+            'disbandedAt': FieldValue.serverTimestamp(),
+          });
+        }
+      }
+      await batch.commit();
+      await _firestore.collection(_userCollectionName).doc(ownerId).update({
+        'groups': FieldValue.arrayRemove([groupId]),
+      });
+      final chatQuery =
+          await _firestore
+              .collection('Chat')
+              .where('groupId', isEqualTo: groupId)
+              .get();
+      final chatBatch = _firestore.batch();
+      for (var doc in chatQuery.docs) {
+        chatBatch.delete(doc.reference);
+      }
+      await chatBatch.commit();
+      final settingsQuery = await groupRef.collection('settings').get();
+      final settingsBatch = _firestore.batch();
+      for (var doc in settingsQuery.docs) {
+        settingsBatch.delete(doc.reference);
+      }
+      await settingsBatch.commit();
+      await groupRef.delete();
+      print('✅ Group disbanded');
+    } catch (e) {
+      print('❌ Error: $e');
+      rethrow;
     }
   }
 

@@ -1,4 +1,3 @@
-
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:mangxahoi/model/model_friend_request.dart';
@@ -54,15 +53,19 @@ class FriendsViewModel extends ChangeNotifier {
 
       print('🔍 [FriendsVM] Đang tìm user với UID: ${firebaseUser.uid}');
       _currentUser = await _userRequest.getUserByUid(firebaseUser.uid);
-      
+
       if (_currentUser != null) {
         _currentUserDocId = _currentUser!.id;
         print('✅ [FriendsVM] Đã lấy currentUserDocId: $_currentUserDocId');
-        
+
         // Khởi tạo streams
-        incomingRequestsStream = _requestManager.getIncomingRequests(_currentUserDocId!);
-        sentRequestsStream = _requestManager.getSentRequests(_currentUserDocId!);
-        
+        incomingRequestsStream = _requestManager.getIncomingRequests(
+          _currentUserDocId!,
+        );
+        sentRequestsStream = _requestManager.getSentRequests(
+          _currentUserDocId!,
+        );
+
         print('✅ [FriendsVM] Đã khởi tạo friend request streams');
       } else {
         print('⚠️ [FriendsVM] Không tìm thấy user trong Firestore');
@@ -94,8 +97,12 @@ class FriendsViewModel extends ChangeNotifier {
       _currentUserDocId = _currentUser!.id;
 
       // Chỉ init streams nếu chưa có
-      incomingRequestsStream ??= _requestManager.getIncomingRequests(_currentUserDocId!);
-      sentRequestsStream ??= _requestManager.getSentRequests(_currentUserDocId!);
+      incomingRequestsStream ??= _requestManager.getIncomingRequests(
+        _currentUserDocId!,
+      );
+      sentRequestsStream ??= _requestManager.getSentRequests(
+        _currentUserDocId!,
+      );
 
       notifyListeners();
     }
@@ -110,12 +117,16 @@ class FriendsViewModel extends ChangeNotifier {
     try {
       print('🔄 [FriendsVM] Accepting request from ${request.fromUserId}');
       await _requestManager.acceptRequest(request);
-      
+
       // Cập nhật local cache nếu có listener
       if (_listener != null) {
-        _listener!.updateLocalFriendship(request.fromUserId, request.toUserId, true);
+        _listener!.updateLocalFriendship(
+          request.fromUserId,
+          request.toUserId,
+          true,
+        );
       }
-      
+
       print('✅ [FriendsVM] Request accepted');
     } catch (e, stackTrace) {
       print('❌ [FriendsVM] Lỗi chấp nhận lời mời: $e');

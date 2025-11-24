@@ -11,6 +11,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:mangxahoi/model/model_group.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:mangxahoi/model/model_user.dart';
+import 'package:mangxahoi/viewmodel/friends_view_model.dart';
+import 'package:mangxahoi/request/friend_request_manager.dart';
 
 class ProfileView extends StatelessWidget {
   final String? userId;
@@ -538,9 +540,68 @@ class _ProfileContentState extends State<_ProfileContent>
                   icon: Icons.cancel_outlined,
                   label: 'Hủy lời mời kết bạn',
                   iconColor: Colors.red,
-                  onTap: () {
-                    Navigator.pop(context);
-                    // TODO: Implement cancel friend request
+                  onTap: () async {
+                    Navigator.pop(context); // Đóng bottom sheet
+
+                    // Hiển thị loading
+                    showDialog(
+                      context: context,
+                      barrierDismissible: false,
+                      builder:
+                          (context) =>
+                              const Center(child: CircularProgressIndicator()),
+                    );
+
+                    try {
+                      // Tìm và hủy request
+                      final sentRequests =
+                          await FriendRequestManager()
+                              .getSentRequests(vm.currentUserData!.id)
+                              .first;
+
+                      final request = sentRequests.firstWhere(
+                        (req) => req.toUserId == vm.user!.id,
+                        orElse:
+                            () =>
+                                throw Exception(
+                                  'Không tìm thấy lời mời kết bạn',
+                                ),
+                      );
+
+                      await FriendRequestManager().cancelSentRequest(
+                        request.id,
+                      );
+
+                      // Đóng loading và hiển thị thông báo
+                      if (context.mounted) {
+                        Navigator.pop(context); // Đóng loading
+
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Đã hủy lời mời kết bạn'),
+                            backgroundColor: Colors.green,
+                            duration: Duration(seconds: 2),
+                          ),
+                        );
+
+                        // ✅ Reload để button đổi từ "Đã gửi" → "Kết bạn"
+                        await vm.loadProfile(userId: vm.user!.id);
+                      }
+                    } catch (e) {
+                      // Đóng loading
+                      if (context.mounted) {
+                        Navigator.pop(context);
+
+                        // Hiển thị lỗi
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('Lỗi: ${e.toString()}'),
+                            backgroundColor: Colors.red,
+                            duration: const Duration(seconds: 3),
+                          ),
+                        );
+                      }
+                    }
                   },
                 ),
                 const SizedBox(height: 20),
@@ -1129,8 +1190,6 @@ class _ProfileContentState extends State<_ProfileContent>
   }
 
   Widget _buildGroupsSection(BuildContext context, ProfileViewModel vm) {
-    final totalGroups = vm.user?.groups.length ?? 0;
-
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 12),
       padding: const EdgeInsets.all(20),
@@ -1155,26 +1214,33 @@ class _ProfileContentState extends State<_ProfileContent>
                 'Nhóm',
                 style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
-              if (totalGroups > 0)
-                TextButton(
-                  onPressed: () {
-                    Navigator.pushNamed(
-                      context,
-                      '/user_groups',
-                      arguments: {
-                        'userId': vm.user!.id,
-                        'userName': vm.user!.name,
-                      },
-                    );
-                  },
-                  child: Text(
-                    'Xem tất cả ($totalGroups)', // ← ĐÚNG: đếm TẤT CẢ
-                    style: TextStyle(
-                      color: AppColors.primary,
-                      fontWeight: FontWeight.w600,
+              StreamBuilder<List<GroupModel>>(
+                stream: vm.groupsStream,
+                builder: (context, snapshot) {
+                  final totalGroups = (snapshot.data ?? []).length;
+                  if (totalGroups <= 2) return const SizedBox.shrink();
+
+                  return TextButton(
+                    onPressed: () {
+                      Navigator.pushNamed(
+                        context,
+                        '/user_groups',
+                        arguments: {
+                          'userId': vm.user!.id,
+                          'userName': vm.user!.name,
+                        },
+                      );
+                    },
+                    child: Text(
+                      'Xem tất cả ($totalGroups)',
+                      style: TextStyle(
+                        color: AppColors.primary,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
-                  ),
-                ),
+                  );
+                },
+              ),
             ],
           ),
           const SizedBox(height: 12),
@@ -1193,19 +1259,22 @@ class _ProfileContentState extends State<_ProfileContent>
         if (groups.isEmpty) {
           return _buildEmptyState('Chưa tham gia nhóm nào');
         }
-        return _buildGroupsListView(context, groups);
+        return _buildGroupsListView(groups);
       },
     );
   }
 
-  Widget _buildGroupsListView(BuildContext context, List<GroupModel> groups) {
+  Widget _buildGroupsListView(List<GroupModel> groups) {
+    final displayGroups = groups.take(2).toList();
+
     return ListView.separated(
-      physics: const NeverScrollableScrollPhysics(),
+      padding: EdgeInsets.zero,
       shrinkWrap: true,
-      itemCount: groups.length,
+      physics: const NeverScrollableScrollPhysics(),
+      itemCount: displayGroups.length,
       separatorBuilder: (context, index) => const SizedBox(height: 12),
       itemBuilder: (context, index) {
-        final group = groups[index];
+        final group = displayGroups[index];
         return _buildGroupCard(context, group);
       },
     );

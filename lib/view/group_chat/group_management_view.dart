@@ -21,10 +21,11 @@ class GroupManagementView extends StatelessWidget {
     final String? currentUserId = context.watch<UserService>().currentUser?.id;
 
     return ChangeNotifierProvider(
-      create: (_) => GroupManagementViewModel(
-        groupId: groupId,
-        currentUserId: currentUserId,
-      ),
+      create:
+          (_) => GroupManagementViewModel(
+            groupId: groupId,
+            currentUserId: currentUserId,
+          ),
       //child: const _GroupManagementContent(),
       child: Consumer<GroupManagementViewModel>(
         builder: (context, vm, _) {
@@ -97,21 +98,21 @@ class _GroupManagementContent extends StatelessWidget {
           children: [
             vm.group!.coverImage.isNotEmpty
                 ? CachedNetworkImage(
-                    imageUrl: vm.group!.coverImage,
-                    fit: BoxFit.cover,
-                  )
+                  imageUrl: vm.group!.coverImage,
+                  fit: BoxFit.cover,
+                )
                 : Container(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [
-                          AppColors.primary,
-                          AppColors.primary.withOpacity(0.7),
-                        ],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        AppColors.primary,
+                        AppColors.primary.withOpacity(0.7),
+                      ],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
                     ),
                   ),
+                ),
             Container(
               decoration: BoxDecoration(
                 gradient: LinearGradient(
@@ -209,13 +210,15 @@ class _GroupManagementContent extends StatelessWidget {
                           : 'Nhóm này chưa có mô tả.'),
                   style: TextStyle(
                     fontSize: 14,
-                    color: vm.group!.description.isNotEmpty
-                        ? Colors.grey[600]
-                        : Colors.grey[400],
+                    color:
+                        vm.group!.description.isNotEmpty
+                            ? Colors.grey[600]
+                            : Colors.grey[400],
                     height: 1.4,
-                    fontStyle: vm.group!.description.isNotEmpty
-                        ? FontStyle.normal
-                        : FontStyle.italic,
+                    fontStyle:
+                        vm.group!.description.isNotEmpty
+                            ? FontStyle.normal
+                            : FontStyle.italic,
                   ),
                 ),
               ),
@@ -234,8 +237,8 @@ class _GroupManagementContent extends StatelessWidget {
                       color: AppColors.primary,
                       size: 20,
                     ),
-                    onPressed: () =>
-                        _showEditGroupDescriptionDialog(context, vm),
+                    onPressed:
+                        () => _showEditGroupDescriptionDialog(context, vm),
                   ),
                 ),
             ],
@@ -346,10 +349,11 @@ class _GroupManagementContent extends StatelessWidget {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (context) => GroupQRCodeView(
-                      group: vm.group!,
-                      currentUserName: vm.currentUser?.name ?? 'Người dùng',
-                    ),
+                    builder:
+                        (context) => GroupQRCodeView(
+                          group: vm.group!,
+                          currentUserName: vm.currentUser?.name ?? 'Người dùng',
+                        ),
                   ),
                 );
               },
@@ -475,9 +479,10 @@ class _GroupManagementContent extends StatelessWidget {
             icon: Icons.message_outlined,
             iconColor: Colors.blue,
             title: 'Ai có thể nhắn tin',
-            subtitle: vm.messagingPermission == 'all'
-                ? 'Tất cả thành viên'
-                : vm.messagingPermission == 'managers'
+            subtitle:
+                vm.messagingPermission == 'all'
+                    ? 'Tất cả thành viên'
+                    : vm.messagingPermission == 'managers'
                     ? 'Chỉ quản lý'
                     : 'Chỉ chủ nhóm',
             trailing: Container(
@@ -534,13 +539,14 @@ class _GroupManagementContent extends StatelessWidget {
           style: TextStyle(fontSize: 13, color: Colors.grey[600]),
         ),
       ),
-      trailing: trailing ??
+      trailing:
+          trailing ??
           (value != null
               ? Switch(
-                  value: value,
-                  onChanged: onChanged,
-                  //activeThumbColor: AppColors.primary, // <-- Corrected line
-                )
+                value: value,
+                onChanged: onChanged,
+                //activeThumbColor: AppColors.primary, // <-- Corrected line
+              )
               : null),
     );
   }
@@ -627,9 +633,10 @@ class _GroupManagementContent extends StatelessWidget {
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               border: Border.all(
-                color: isOwner
-                    ? Colors.amber.withOpacity(0.3)
-                    : isManager
+                color:
+                    isOwner
+                        ? Colors.amber.withOpacity(0.3)
+                        : isManager
                         ? AppColors.primary.withOpacity(0.3)
                         : Colors.transparent,
                 width: 2,
@@ -637,9 +644,10 @@ class _GroupManagementContent extends StatelessWidget {
             ),
             child: CircleAvatar(
               radius: 24,
-              backgroundImage: member.avatar.isNotEmpty
-                  ? NetworkImage(member.avatar.first)
-                  : null,
+              backgroundImage:
+                  member.avatar.isNotEmpty
+                      ? NetworkImage(member.avatar.first)
+                      : null,
               child: member.avatar.isEmpty ? const Icon(Icons.person) : null,
             ),
           ),
@@ -722,13 +730,14 @@ class _GroupManagementContent extends StatelessWidget {
           isOwner
               ? 'Chủ nhóm'
               : isManager
-                  ? 'Quản lý'
-                  : 'Thành viên',
+              ? 'Quản lý'
+              : 'Thành viên',
           style: TextStyle(
             fontSize: 13,
-            color: isOwner
-                ? Colors.amber[700]
-                : isManager
+            color:
+                isOwner
+                    ? Colors.amber[700]
+                    : isManager
                     ? AppColors.primary
                     : Colors.grey[600],
             fontWeight:
@@ -736,19 +745,21 @@ class _GroupManagementContent extends StatelessWidget {
           ),
         ),
       ),
-      trailing: vm.canManageMembers && member.id != vm.currentUserId
-          ? IconButton(
-              icon: Icon(Icons.more_vert, size: 20, color: Colors.grey[700]),
-              onPressed: () => _showMemberOptionsSheet(
-                context,
-                vm,
-                member,
-                isOwner,
-                isManager,
-                isMuted,
-              ),
-            )
-          : null,
+      trailing:
+          vm.canManageMembers && member.id != vm.currentUserId
+              ? IconButton(
+                icon: Icon(Icons.more_vert, size: 20, color: Colors.grey[700]),
+                onPressed:
+                    () => _showMemberOptionsSheet(
+                      context,
+                      vm,
+                      member,
+                      isOwner,
+                      isManager,
+                      isMuted,
+                    ),
+              )
+              : null,
     );
   }
 
@@ -838,135 +849,136 @@ class _GroupManagementContent extends StatelessWidget {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => Padding(
-        padding: EdgeInsets.only(
-          bottom: MediaQuery.of(context).viewInsets.bottom,
-        ),
-        child: SingleChildScrollView(
-          child: Container(
-            decoration: const BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      builder:
+          (context) => Padding(
+            padding: EdgeInsets.only(
+              bottom: MediaQuery.of(context).viewInsets.bottom,
             ),
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Text(
-                      'Đổi tên nhóm',
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.close),
-                      onPressed: () => Navigator.pop(context),
-                      padding: EdgeInsets.zero,
-                      constraints: const BoxConstraints(),
-                    ),
-                  ],
+            child: SingleChildScrollView(
+              child: Container(
+                decoration: const BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
                 ),
-                const SizedBox(height: 20),
-                Form(
-                  key: formKey,
-                  child: TextFormField(
-                    controller: controller,
-                    autofocus: true,
-                    validator: (value) {
-                      if (value == null || value.trim().isEmpty) {
-                        return 'Tên không được để trống';
-                      }
-                      return null;
-                    },
-                    decoration: InputDecoration(
-                      hintText: 'Nhập tên nhóm mới',
-                      filled: true,
-                      fillColor: Colors.grey[100],
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide.none,
-                      ),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide.none,
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide(
-                          color: AppColors.primary,
-                          width: 2,
-                        ),
-                      ),
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 12,
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                Row(
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Expanded(
-                      child: ElevatedButton(
-                        onPressed: () => Navigator.pop(context),
-                        style: ElevatedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                          backgroundColor: const Color(0xFFFEE2E2),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          elevation: 0,
-                        ),
-                        child: const Text(
-                          'Hủy',
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text(
+                          'Đổi tên nhóm',
                           style: TextStyle(
-                            color: Color(0xFFEF4444),
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
                           ),
                         ),
-                      ),
+                        IconButton(
+                          icon: const Icon(Icons.close),
+                          onPressed: () => Navigator.pop(context),
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(),
+                        ),
+                      ],
                     ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: ElevatedButton(
-                        onPressed: () {
-                          if (formKey.currentState!.validate()) {
-                            vm.updateGroupName(controller.text.trim());
-                            Navigator.pop(context);
+                    const SizedBox(height: 20),
+                    Form(
+                      key: formKey,
+                      child: TextFormField(
+                        controller: controller,
+                        autofocus: true,
+                        validator: (value) {
+                          if (value == null || value.trim().isEmpty) {
+                            return 'Tên không được để trống';
                           }
+                          return null;
                         },
-                        style: ElevatedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                          backgroundColor: AppColors.primary,
-                          shape: RoundedRectangleBorder(
+                        decoration: InputDecoration(
+                          hintText: 'Nhập tên nhóm mới',
+                          filled: true,
+                          fillColor: Colors.grey[100],
+                          border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide.none,
                           ),
-                          elevation: 0,
-                        ),
-                        child: const Text(
-                          'Lưu',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.white,
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide.none,
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide(
+                              color: AppColors.primary,
+                              width: 2,
+                            ),
+                          ),
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 12,
                           ),
                         ),
                       ),
                     ),
+                    const SizedBox(height: 16),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: ElevatedButton(
+                            onPressed: () => Navigator.pop(context),
+                            style: ElevatedButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              backgroundColor: const Color(0xFFFEE2E2),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              elevation: 0,
+                            ),
+                            child: const Text(
+                              'Hủy',
+                              style: TextStyle(
+                                color: Color(0xFFEF4444),
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: ElevatedButton(
+                            onPressed: () {
+                              if (formKey.currentState!.validate()) {
+                                vm.updateGroupName(controller.text.trim());
+                                Navigator.pop(context);
+                              }
+                            },
+                            style: ElevatedButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              backgroundColor: AppColors.primary,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              elevation: 0,
+                            ),
+                            child: const Text(
+                              'Lưu',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ],
                 ),
-              ],
+              ),
             ),
           ),
-        ),
-      ),
     );
   }
 
@@ -980,123 +992,124 @@ class _GroupManagementContent extends StatelessWidget {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => Padding(
-        padding: EdgeInsets.only(
-          bottom: MediaQuery.of(context).viewInsets.bottom,
-        ),
-        child: SingleChildScrollView(
-          child: Container(
-            decoration: const BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      builder:
+          (context) => Padding(
+            padding: EdgeInsets.only(
+              bottom: MediaQuery.of(context).viewInsets.bottom,
             ),
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            child: SingleChildScrollView(
+              child: Container(
+                decoration: const BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+                ),
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
-                      'Sửa mô tả nhóm',
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text(
+                          'Sửa mô tả nhóm',
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.close),
+                          onPressed: () => Navigator.pop(context),
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 20),
+                    TextFormField(
+                      controller: controller,
+                      autofocus: true,
+                      maxLines: 5,
+                      minLines: 3,
+                      decoration: InputDecoration(
+                        hintText: 'Nhập mô tả cho nhóm...',
+                        filled: true,
+                        fillColor: Colors.grey[100],
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide.none,
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide.none,
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(
+                            color: AppColors.primary,
+                            width: 2,
+                          ),
+                        ),
+                        contentPadding: const EdgeInsets.all(16),
                       ),
                     ),
-                    IconButton(
-                      icon: const Icon(Icons.close),
-                      onPressed: () => Navigator.pop(context),
-                      padding: EdgeInsets.zero,
-                      constraints: const BoxConstraints(),
+                    const SizedBox(height: 16),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: ElevatedButton(
+                            onPressed: () => Navigator.pop(context),
+                            style: ElevatedButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              backgroundColor: const Color(0xFFFEE2E2),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              elevation: 0,
+                            ),
+                            child: const Text(
+                              'Hủy',
+                              style: TextStyle(
+                                color: Color(0xFFEF4444),
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: ElevatedButton(
+                            onPressed: () {
+                              vm.updateGroupDescription(controller.text.trim());
+                              Navigator.pop(context);
+                            },
+                            style: ElevatedButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              backgroundColor: AppColors.primary,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              elevation: 0,
+                            ),
+                            child: const Text(
+                              'Lưu',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),
-                const SizedBox(height: 20),
-                TextFormField(
-                  controller: controller,
-                  autofocus: true,
-                  maxLines: 5,
-                  minLines: 3,
-                  decoration: InputDecoration(
-                    hintText: 'Nhập mô tả cho nhóm...',
-                    filled: true,
-                    fillColor: Colors.grey[100],
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide.none,
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide.none,
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide(
-                        color: AppColors.primary,
-                        width: 2,
-                      ),
-                    ),
-                    contentPadding: const EdgeInsets.all(16),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                Row(
-                  children: [
-                    Expanded(
-                      child: ElevatedButton(
-                        onPressed: () => Navigator.pop(context),
-                        style: ElevatedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                          backgroundColor: const Color(0xFFFEE2E2),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          elevation: 0,
-                        ),
-                        child: const Text(
-                          'Hủy',
-                          style: TextStyle(
-                            color: Color(0xFFEF4444),
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: ElevatedButton(
-                        onPressed: () {
-                          vm.updateGroupDescription(controller.text.trim());
-                          Navigator.pop(context);
-                        },
-                        style: ElevatedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                          backgroundColor: AppColors.primary,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          elevation: 0,
-                        ),
-                        child: const Text(
-                          'Lưu',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.white,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
+              ),
             ),
           ),
-        ),
-      ),
     );
   }
 
@@ -1108,138 +1121,163 @@ class _GroupManagementContent extends StatelessWidget {
     bool isManager,
     bool isMuted,
   ) {
-    // ✅ Kiểm tra quyền xóa thành viên
     final canRemove = vm.canRemoveMember(member.id);
+    final canTransfer = vm.canTransferOwnership(member.id);
 
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
-      builder: (context) => SingleChildScrollView(
-        child: Container(
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const SizedBox(height: 12),
-              Container(
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: Colors.grey[300],
-                  borderRadius: BorderRadius.circular(2),
-                ),
+      builder:
+          (context) => SingleChildScrollView(
+            child: Container(
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
               ),
-              const SizedBox(height: 20),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                child: Row(
-                  children: [
-                    CircleAvatar(
-                      radius: 24,
-                      backgroundImage: member.avatar.isNotEmpty
-                          ? NetworkImage(member.avatar.first)
-                          : null,
-                      child: member.avatar.isEmpty
-                          ? const Icon(Icons.person)
-                          : null,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const SizedBox(height: 12),
+                  Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: Colors.grey[300],
+                      borderRadius: BorderRadius.circular(2),
                     ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            member.name,
-                            style: const TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          Text(
-                            isOwner
-                                ? 'Chủ nhóm'
-                                : isManager
+                  ),
+                  const SizedBox(height: 20),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    child: Row(
+                      children: [
+                        CircleAvatar(
+                          radius: 24,
+                          backgroundImage:
+                              member.avatar.isNotEmpty
+                                  ? NetworkImage(member.avatar.first)
+                                  : null,
+                          child:
+                              member.avatar.isEmpty
+                                  ? const Icon(Icons.person)
+                                  : null,
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                member.name,
+                                style: const TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              Text(
+                                isOwner
+                                    ? 'Chủ nhóm'
+                                    : isManager
                                     ? 'Quản lý'
                                     : 'Thành viên',
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: Colors.grey[600],
-                            ),
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  color: Colors.grey[600],
+                                ),
+                              ),
+                            ],
                           ),
-                        ],
-                      ),
+                        ),
+                      ],
                     ),
-                  ],
-                ),
+                  ),
+                  const SizedBox(height: 20),
+                  Divider(height: 1, color: Colors.grey[300]),
+                  const SizedBox(height: 20),
+
+                  // ✅ CHUYỂN QUYỀN CHỦ NHÓM
+                  if (canTransfer)
+                    _buildOptionTile(
+                      icon: Icons.swap_horiz,
+                      iconColor: Colors.amber,
+                      title: 'Chuyển quyền chủ nhóm',
+                      subtitle:
+                          isManager
+                              ? 'Bạn sẽ trở thành thành viên thường'
+                              : 'Cần cấp quyền quản lý trước',
+                      onTap: () {
+                        Navigator.pop(context);
+                        if (isManager) {
+                          _confirmTransferOwnership(context, vm, member);
+                        } else {
+                          _showMustPromoteFirstDialog(context, vm, member);
+                        }
+                      },
+                    ),
+
+                  // ✅ CẤP QUYỀN QUẢN LÝ
+                  if (vm.isOwner && !isManager && !isOwner)
+                    _buildOptionTile(
+                      icon: Icons.shield_outlined,
+                      iconColor: AppColors.primary,
+                      title: 'Cấp quyền quản lý',
+                      subtitle: 'Cho phép quản lý nhóm và thành viên',
+                      onTap: () {
+                        Navigator.pop(context);
+                        vm.promoteToManager(member.id);
+                      },
+                    ),
+
+                  // ✅ GỠ QUYỀN QUẢN LÝ
+                  if (vm.isOwner && isManager && !isOwner)
+                    _buildOptionTile(
+                      icon: Icons.remove_circle_outline,
+                      iconColor: Colors.orange,
+                      title: 'Gỡ quyền quản lý',
+                      subtitle: 'Hạ xuống thành viên thông thường',
+                      onTap: () {
+                        Navigator.pop(context);
+                        vm.demoteFromManager(member.id);
+                      },
+                    ),
+
+                  // ✅ TẮT TIẾNG / BỎ TẮT TIẾNG
+                  _buildOptionTile(
+                    icon:
+                        isMuted
+                            ? Icons.volume_up_outlined
+                            : Icons.volume_off_outlined,
+                    iconColor: isMuted ? Colors.green : Colors.grey[700]!,
+                    title: isMuted ? 'Bỏ tắt tiếng' : 'Tắt tiếng',
+                    subtitle:
+                        isMuted
+                            ? 'Cho phép gửi tin nhắn trở lại'
+                            : 'Ngăn không cho gửi tin nhắn',
+                    onTap: () {
+                      Navigator.pop(context);
+                      vm.toggleMuteMember(member.id);
+                    },
+                  ),
+
+                  // ✅ XÓA KHỎI NHÓM
+                  if (canRemove)
+                    _buildOptionTile(
+                      icon: Icons.person_remove_outlined,
+                      iconColor: Colors.red,
+                      title: 'Xóa khỏi nhóm',
+                      subtitle: 'Thành viên sẽ bị xóa vĩnh viễn',
+                      onTap: () {
+                        Navigator.pop(context);
+                        _confirmRemoveMember(context, vm, member);
+                      },
+                    ),
+
+                  const SizedBox(height: 20),
+                ],
               ),
-              const SizedBox(height: 20),
-              Divider(height: 1, color: Colors.grey[300]),
-              const SizedBox(height: 20),
-
-              // ✅ Cấp quyền quản lý (chỉ owner mới thấy)
-              if (vm.isOwner && !isManager && !isOwner)
-                _buildOptionTile(
-                  icon: Icons.shield_outlined,
-                  iconColor: AppColors.primary,
-                  title: 'Cấp quyền quản lý',
-                  subtitle: 'Cho phép quản lý nhóm và thành viên',
-                  onTap: () {
-                    Navigator.pop(context);
-                    vm.promoteToManager(member.id);
-                  },
-                ),
-
-              // ✅ Gỡ quyền quản lý (chỉ owner mới thấy)
-              if (vm.isOwner && isManager && !isOwner)
-                _buildOptionTile(
-                  icon: Icons.remove_circle_outline,
-                  iconColor: Colors.orange,
-                  title: 'Gỡ quyền quản lý',
-                  subtitle: 'Hạ xuống thành viên thông thường',
-                  onTap: () {
-                    Navigator.pop(context);
-                    vm.demoteFromManager(member.id);
-                  },
-                ),
-
-              // ✅ Tắt tiếng / Bỏ tắt tiếng
-              _buildOptionTile(
-                icon: isMuted
-                    ? Icons.volume_up_outlined
-                    : Icons.volume_off_outlined,
-                iconColor: isMuted ? Colors.green : Colors.grey[700]!,
-                title: isMuted ? 'Bỏ tắt tiếng' : 'Tắt tiếng',
-                subtitle: isMuted
-                    ? 'Cho phép gửi tin nhắn trở lại'
-                    : 'Ngăn không cho gửi tin nhắn',
-                onTap: () {
-                  Navigator.pop(context);
-                  vm.toggleMuteMember(member.id);
-                },
-              ),
-
-              // ✅ Xóa khỏi nhóm (kiểm tra quyền)
-              if (canRemove)
-                _buildOptionTile(
-                  icon: Icons.person_remove_outlined,
-                  iconColor: Colors.red,
-                  title: 'Xóa khỏi nhóm',
-                  subtitle: 'Thành viên sẽ bị xóa vĩnh viễn',
-                  onTap: () {
-                    Navigator.pop(context);
-                    _confirmRemoveMember(context, vm, member);
-                  },
-                ),
-
-              const SizedBox(height: 20),
-            ],
+            ),
           ),
-        ),
-      ),
     );
   }
 
@@ -1287,67 +1325,68 @@ class _GroupManagementContent extends StatelessWidget {
       context: context,
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
-      builder: (context) => SingleChildScrollView(
-        child: Container(
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-          ),
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      builder:
+          (context) => SingleChildScrollView(
+            child: Container(
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+              ),
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    'Ai có thể nhắn tin?',
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                    ),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        'Ai có thể nhắn tin?',
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.close),
+                        onPressed: () => Navigator.pop(context),
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(),
+                      ),
+                    ],
                   ),
-                  IconButton(
-                    icon: const Icon(Icons.close),
-                    onPressed: () => Navigator.pop(context),
-                    padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(),
+                  const SizedBox(height: 16),
+                  _buildPermissionOption(
+                    context,
+                    vm,
+                    'all',
+                    'Tất cả thành viên',
+                    'Mọi thành viên trong nhóm có thể gửi tin nhắn',
+                    Icons.people_outline,
                   ),
+                  const SizedBox(height: 12),
+                  _buildPermissionOption(
+                    context,
+                    vm,
+                    'managers',
+                    'Chỉ quản lý',
+                    'Chỉ quản lý và chủ nhóm có thể gửi tin nhắn',
+                    Icons.shield_outlined,
+                  ),
+                  const SizedBox(height: 12),
+                  _buildPermissionOption(
+                    context,
+                    vm,
+                    'owner',
+                    'Chỉ chủ nhóm',
+                    'Chỉ có chủ nhóm mới có thể gửi tin nhắn',
+                    Icons.star_outline,
+                  ),
+                  const SizedBox(height: 8),
                 ],
               ),
-              const SizedBox(height: 16),
-              _buildPermissionOption(
-                context,
-                vm,
-                'all',
-                'Tất cả thành viên',
-                'Mọi thành viên trong nhóm có thể gửi tin nhắn',
-                Icons.people_outline,
-              ),
-              const SizedBox(height: 12),
-              _buildPermissionOption(
-                context,
-                vm,
-                'managers',
-                'Chỉ quản lý',
-                'Chỉ quản lý và chủ nhóm có thể gửi tin nhắn',
-                Icons.shield_outlined,
-              ),
-              const SizedBox(height: 12),
-              _buildPermissionOption(
-                context,
-                vm,
-                'owner',
-                'Chỉ chủ nhóm',
-                'Chỉ có chủ nhóm mới có thể gửi tin nhắn',
-                Icons.star_outline,
-              ),
-              const SizedBox(height: 8),
-            ],
+            ),
           ),
-        ),
-      ),
     );
   }
 
@@ -1383,9 +1422,10 @@ class _GroupManagementContent extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
-                color: isSelected
-                    ? AppColors.primary.withOpacity(0.2)
-                    : Colors.grey[200],
+                color:
+                    isSelected
+                        ? AppColors.primary.withOpacity(0.2)
+                        : Colors.grey[200],
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Icon(
@@ -1435,185 +1475,187 @@ class _GroupManagementContent extends StatelessWidget {
       context: context,
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
-      builder: (context) => Container(
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-        ),
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  'Xóa $memberRole',
-                  style: const TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.red,
-                  ),
-                ),
-                IconButton(
-                  icon: const Icon(Icons.close),
-                  onPressed: () => Navigator.pop(context),
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(),
-                ),
-              ],
+      builder:
+          (context) => Container(
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
             ),
-            const SizedBox(height: 16),
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.red.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                  color: Colors.red.withOpacity(0.3),
-                  width: 1,
-                ),
-              ),
-              child: Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: Colors.red.withOpacity(0.2),
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(
-                      Icons.warning_amber_rounded,
-                      color: Colors.red,
-                      size: 24,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Bạn có chắc muốn xóa ${member.name} khỏi nhóm?',
-                          style: const TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.w600,
-                            color: Color(0xFF1A1A1A),
-                            height: 1.4,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          isTargetManager
-                              ? '• Quyền quản lý sẽ bị gỡ bỏ\n• Thành viên sẽ bị xóa khỏi nhóm'
-                              : '• Thành viên sẽ bị xóa khỏi nhóm',
-                          style: TextStyle(
-                            fontSize: 13,
-                            color: Colors.grey[700],
-                            height: 1.5,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 20),
-            Row(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Expanded(
-                  child: ElevatedButton(
-                    onPressed: () => Navigator.pop(context),
-                    style: ElevatedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      backgroundColor: Colors.grey[200],
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      elevation: 0,
-                    ),
-                    child: Text(
-                      'Hủy',
-                      style: TextStyle(
-                        color: Colors.grey[700],
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Xóa $memberRole',
+                      style: const TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.red,
                       ),
                     ),
-                  ),
+                    IconButton(
+                      icon: const Icon(Icons.close),
+                      onPressed: () => Navigator.pop(context),
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
+                    ),
+                  ],
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: ElevatedButton(
-                    onPressed: () async {
-                      final navigator = Navigator.of(context);
-                      final scaffoldMessenger = ScaffoldMessenger.of(
-                        context,
-                      );
-
-                      navigator.pop();
-                      showDialog(
-                        context: context,
-                        barrierDismissible: false,
-                        builder: (ctx) => const Center(
-                          child: CircularProgressIndicator(),
+                const SizedBox(height: 16),
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.red.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: Colors.red.withOpacity(0.3),
+                      width: 1,
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: Colors.red.withOpacity(0.2),
+                          shape: BoxShape.circle,
                         ),
-                      );
-
-                      try {
-                        await vm.removeMember(member.id);
-                        navigator.pop();
-                        scaffoldMessenger.showSnackBar(
-                          SnackBar(
-                            content: Text(
-                              'Đã xóa ${member.name} khỏi nhóm',
+                        child: const Icon(
+                          Icons.warning_amber_rounded,
+                          color: Colors.red,
+                          size: 24,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Bạn có chắc muốn xóa ${member.name} khỏi nhóm?',
+                              style: const TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w600,
+                                color: Color(0xFF1A1A1A),
+                                height: 1.4,
+                              ),
                             ),
-                            backgroundColor: Colors.green,
-                            duration: const Duration(seconds: 2),
-                          ),
-                        );
-                        await Future.delayed(
-                          const Duration(milliseconds: 300),
-                        );
-
-                        if (context.mounted) {}
-                      } catch (e) {
-                        navigator.pop();
-                        scaffoldMessenger.showSnackBar(
-                          SnackBar(
-                            content: Text('Lỗi: ${e.toString()}'),
-                            backgroundColor: Colors.red,
-                            duration: const Duration(seconds: 3),
-                          ),
-                        );
-                      }
-                    },
-                    style: ElevatedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      backgroundColor: Colors.red,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
+                            const SizedBox(height: 4),
+                            Text(
+                              isTargetManager
+                                  ? '• Quyền quản lý sẽ bị gỡ bỏ\n• Thành viên sẽ bị xóa khỏi nhóm'
+                                  : '• Thành viên sẽ bị xóa khỏi nhóm',
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: Colors.grey[700],
+                                height: 1.5,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
-                      elevation: 0,
-                    ),
-                    child: const Text(
-                      'Xóa',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.white,
-                      ),
-                    ),
+                    ],
                   ),
                 ),
+                const SizedBox(height: 20),
+                Row(
+                  children: [
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: () => Navigator.pop(context),
+                        style: ElevatedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          backgroundColor: Colors.grey[200],
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          elevation: 0,
+                        ),
+                        child: Text(
+                          'Hủy',
+                          style: TextStyle(
+                            color: Colors.grey[700],
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: () async {
+                          final navigator = Navigator.of(context);
+                          final scaffoldMessenger = ScaffoldMessenger.of(
+                            context,
+                          );
+
+                          navigator.pop();
+                          showDialog(
+                            context: context,
+                            barrierDismissible: false,
+                            builder:
+                                (ctx) => const Center(
+                                  child: CircularProgressIndicator(),
+                                ),
+                          );
+
+                          try {
+                            await vm.removeMember(member.id);
+                            navigator.pop();
+                            scaffoldMessenger.showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                  'Đã xóa ${member.name} khỏi nhóm',
+                                ),
+                                backgroundColor: Colors.green,
+                                duration: const Duration(seconds: 2),
+                              ),
+                            );
+                            await Future.delayed(
+                              const Duration(milliseconds: 300),
+                            );
+
+                            if (context.mounted) {}
+                          } catch (e) {
+                            navigator.pop();
+                            scaffoldMessenger.showSnackBar(
+                              SnackBar(
+                                content: Text('Lỗi: ${e.toString()}'),
+                                backgroundColor: Colors.red,
+                                duration: const Duration(seconds: 3),
+                              ),
+                            );
+                          }
+                        },
+                        style: ElevatedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          backgroundColor: Colors.red,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          elevation: 0,
+                        ),
+                        child: const Text(
+                          'Xóa',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
               ],
             ),
-            const SizedBox(height: 8),
-          ],
-        ),
-      ),
+          ),
     );
   }
 
@@ -1622,189 +1664,755 @@ class _GroupManagementContent extends StatelessWidget {
       context: context,
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
-      builder: (context) => Container(
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-        ),
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Row(
-                  children: [
-                    Icon(
-                      Icons.warning_amber_rounded,
-                      color: Colors.red,
-                      size: 24,
-                    ),
-                    SizedBox(width: 8),
-                    Text(
-                      'Giải tán nhóm',
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.red,
-                      ),
-                    ),
-                  ],
-                ),
-                IconButton(
-                  icon: const Icon(Icons.close),
-                  onPressed: () => Navigator.pop(context),
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(),
-                ),
-              ],
+      builder:
+          (context) => Container(
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
             ),
-            const SizedBox(height: 16),
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.red.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                  color: Colors.red.withOpacity(0.3),
-                  width: 1,
-                ),
-              ),
-              child: Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: Colors.red.withOpacity(0.2),
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(
-                      Icons.delete_forever_outlined,
-                      color: Colors.red,
-                      size: 24,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Row(
                       children: [
-                        const Text(
-                          'Bạn có chắc chắn muốn giải tán nhóm này?',
-                          style: TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.w600,
-                            color: Color(0xFF1A1A1A),
-                            height: 1.4,
-                          ),
+                        Icon(
+                          Icons.warning_amber_rounded,
+                          color: Colors.red,
+                          size: 24,
                         ),
-                        const SizedBox(height: 4),
+                        SizedBox(width: 8),
                         Text(
-                          '• Tất cả thành viên sẽ bị xóa\n• Dữ liệu nhóm sẽ bị xóa vĩnh viễn',
+                          'Giải tán nhóm',
                           style: TextStyle(
-                            fontSize: 13,
-                            color: Colors.grey[700],
-                            height: 1.5,
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.red,
                           ),
                         ),
                       ],
                     ),
+                    IconButton(
+                      icon: const Icon(Icons.close),
+                      onPressed: () => Navigator.pop(context),
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.red.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: Colors.red.withOpacity(0.3),
+                      width: 1,
+                    ),
                   ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 20),
-            Row(
-              children: [
-                Expanded(
-                  child: ElevatedButton(
-                    onPressed: () => Navigator.pop(context),
-                    style: ElevatedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      backgroundColor: Colors.grey[200],
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: Colors.red.withOpacity(0.2),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.delete_forever_outlined,
+                          color: Colors.red,
+                          size: 24,
+                        ),
                       ),
-                      elevation: 0,
-                    ),
-                    child: Text(
-                      'Hủy',
-                      style: TextStyle(
-                        color: Colors.grey[700],
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'Bạn có chắc chắn muốn giải tán nhóm này?',
+                              style: TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w600,
+                                color: Color(0xFF1A1A1A),
+                                height: 1.4,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              '• Tất cả thành viên sẽ bị xóa\n• Dữ liệu nhóm sẽ bị xóa vĩnh viễn',
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: Colors.grey[700],
+                                height: 1.5,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
-                    ),
+                    ],
                   ),
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: ElevatedButton(
-                    onPressed: () async {
-                      final navigator = Navigator.of(context);
-                      final scaffoldMessenger = ScaffoldMessenger.of(
-                        context,
-                      );
-                      navigator.pop();
-                      showDialog(
-                        context: context,
-                        barrierDismissible: false,
-                        builder: (ctx) => const Center(
-                          child: CircularProgressIndicator(),
+                const SizedBox(height: 20),
+                Row(
+                  children: [
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: () => Navigator.pop(context),
+                        style: ElevatedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          backgroundColor: Colors.grey[200],
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          elevation: 0,
                         ),
-                      );
-
-                      try {
-                        await vm.disbandGroup();
-                        navigator.pop();
-                        navigator.popUntil(
-                          (route) =>
-                              route.isFirst || route.settings.name == '/groups',
-                        );
-
-                        scaffoldMessenger.showSnackBar(
-                          const SnackBar(
-                            content: Text('Đã giải tán nhóm thành công'),
-                            backgroundColor: Colors.green,
-                            duration: Duration(seconds: 2),
+                        child: Text(
+                          'Hủy',
+                          style: TextStyle(
+                            color: Colors.grey[700],
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
                           ),
-                        );
-                      } catch (e) {
-                        navigator.pop();
-                        scaffoldMessenger.showSnackBar(
-                          SnackBar(
-                            content: Text('Lỗi: ${e.toString()}'),
-                            backgroundColor: Colors.red,
-                            duration: const Duration(seconds: 3),
-                          ),
-                        );
-                      }
-                    },
-                    style: ElevatedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      backgroundColor: Colors.red,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      elevation: 0,
-                    ),
-                    child: const Text(
-                      'Giải tán',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.white,
+                        ),
                       ),
                     ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: () async {
+                          final navigator = Navigator.of(context);
+                          final scaffoldMessenger = ScaffoldMessenger.of(
+                            context,
+                          );
+                          navigator.pop();
+                          showDialog(
+                            context: context,
+                            barrierDismissible: false,
+                            builder:
+                                (ctx) => const Center(
+                                  child: CircularProgressIndicator(),
+                                ),
+                          );
+
+                          try {
+                            await vm.disbandGroup();
+                            navigator.pop();
+                            navigator.popUntil(
+                              (route) =>
+                                  route.isFirst ||
+                                  route.settings.name == '/groups',
+                            );
+
+                            scaffoldMessenger.showSnackBar(
+                              const SnackBar(
+                                content: Text('Đã giải tán nhóm thành công'),
+                                backgroundColor: Colors.green,
+                                duration: Duration(seconds: 2),
+                              ),
+                            );
+                          } catch (e) {
+                            navigator.pop();
+                            scaffoldMessenger.showSnackBar(
+                              SnackBar(
+                                content: Text('Lỗi: ${e.toString()}'),
+                                backgroundColor: Colors.red,
+                                duration: const Duration(seconds: 3),
+                              ),
+                            );
+                          }
+                        },
+                        style: ElevatedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          backgroundColor: Colors.red,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          elevation: 0,
+                        ),
+                        child: const Text(
+                          'Giải tán',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+              ],
+            ),
+          ),
+    );
+  }
+
+  void _showMustPromoteFirstDialog(
+    BuildContext context,
+    GroupManagementViewModel vm,
+    UserModel member,
+  ) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder:
+          (context) => Container(
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+            ),
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.orange.withOpacity(0.1),
+                    shape: BoxShape.circle,
                   ),
+                  child: const Icon(
+                    Icons.info_outline,
+                    color: Colors.orange,
+                    size: 48,
+                  ),
+                ),
+                const SizedBox(height: 20),
+                const Text(
+                  'Cần cấp quyền quản lý',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF1A1A1A),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  'Bạn cần cấp quyền quản lý cho ${member.name} trước khi chuyển quyền chủ nhóm.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 15,
+                    color: Colors.grey[700],
+                    height: 1.5,
+                  ),
+                ),
+                const SizedBox(height: 24),
+                Row(
+                  children: [
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: () => Navigator.pop(context),
+                        style: ElevatedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          backgroundColor: Colors.grey[200],
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          elevation: 0,
+                        ),
+                        child: Text(
+                          'Hủy',
+                          style: TextStyle(
+                            color: Colors.grey[700],
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: () {
+                          Navigator.pop(context);
+                          vm.promoteToManager(member.id);
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                'Đã cấp quyền quản lý cho ${member.name}',
+                              ),
+                              backgroundColor: Colors.green,
+                              duration: const Duration(seconds: 2),
+                            ),
+                          );
+                        },
+                        style: ElevatedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          backgroundColor: AppColors.primary,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          elevation: 0,
+                        ),
+                        child: const Text(
+                          'Cấp ngay',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
-            const SizedBox(height: 8),
-          ],
-        ),
+          ),
+    );
+  }
+
+  void _confirmTransferOwnership(
+    BuildContext context,
+    GroupManagementViewModel vm,
+    UserModel newOwner,
+  ) {
+    bool agreedToTerms = false;
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      isDismissible: false,
+      builder:
+          (context) => StatefulBuilder(
+            builder:
+                (context, setState) => Container(
+                  decoration: const BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.vertical(
+                      top: Radius.circular(20),
+                    ),
+                  ),
+                  padding: const EdgeInsets.all(24),
+                  child: SingleChildScrollView(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: Colors.red.withOpacity(0.1),
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(
+                            Icons.warning_amber_rounded,
+                            color: Colors.red,
+                            size: 48,
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        const Text(
+                          'Chuyển quyền chủ nhóm?',
+                          style: TextStyle(
+                            fontSize: 22,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.red,
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: Colors.grey[50],
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: Colors.grey[300]!),
+                          ),
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: Column(
+                                  children: [
+                                    CircleAvatar(
+                                      radius: 28,
+                                      backgroundImage:
+                                          vm.currentUser?.avatar.isNotEmpty ==
+                                                  true
+                                              ? NetworkImage(
+                                                vm.currentUser!.avatar.first,
+                                              )
+                                              : null,
+                                      child:
+                                          vm.currentUser?.avatar.isEmpty ?? true
+                                              ? const Icon(Icons.person)
+                                              : null,
+                                    ),
+                                    const SizedBox(height: 8),
+                                    Text(
+                                      vm.currentUser?.name ?? 'Bạn',
+                                      style: const TextStyle(
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                      textAlign: TextAlign.center,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 8,
+                                        vertical: 4,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: Colors.red.withOpacity(0.1),
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      child: const Text(
+                                        'Thành viên',
+                                        style: TextStyle(
+                                          fontSize: 11,
+                                          color: Colors.red,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              Column(
+                                children: [
+                                  Icon(
+                                    Icons.arrow_forward,
+                                    color: Colors.grey[600],
+                                    size: 28,
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    'Chuyển',
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      color: Colors.grey[600],
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              Expanded(
+                                child: Column(
+                                  children: [
+                                    Stack(
+                                      children: [
+                                        CircleAvatar(
+                                          radius: 28,
+                                          backgroundImage:
+                                              newOwner.avatar.isNotEmpty
+                                                  ? NetworkImage(
+                                                    newOwner.avatar.first,
+                                                  )
+                                                  : null,
+                                          child:
+                                              newOwner.avatar.isEmpty
+                                                  ? const Icon(Icons.person)
+                                                  : null,
+                                        ),
+                                        Positioned(
+                                          right: 0,
+                                          bottom: 0,
+                                          child: Container(
+                                            padding: const EdgeInsets.all(4),
+                                            decoration: BoxDecoration(
+                                              color: Colors.amber,
+                                              shape: BoxShape.circle,
+                                              border: Border.all(
+                                                color: Colors.white,
+                                                width: 2,
+                                              ),
+                                            ),
+                                            child: const Icon(
+                                              Icons.star,
+                                              size: 14,
+                                              color: Colors.white,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 8),
+                                    Text(
+                                      newOwner.name,
+                                      style: const TextStyle(
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                      textAlign: TextAlign.center,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 8,
+                                        vertical: 4,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: Colors.amber.withOpacity(0.2),
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      child: const Text(
+                                        'Chủ nhóm',
+                                        style: TextStyle(
+                                          fontSize: 11,
+                                          color: Colors.amber,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 20),
+                        Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: Colors.red.withOpacity(0.05),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: Colors.red.withOpacity(0.3),
+                              width: 1.5,
+                            ),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Icon(
+                                    Icons.error_outline,
+                                    color: Colors.red[700],
+                                    size: 20,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    'Lưu ý quan trọng:',
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.red[700],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 12),
+                              _buildWarningItem('Bạn sẽ mất quyền chủ nhóm'),
+                              _buildWarningItem('Không thể tự lấy lại quyền'),
+                              _buildWarningItem('Có thể bị kick bởi chủ mới'),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 20),
+                        InkWell(
+                          onTap:
+                              () => setState(
+                                () => agreedToTerms = !agreedToTerms,
+                              ),
+                          borderRadius: BorderRadius.circular(8),
+                          child: Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              border: Border.all(
+                                color:
+                                    agreedToTerms
+                                        ? AppColors.primary
+                                        : Colors.grey[300]!,
+                                width: 2,
+                              ),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(
+                                  agreedToTerms
+                                      ? Icons.check_box
+                                      : Icons.check_box_outline_blank,
+                                  color:
+                                      agreedToTerms
+                                          ? AppColors.primary
+                                          : Colors.grey[400],
+                                ),
+                                const SizedBox(width: 12),
+                                const Expanded(
+                                  child: Text(
+                                    'Tôi hiểu hậu quả và muốn tiếp tục',
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 24),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: ElevatedButton(
+                                onPressed: () => Navigator.pop(context),
+                                style: ElevatedButton.styleFrom(
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 14,
+                                  ),
+                                  backgroundColor: Colors.grey[200],
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  elevation: 0,
+                                ),
+                                child: Text(
+                                  'Hủy',
+                                  style: TextStyle(
+                                    color: Colors.grey[700],
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: ElevatedButton(
+                                onPressed:
+                                    agreedToTerms
+                                        ? () async {
+                                          final navigator = Navigator.of(
+                                            context,
+                                          );
+                                          final scaffoldMessenger =
+                                              ScaffoldMessenger.of(context);
+
+                                          navigator.pop();
+                                          showDialog(
+                                            context: context,
+                                            barrierDismissible: false,
+                                            builder:
+                                                (ctx) => const Center(
+                                                  child:
+                                                      CircularProgressIndicator(),
+                                                ),
+                                          );
+
+                                          try {
+                                            final isTargetManager =
+                                                vm.group?.managers.contains(
+                                                  newOwner.id,
+                                                ) ??
+                                                false;
+
+                                            if (!isTargetManager) {
+                                              print(
+                                                '🔄 Tự động cấp quyền Manager cho ${newOwner.name}...',
+                                              );
+                                              await vm.promoteToManager(
+                                                newOwner.id,
+                                              );
+                                              await Future.delayed(
+                                                const Duration(
+                                                  milliseconds: 500,
+                                                ),
+                                              );
+                                            }
+
+                                            await vm.transferOwnership(
+                                              newOwner.id,
+                                            );
+                                            navigator.pop();
+                                            scaffoldMessenger.showSnackBar(
+                                              SnackBar(
+                                                content: Text(
+                                                  '✅ Đã chuyển quyền chủ nhóm cho ${newOwner.name}',
+                                                ),
+                                                backgroundColor: Colors.green,
+                                                duration: const Duration(
+                                                  seconds: 3,
+                                                ),
+                                              ),
+                                            );
+                                          } catch (e) {
+                                            navigator.pop();
+                                            scaffoldMessenger.showSnackBar(
+                                              SnackBar(
+                                                content: Text(
+                                                  'Lỗi: ${e.toString()}',
+                                                ),
+                                                backgroundColor: Colors.red,
+                                                duration: const Duration(
+                                                  seconds: 3,
+                                                ),
+                                              ),
+                                            );
+                                          }
+                                        }
+                                        : null,
+                                style: ElevatedButton.styleFrom(
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 14,
+                                  ),
+                                  backgroundColor: Colors.red,
+                                  disabledBackgroundColor: Colors.grey[300],
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  elevation: 0,
+                                ),
+                                child: const Text(
+                                  'Xác nhận',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w600,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+          ),
+    );
+  }
+
+  Widget _buildWarningItem(String text) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            margin: const EdgeInsets.only(top: 4),
+            width: 6,
+            height: 6,
+            decoration: BoxDecoration(
+              color: Colors.red[700],
+              shape: BoxShape.circle,
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              text,
+              style: TextStyle(
+                fontSize: 13,
+                color: Colors.grey[800],
+                height: 1.4,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
