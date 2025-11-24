@@ -72,12 +72,13 @@ class GroupManagementViewModel extends ChangeNotifier {
 
   Future<void> _loadMutedMembers() async {
     try {
-      final doc = await _firestore
-          .collection('Group')
-          .doc(groupId)
-          .collection('settings')
-          .doc('muted_members')
-          .get();
+      final doc =
+          await _firestore
+              .collection('Group')
+              .doc(groupId)
+              .collection('settings')
+              .doc('muted_members')
+              .get();
 
       if (doc.exists) {
         mutedMembers = Set<String>.from(doc.data()?['members'] ?? []);
@@ -142,8 +143,8 @@ class GroupManagementViewModel extends ChangeNotifier {
         showDialog(
           context: context,
           barrierDismissible: false,
-          builder: (context) =>
-              const Center(child: CircularProgressIndicator()),
+          builder:
+              (context) => const Center(child: CircularProgressIndicator()),
         );
 
         final files = [File(image.path)];
@@ -208,30 +209,56 @@ class GroupManagementViewModel extends ChangeNotifier {
     }
   }
 
-  Future<void> promoteToManager(String userId) async {
-    if (!isOwner) return;
+  //Chuyển quyền sở hữu nhóm//
+  Future<void> transferOwnership(String newOwnerId) async {
+    if (!isOwner || currentUserId == null) return;
+
     try {
-      await _firestore.collection('Group').doc(groupId).update({
-        'managers': FieldValue.arrayUnion([userId]),
-      });
+      await _groupRequest.transferOwnership(
+        groupId,
+        currentUserId!,
+        newOwnerId,
+      );
       await _loadGroup();
+      await _loadMembers();
       notifyListeners();
     } catch (e) {
-      print('Error promoting to manager: $e');
+      print('❌ Error: $e');
+      rethrow;
     }
   }
 
-  Future<void> demoteFromManager(String userId) async {
+  // Cấp quyền quản lý //
+  Future<void> promoteToManager(String userId) async {
     if (!isOwner) return;
     try {
-      await _firestore.collection('Group').doc(groupId).update({
-        'managers': FieldValue.arrayRemove([userId]),
-      });
+      await _groupRequest.promoteToManager(groupId, userId);
       await _loadGroup();
       notifyListeners();
     } catch (e) {
-      print('Error demoting from manager: $e');
+      print('Error: $e');
+      rethrow;
     }
+  }
+
+  //Gỡ quyền quản lý //
+  Future<void> demoteFromManager(String userId) async {
+    if (!isOwner) return;
+    try {
+      await _groupRequest.demoteFromManager(groupId, userId);
+      await _loadGroup();
+      notifyListeners();
+    } catch (e) {
+      print('Error: $e');
+      rethrow;
+    }
+  }
+
+  bool canTransferOwnership(String userId) {
+    if (!isOwner) return false;
+    if (userId == currentUserId) return false;
+    if (userId == group?.ownerId) return false;
+    return true;
   }
 
   Future<void> toggleMuteMember(String userId) async {
@@ -298,63 +325,15 @@ class GroupManagementViewModel extends ChangeNotifier {
     return false;
   }
 
+  // Giải tán nhóm //
   Future<void> disbandGroup() async {
     if (!isOwner || currentUserId == null || group == null) return;
 
     try {
-      print('🔥 [GroupManagementVM] Bắt đầu giải tán nhóm $groupId');
-      final groupName = group!.name;
-      final groupType = group!.type;
-      final memberIds = List<String>.from(group!.members);
-      for (String memberId in memberIds) {
-        if (memberId != currentUserId) {
-          await _firestore
-              .collection('User')
-              .doc(memberId)
-              .collection('disbandedGroups')
-              .doc(groupId)
-              .set({
-            'groupId': groupId,
-            'name': groupName,
-            'type': groupType,
-            'disbandedAt': FieldValue.serverTimestamp(),
-          });
-        }
-      }
-      print(
-        '   ✓ Đã lưu thông tin nhóm giải tán vào subcollection của ${memberIds.length - 1} thành viên',
-      );
-      await _firestore.collection('User').doc(currentUserId).update({
-        'groups': FieldValue.arrayRemove([groupId]),
-      });
-      print('   ✓ Đã xóa groupId khỏi User collection của owner');
-      final chatQuery = await _firestore
-          .collection('Chat')
-          .where('groupId', isEqualTo: groupId)
-          .get();
-
-      for (var doc in chatQuery.docs) {
-        await doc.reference.delete();
-      }
-      print('   ✓ Đã xóa ${chatQuery.docs.length} chat documents');
-      final settingsQuery = await _firestore
-          .collection('Group')
-          .doc(groupId)
-          .collection('settings')
-          .get();
-
-      for (var doc in settingsQuery.docs) {
-        await doc.reference.delete();
-      }
-      print('   ✓ Đã xóa ${settingsQuery.docs.length} settings documents');
-      await _firestore.collection('Group').doc(groupId).delete();
-      print('   ✓ Đã XÓA HẲN Group document');
-
-      print(
-        '✅ [GroupManagementVM] Giải tán nhóm thành công - Document đã bị xóa',
-      );
+      await _groupRequest.disbandGroup(groupId, currentUserId!);
+      print('✅ Giải tán nhóm thành công');
     } catch (e) {
-      print('❌ [GroupManagementVM] Lỗi khi giải tán nhóm: $e');
+      print('❌ Lỗi: $e');
       rethrow;
     }
   }
