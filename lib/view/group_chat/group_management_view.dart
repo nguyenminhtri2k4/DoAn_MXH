@@ -10,6 +10,7 @@ import 'package:intl/intl.dart';
 import 'package:mangxahoi/view/group_chat/group_qr_code_view.dart';
 import 'package:mangxahoi/view/group_chat/group_members_list_view.dart';
 import 'package:mangxahoi/view/group_chat/group_disbanded_view.dart';
+import '../../view/group_chat/group_settings_view.dart';
 
 class GroupManagementView extends StatelessWidget {
   final String groupId;
@@ -92,6 +93,22 @@ class _GroupManagementContent extends StatelessWidget {
         icon: const Icon(Icons.arrow_back, color: Colors.white),
         onPressed: () => Navigator.pop(context),
       ),
+      actions: [
+        // Chỉ hiện nút cài đặt nếu là Owner hoặc Manager
+        if (vm.isOwner || (vm.group != null && vm.group!.managers.contains(vm.currentUserId)))
+          IconButton(
+            icon: const Icon(Icons.settings, color: Colors.white),
+            onPressed: () {
+               // Chuyển sang trang GroupSettingsView
+               Navigator.push(
+                 context, 
+                 MaterialPageRoute(
+                   builder: (context) => GroupSettingsView(group: vm.group!),
+                 ),
+               );
+            },
+          ),
+      ],
       flexibleSpace: FlexibleSpaceBar(
         background: Stack(
           fit: StackFit.expand,

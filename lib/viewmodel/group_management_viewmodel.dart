@@ -100,11 +100,13 @@ class GroupManagementViewModel extends ChangeNotifier {
 
   bool get isPrivate => group?.status == 'private';
 
-  String get messagingPermission {
-    final settings = group?.settings ?? '';
-    if (settings.contains('messaging:owner')) return 'owner';
-    if (settings.contains('messaging:managers')) return 'managers';
-    return 'all';
+ String get messagingPermission {
+    // Lấy map settings, nếu null thì mặc định là map rỗng
+    final settings = group?.settings ?? {};
+    
+    // Trả về giá trị của key 'messaging_permission'. 
+    // Nếu chưa có key này (null) thì mặc định là 'all'
+    return settings['messaging_permission'] ?? 'all';
   }
 
   Future<void> updateGroupName(String newName) async {
@@ -188,26 +190,18 @@ class GroupManagementViewModel extends ChangeNotifier {
   }
 
   Future<void> updateMessagingPermission(String permission) async {
-    if (!canEdit) return;
-    try {
-      String newSettings = group?.settings ?? '';
-      newSettings = newSettings
-          .replaceAll('messaging:owner', '')
-          .replaceAll('messaging:managers', '')
-          .replaceAll('messaging:all', '')
-          .replaceAll(',,', ',');
-      if (permission != 'all') {
-        newSettings += ',messaging:$permission';
-      }
-      await _firestore.collection('Group').doc(groupId).update({
-        'settings': newSettings,
-      });
-      await _loadGroup();
-      notifyListeners();
-    } catch (e) {
-      print('Error updating messaging permission: $e');
-    }
+  if (!canEdit) return;
+  try {
+    await _groupRequest.updateMessagingPermission(groupId, permission);
+    await _loadGroup();
+    notifyListeners();
+
+    print('✅ Đã cập nhật quyền nhắn tin: $permission');
+  } catch (e) {
+    print('❌ Error updating messaging permission: $e');
+    rethrow;
   }
+}
 
   //Chuyển quyền sở hữu nhóm//
   Future<void> transferOwnership(String newOwnerId) async {
@@ -340,7 +334,12 @@ class GroupManagementViewModel extends ChangeNotifier {
 }
 
 extension GroupModelCopyWith on GroupModel {
-  GroupModel copyWith({String? name, String? description, String? coverImage}) {
+  GroupModel copyWith({
+    String? name, 
+    String? description, 
+    String? coverImage,
+    Map<String, dynamic>? settings, // <--- Thêm tham số này
+  }) {
     return GroupModel(
       id: id,
       ownerId: ownerId,
@@ -349,7 +348,7 @@ extension GroupModelCopyWith on GroupModel {
       coverImage: coverImage ?? this.coverImage,
       managers: managers,
       members: members,
-      settings: settings,
+      settings: settings ?? this.settings, // <--- Cập nhật dòng này
       status: status,
       type: type,
       createdAt: createdAt,

@@ -1,4 +1,3 @@
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class GroupModel {
@@ -6,10 +5,10 @@ class GroupModel {
   final String ownerId;
   final String name;
   final String description;
-  final String coverImage; // <--- Đã thêm trường này
+  final String coverImage;
   final List<String> managers;
   final List<String> members;
-  final String settings;
+  final Map<String, dynamic> settings; // <--- Sửa từ String thành Map
   final String status;
   final String type;
   final DateTime? createdAt;
@@ -19,7 +18,7 @@ class GroupModel {
     required this.ownerId,
     required this.name,
     required this.description,
-    this.coverImage = '', // <--- Mặc định là chuỗi rỗng
+    this.coverImage = '',
     required this.managers,
     required this.members,
     required this.settings,
@@ -35,10 +34,13 @@ class GroupModel {
       ownerId: map['ownerId'] ?? '',
       name: map['name'] ?? '',
       description: map['description'] ?? '',
-      coverImage: map['coverImage'] ?? '', // <--- Đọc từ Firestore
+      coverImage: map['coverImage'] ?? '',
       managers: List<String>.from(map['managers'] ?? []),
       members: List<String>.from(map['members'] ?? []),
-      settings: map['settings'] ?? '',
+      // Xử lý an toàn: Nếu null hoặc không phải Map thì trả về Map rỗng
+      settings: map['settings'] is Map<String, dynamic> 
+          ? map['settings'] 
+          : {}, 
       status: map['status'] ?? 'activate',
       type: map['type'] ?? 'post',
       createdAt: map['createdAt'] != null
@@ -53,10 +55,10 @@ class GroupModel {
       'ownerId': ownerId,
       'name': name,
       'description': description,
-      'coverImage': coverImage, // <--- Ghi lên Firestore
+      'coverImage': coverImage,
       'managers': managers,
       'members': members,
-      'settings': settings,
+      'settings': settings, // Lưu Map trực tiếp lên Firestore
       'status': status,
       'type': type,
       'createdAt': createdAt ?? FieldValue.serverTimestamp(),

@@ -36,8 +36,8 @@ class _LoginFormState extends State<LoginForm> {
     super.initState();
     // Pre-fill with test credentials for development
     _emailController.text = 'Tên đăng nhập';
-    _passwordController.text = 'Susu@123';
-
+    _passwordController.text = '';
+//Susu@123
     // Listen to email focus changes
     _emailFocusNode.addListener(() {
       if (_emailFocusNode.hasFocus && !_hasEmailFocused) {

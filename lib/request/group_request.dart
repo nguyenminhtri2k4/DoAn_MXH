@@ -28,7 +28,7 @@ class GroupRequest {
         managers: [ownerId],
         description: '',
         coverImage: '',
-        settings: '',
+        settings:{},
         status: 'active',
         type: type,
         createdAt: DateTime.now(),
@@ -62,24 +62,46 @@ class GroupRequest {
     }
   }
 
-  Future<void> joinGroup(String groupId, String userId) async {
-    try {
-      print('🔄 [GroupRequest] User $userId joining group $groupId');
+  
+// =====================================================================
+// FILE: group_request.dart - Cập nhật hàm joinGroup
+// =====================================================================
 
-      await _firestore.collection(_collectionName).doc(groupId).update({
-        'members': FieldValue.arrayUnion([userId]),
-      });
+Future<void> joinGroup(String groupId, String userId) async {
+  try {
+    print('🔄 [GroupRequest] User $userId joining group $groupId');
 
-      await _firestore.collection(_userCollectionName).doc(userId).update({
-        'groups': FieldValue.arrayUnion([groupId]),
-      });
-
-      print('✅ [GroupRequest] Sync join success');
-    } catch (e) {
-      print('❌ [GroupRequest] Error joining group: $e');
-      rethrow;
+    final groupDoc = await _firestore.collection(_collectionName).doc(groupId).get();
+    if (!groupDoc.exists) {
+      throw Exception('Nhóm không tồn tại');
     }
+
+    final joinPermission = groupDoc.data()?['settings']?['join_permission'] ?? 'requires_approval';
+
+    // Kiểm tra điều kiện tham gia
+    if (joinPermission == 'closed') {
+      throw Exception('Nhóm này đã khóa, không thể tham gia');
+    }
+
+    if (joinPermission == 'requires_approval') {
+      throw Exception('Nhóm này yêu cầu phê duyệt. Vui lòng gửi yêu cầu');
+    }
+
+    // joinPermission == 'open' → Thêm thành viên ngay
+    await _firestore.collection(_collectionName).doc(groupId).update({
+      'members': FieldValue.arrayUnion([userId]),
+    });
+
+    await _firestore.collection(_userCollectionName).doc(userId).update({
+      'groups': FieldValue.arrayUnion([groupId]),
+    });
+
+    print('✅ [GroupRequest] Sync join success');
+  } catch (e) {
+    print('❌ [GroupRequest] Error joining group: $e');
+    rethrow;
   }
+}
 
   Future<void> addMembersToGroup(
     String groupId,
@@ -575,4 +597,117 @@ class GroupRequest {
       print('❌ SYNC ERROR: $e');
     }
   }
+
+  /// Cập nhật cài đặt nhóm (Settings Map)
+    Future<void> updateGroupSettings(String groupId, Map<String, dynamic> newSettings) async {
+      try {
+        print('🔄 [GroupRequest] Updating settings for group $groupId');
+        
+        await _firestore.collection(_collectionName).doc(groupId).update({
+          'settings': newSettings,
+        });
+        
+        print('✅ [GroupRequest] Settings updated successfully');
+      } catch (e) {
+        print('❌ [GroupRequest] Error updating settings: $e');
+        rethrow;
+      }
+    }
+    Future<void> updateMessagingPermission(
+    String groupId,
+    String permission,
+  ) async {
+    try {
+      print('🔄 [GroupRequest] Updating messaging permission for group $groupId');
+
+      final groupRef = _firestore.collection(_collectionName).doc(groupId);
+
+      // Lấy settings hiện tại
+      final groupDoc = await groupRef.get();
+      if (!groupDoc.exists) {
+        throw Exception('Group not found');
+      }
+
+      final currentSettings =
+          Map<String, dynamic>.from(groupDoc.data()?['settings'] ?? {});
+
+      // Cập nhật riêng messaging_permission
+      currentSettings['messaging_permission'] = permission;
+
+      // Lưu lên Firestore
+      await groupRef.update({
+        'settings': currentSettings,
+      });
+
+      print(
+        '✅ [GroupRequest] Messaging permission updated to: $permission',
+      );
+    } catch (e) {
+      print('❌ [GroupRequest] Error updating messaging permission: $e');
+      rethrow;
+    }
+  }
+    Future<void> updateJoinPermission(
+    String groupId,
+    String permission,
+  ) async {
+    try {
+      print('🔄 [GroupRequest] Updating join permission for group $groupId');
+
+      final groupRef = _firestore.collection(_collectionName).doc(groupId);
+      final groupDoc = await groupRef.get();
+
+      if (!groupDoc.exists) {
+        throw Exception('Group not found');
+      }
+
+      final currentSettings =
+          Map<String, dynamic>.from(groupDoc.data()?['settings'] ?? {});
+
+      currentSettings['join_permission'] = permission;
+
+      await groupRef.update({
+        'settings': currentSettings,
+      });
+
+      print(
+        '✅ [GroupRequest] Join permission updated to: $permission',
+      );
+    } catch (e) {
+      print('❌ [GroupRequest] Error updating join permission: $e');
+      rethrow;
+    }
+  }
+
+  Future<void> updatePostPermission(
+  String groupId,
+  String permission,
+) async {
+  try {
+    print('🔄 [GroupRequest] Updating post permission for group $groupId');
+
+    final groupRef = _firestore.collection(_collectionName).doc(groupId);
+    final groupDoc = await groupRef.get();
+
+    if (!groupDoc.exists) {
+      throw Exception('Group not found');
+    }
+
+    final currentSettings =
+        Map<String, dynamic>.from(groupDoc.data()?['settings'] ?? {});
+
+    currentSettings['post_permission'] = permission;
+
+    await groupRef.update({
+      'settings': currentSettings,
+    });
+
+    print(
+      '✅ [GroupRequest] Post permission updated to: $permission',
+    );
+  } catch (e) {
+    print('❌ [GroupRequest] Error updating post permission: $e');
+    rethrow;
+  }
+}
 }

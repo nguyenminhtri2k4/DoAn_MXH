@@ -52,7 +52,7 @@ class _ProfileContentState extends State<_ProfileContent>
               : vm.user == null
               ? const Center(child: Text('Không tìm thấy thông tin người dùng'))
               : NestedScrollView(
-                physics: const ClampingScrollPhysics(),
+                physics:  ClampingScrollPhysics(),
                 headerSliverBuilder: (context, innerBoxIsScrolled) {
                   return [
                     SliverAppBar(
@@ -83,7 +83,7 @@ class _ProfileContentState extends State<_ProfileContent>
                           }
                         },
                       ),
-                      expandedHeight: vm.isCurrentUserProfile ? 380.0 : 480.0,
+                      expandedHeight: vm.isCurrentUserProfile ? 380.0 : 468.0,
                       floating: false,
                       pinned: true,
                       backgroundColor: Colors.white,

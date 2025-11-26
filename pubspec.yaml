@@ -41,18 +41,21 @@ dependencies:
   mobile_scanner: ^3.5.5  # Quét QR code
   share_plus: ^7.2.1  # Để chia sẻ QR code
   google_sign_in: ^6.2.1
-  rxdart: ^0.27.7
+  rxdart: ^0.28.0
   google_mlkit_smart_reply: ^0.11.0
   google_generative_ai: ^0.4.0
   firebase_messaging: ^16.0.0  # Đã dùng
   flutter_local_notifications: ^19.0.0
   geolocator: ^11.0.0
   url_launcher: ^6.2.5
+  fake_cloud_firestore: 4.0.0
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^5.0.0
+  integration_test:
+    sdk: flutter
 
 flutter:
   uses-material-design: true
