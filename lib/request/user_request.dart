@@ -111,16 +111,44 @@ class UserRequest {
   }
 
   /// Xóa user
-  Future<void> deleteUser(String docId) async {
+    Future<void> deleteUser(String docId) async {
     try {
+      print('🗑️ [UserRequest] Soft deleting user: $docId');
+      
+      // ✅ Xóa mềm: Chỉ cập nhật trường statusAccount thành 'deleted'
       await _firestore
           .collection(_collectionName)
           .doc(docId)
-          .delete()
+          .update({
+            'statusAccount': 'deleted',
+            'deletedAt': FieldValue.serverTimestamp(), // ✅ Lưu thời gian xóa
+          })
           .timeout(const Duration(seconds: 10));
-      print('✅ Xóa user thành công');
+      
+      print('✅ [UserRequest] Soft delete user successful');
     } catch (e) {
-      print('❌ Lỗi khi xóa user: $e');
+      print('❌ [UserRequest] Error soft deleting user: $e');
+      rethrow;
+    }
+  }
+
+  /// Restore user (Khôi phục user đã xóa mềm)
+  Future<void> restoreUser(String docId) async {
+    try {
+      print('♻️ [UserRequest] Restoring user: $docId');
+      
+      await _firestore
+          .collection(_collectionName)
+          .doc(docId)
+          .update({
+            'statusAccount': 'active',
+            'deletedAt': FieldValue.delete(), // ✅ Xóa timestamp xóa
+          })
+          .timeout(const Duration(seconds: 10));
+      
+      print('✅ [UserRequest] Restore user successful');
+    } catch (e) {
+      print('❌ [UserRequest] Error restoring user: $e');
       rethrow;
     }
   }

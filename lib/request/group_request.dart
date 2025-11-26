@@ -831,7 +831,7 @@ Future<void> joinGroup(String groupId, String userId) async {
           .doc(groupId)
           .collection('requests')      // 👉 SUB-COLLECTION
           .doc(requestId)
-          .update({'status': 'rejected'});
+          .delete();
       print('✅ [GroupRequest] Request rejected');
     } catch (e) {
       print('❌ [GroupRequest] Error rejecting request: $e');
