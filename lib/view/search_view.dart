@@ -395,7 +395,7 @@ class _SearchViewContent extends StatelessWidget {
                   final success = await vm.joinGroup(group.id);
                   if (!context.mounted) return;
 
-                  if (success) {
+                  if (success == 'success') {
                     NotificationService().showSuccessDialog(
                       context: context,
                       title: 'Thành công',
