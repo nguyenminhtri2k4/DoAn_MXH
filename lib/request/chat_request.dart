@@ -232,63 +232,6 @@ class ChatRequest {
     }
   }
 
-  /// Tìm và cập nhật tin nhắn cuối cùng hợp lệ
-  // Future<void> _updateLastMessage(String chatId) async {
-  //   try {
-  //     // Lấy tin nhắn gần nhất không bị recalled/deleted
-  //     final messagesSnapshot = await _firestore
-  //         .collection('Chat')
-  //         .doc(chatId)
-  //         .collection('messages')
-  //         .where('status', whereNotIn: ['recalled', 'deleted'])
-  //         .orderBy('createdAt', descending: true)
-  //         .limit(1)
-  //         .get();
-
-  //     String newLastMessage = 'Không có tin nhắn';
-  //     DateTime newUpdatedAt = DateTime.now();
-
-  //     if (messagesSnapshot.docs.isNotEmpty) {
-  //       final latestMessageDoc = messagesSnapshot.docs.first;
-  //       final latestMessage = latestMessageDoc.data();
-  //       final messageModel = MessageModel.fromMap(
-  //         latestMessage,
-  //         latestMessageDoc.id,
-  //       );
-
-  //       // Tạo preview cho lastMessage
-  //       if (messageModel.type == 'share_post') {
-  //         newLastMessage = 'Đã chia sẻ một bài viết';
-  //       } else if (messageModel.mediaIds.isNotEmpty) {
-  //         final mediaCount = messageModel.mediaIds.length;
-  //         if (messageModel.content.isNotEmpty) {
-  //           newLastMessage = '${messageModel.content} 📷';
-  //         } else {
-  //           newLastMessage = mediaCount > 1
-  //               ? '$mediaCount ảnh/video'
-  //               : '1 ảnh/video';
-  //         }
-  //       } else {
-  //         newLastMessage = messageModel.content.isNotEmpty
-  //             ? messageModel.content
-  //             : 'Tin nhắn không có nội dung';
-  //       }
-
-  //       newUpdatedAt = messageModel.createdAt;
-  //     }
-
-  //     // Cập nhật Chat document
-  //     await _firestore.collection('Chat').doc(chatId).update({
-  //       'lastMessage': newLastMessage,
-  //       'updatedAt': Timestamp.fromDate(newUpdatedAt),
-  //     });
-
-  //     print('✅ Đã cập nhật lastMessage cho chat $chatId: $newLastMessage');
-  //   } catch (e) {
-  //     print('❌ Lỗi khi cập nhật lastMessage: $e');
-  //     // Không throw lỗi để không ảnh hưởng đến việc thu hồi tin nhắn
-  //   }
-  // }
   Future<void> _updateLastMessage(String chatId) async {
     try {
       // Lấy tin nhắn gần nhất không bị recalled/deleted
