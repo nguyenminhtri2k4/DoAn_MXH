@@ -1,3 +1,4 @@
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:mangxahoi/viewmodel/chat_viewmodel.dart';
@@ -36,10 +37,35 @@ class ChatViewContent extends StatelessWidget {
     }
 
     Widget appBarTitle;
+    
+    // Biến kiểm tra quyền chat
+    bool canChat = true;
+    String restrictionReason = "";
 
     if (vm.isGroup) {
       final group = firestoreListener.getGroupById(vm.chatId);
       final bool hasCoverImage = group?.coverImage.isNotEmpty ?? false;
+
+      // --- LOGIC KIỂM TRA QUYỀN NHẮN TIN ---
+      if (group != null && currentUser != null) {
+        final String currentId = currentUser.id;
+        final String permission = group.settings['messaging_permission']?.toString() ?? 'all';
+        final bool isOwner = group.ownerId == currentId;
+        final bool isManager = group.managers.contains(currentId);
+
+        if (permission == 'owner') {
+          if (!isOwner) {
+            canChat = false;
+            restrictionReason = "Chỉ chủ nhóm mới có thể gửi tin nhắn.";
+          }
+        } else if (permission == 'managers') {
+          if (!isOwner && !isManager) {
+            canChat = false;
+            restrictionReason = "Chỉ quản trị viên mới có thể gửi tin nhắn.";
+          }
+        }
+      }
+      // -------------------------------------
 
       if (hasCoverImage) {
         appBarTitle = Row(
@@ -129,13 +155,6 @@ class ChatViewContent extends StatelessWidget {
                     final bool isGeminiEnabled =
                         currentUser?.serviceGemini ?? false;
 
-                    print('--- DEBUG SMART REPLY ---');
-                    print('1. SenderID tin cuối: ${lastMessage.senderId}');
-                    print('2. My ID: ${vm.currentUserId}');
-                    print('3. Is Group: ${vm.isGroup}');
-                    print('4. Is Blocked: ${vm.isBlocked}');
-                    print('5. Setting bật chưa: $isGeminiEnabled');
-                    print('-------------------------');
                     if (lastMessage.senderId != vm.currentUserId &&
                         !vm.isGroup &&
                         !vm.isBlocked) {
@@ -183,8 +202,38 @@ class ChatViewContent extends StatelessWidget {
                 },
               ),
             ),
+            
+            // --- Hiển thị UI dựa trên quyền ---
             if (vm.isBlocked && !vm.isGroup)
               BlockedNotification(vm: vm)
+            else if (vm.isGroup && !canChat)
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
+                decoration: BoxDecoration(
+                  color: Colors.grey[200],
+                  border: Border(top: BorderSide(color: Colors.grey.shade300)),
+                ),
+                alignment: Alignment.center,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.lock_outline, size: 18, color: Colors.grey[600]),
+                    const SizedBox(width: 8),
+                    Flexible(
+                      child: Text(
+                        restrictionReason,
+                        style: TextStyle(
+                          color: Colors.grey[600],
+                          fontWeight: FontWeight.w500,
+                          fontSize: 14,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                  ],
+                ),
+              )
             else ...[
               SmartReplySuggestions(vm: vm),
               MessageComposer(vm: vm),

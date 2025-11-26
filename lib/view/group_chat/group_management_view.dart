@@ -11,6 +11,7 @@ import 'package:mangxahoi/view/group_chat/group_qr_code_view.dart';
 import 'package:mangxahoi/view/group_chat/group_members_list_view.dart';
 import 'package:mangxahoi/view/group_chat/group_disbanded_view.dart';
 import '../../view/group_chat/group_settings_view.dart';
+import 'package:mangxahoi/view/group_chat/join_requests_view.dart';
 
 class GroupManagementView extends StatelessWidget {
   final String groupId;
@@ -108,6 +109,19 @@ class _GroupManagementContent extends StatelessWidget {
                );
             },
           ),
+          if (vm.isOwner)
+            IconButton(
+              icon: const Icon(Icons.playlist_add_check, color: Colors.white),
+              onPressed: () {
+                // Chuyển sang trang JoinRequestsView
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => JoinRequestsView(groupId: vm.groupId),
+                  ),
+                );
+              },
+            ),
       ],
       flexibleSpace: FlexibleSpaceBar(
         background: Stack(

@@ -1,3 +1,4 @@
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:mangxahoi/viewmodel/search_view_model.dart';
@@ -396,47 +397,58 @@ class _SearchResultsContentState extends State<_SearchResultsContent> {
   }
 
   Widget _buildGroupActionButton(
-    GroupModel group,
-    SearchViewModel vm,
-    bool isMember,
-  ) {
-    if (isMember) {
-      return TextButton(
-        onPressed: null,
-        style: TextButton.styleFrom(
-          backgroundColor: Colors.grey[200],
-          foregroundColor: Colors.black87,
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-        ),
-        child: const Text('Đã tham gia'),
-      );
-    }
-
+  GroupModel group,
+  SearchViewModel vm,
+  bool isMember,
+) {
+  if (isMember) {
     return TextButton(
-      onPressed: () async {
-        final success = await vm.joinGroup(group.id);
-        if (!mounted) return;
-
-        if (success) {
-          NotificationService().showSuccessDialog(
-            context: context,
-            title: 'Thành công',
-            message: 'Đã tham gia nhóm ${group.name}!',
-          );
-        } else {
-          NotificationService().showWarningDialog(
-            context: context,
-            title: 'Thất bại',
-            message: 'Không thể tham gia nhóm.',
-          );
-        }
-      },
+      onPressed: null,
       style: TextButton.styleFrom(
-        backgroundColor: Colors.blue,
-        foregroundColor: Colors.white,
+        backgroundColor: Colors.grey[200],
+        foregroundColor: Colors.black87,
         padding: const EdgeInsets.symmetric(horizontal: 16),
       ),
-      child: const Text('Tham gia'),
+      child: const Text('Đã tham gia'),
     );
   }
+
+  return TextButton(
+    onPressed: () async {
+      final result = await vm.joinGroup(group.id);
+      
+      if (!mounted) return;
+
+      // ✅ Kiểm tra result
+      if (result == 'success') {
+        // Đã tham gia nhóm (open join)
+        NotificationService().showSuccessDialog(
+          context: context,
+          title: 'Thành công',
+          message: 'Đã tham gia nhóm ${group.name}!',
+        );
+      } else if (result == 'pending') {
+        // Gửi request thành công (requires_approval)
+        NotificationService().showSuccessDialog(
+          context: context,
+          title: 'Yêu cầu đã gửi',
+          message: vm.actionError ?? 'Yêu cầu tham gia đã được gửi. Vui lòng chờ phê duyệt.',
+        );
+      } else {
+        // Lỗi
+        NotificationService().showWarningDialog(
+          context: context,
+          title: 'Thất bại',
+          message: vm.actionError ?? 'Không thể tham gia nhóm.',
+        );
+      }
+    },
+    style: TextButton.styleFrom(
+      backgroundColor: Colors.blue,
+      foregroundColor: Colors.white,
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+    ),
+    child: const Text('Tham gia'),
+  );
+}
 }

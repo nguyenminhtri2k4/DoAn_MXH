@@ -1,3 +1,4 @@
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:mangxahoi/model/model_group.dart';
@@ -548,9 +549,7 @@ class _PostGroupViewContent extends StatelessWidget {
                     Expanded(
                       child: ElevatedButton(
                         onPressed: () async {
-                          Navigator.pop(
-                            bottomSheetContext,
-                          ); // Đóng bottom sheet
+                          Navigator.pop(bottomSheetContext); // Đóng bottom sheet
 
                           // Hiển thị loading
                           if (!context.mounted) return;
@@ -620,7 +619,7 @@ class _PostGroupViewContent extends StatelessWidget {
       return const Center(child: Text("Không thể tải dữ liệu người dùng"));
     }
 
-    // Kiểm tra quyền truy cập
+    // Kiểm tra quyền truy cập (Private group)
     if (!vm.hasAccess) {
       return Center(
         child: Padding(
@@ -682,6 +681,33 @@ class _PostGroupViewContent extends StatelessWidget {
       );
     }
 
+    // ============================================================
+    // 🔥 LOGIC KIỂM TRA QUYỀN ĐĂNG BÀI (MỚI)
+    // ============================================================
+    
+    // 1. Lấy cài đặt từ nhóm (mặc định là 'all' nếu không có)
+    final String postPermission = vm.group.settings['post_permission']?.toString() ?? 'all';
+    
+    // 2. Xác định quyền
+    bool canPost = true;
+    String restrictionReason = "";
+
+    if (postPermission == 'owner') {
+      // Chỉ chủ nhóm
+      if (!vm.isOwner) {
+        canPost = false;
+        restrictionReason = "Chỉ chủ nhóm mới được đăng bài.";
+      }
+    } else if (postPermission == 'managers') {
+      // Quản trị viên & Chủ nhóm
+      if (!vm.isOwner && !vm.isManager) {
+        canPost = false;
+        restrictionReason = "Chỉ quản trị viên mới được đăng bài.";
+      }
+    }
+    // Nếu 'all' thì ai cũng đăng được (mặc định canPost = true)
+    // ============================================================
+
     return Container(
       color: Colors.grey[100],
       child: StreamBuilder<List<PostModel>>(
@@ -699,10 +725,42 @@ class _PostGroupViewContent extends StatelessWidget {
           return ListView(
             padding: const EdgeInsets.symmetric(vertical: 8.0),
             children: [
-              // ✅ Chỉ hiện phần tạo bài viết khi là thành viên
-              if (vm.isMember) _buildCreatePostSection(context, vm),
+              // ✅ HIỂN THỊ Ô ĐĂNG BÀI DỰA TRÊN QUYỀN (ĐÃ SỬA)
+              
+              // Trường hợp 1: Được phép đăng -> Hiện ô đăng
+              if (vm.isMember && canPost) _buildCreatePostSection(context, vm),
+              
+              // Trường hợp 2: Bị chặn -> Hiện thông báo (Tương tự bên Chat)
+              if (vm.isMember && !canPost)
+                Container(
+                  margin: const EdgeInsets.fromLTRB(12, 0, 12, 8),
+                  padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.grey.shade200),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.lock_outline, size: 18, color: Colors.grey[600]),
+                      const SizedBox(width: 8),
+                      Text(
+                        restrictionReason,
+                        style: TextStyle(
+                          color: Colors.grey[600],
+                          fontWeight: FontWeight.w500,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+              // Các nút chức năng nhanh
               if (vm.isMember) const SizedBox(height: 8),
               if (vm.isMember) _buildQuickActions(context, vm),
+              
               if (posts.isNotEmpty) const SizedBox(height: 8),
               if (posts.isEmpty)
                 Container(
@@ -724,7 +782,7 @@ class _PostGroupViewContent extends StatelessWidget {
                       const SizedBox(height: 8),
                       Text(
                         vm.isMember
-                            ? "Hãy là người đầu tiên chia sẻ điều gì đó!"
+                            ? (canPost ? "Hãy là người đầu tiên chia sẻ điều gì đó!" : "")
                             : "Tham gia nhóm để xem và chia sẻ bài viết",
                         style: TextStyle(fontSize: 14, color: Colors.grey[500]),
                       ),

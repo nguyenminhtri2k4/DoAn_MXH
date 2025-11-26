@@ -364,53 +364,64 @@ class SearchViewModel extends ChangeNotifier {
     }
   }
 
-  /// Tham gia nhóm
-  Future<bool> joinGroup(String groupId) async {
-    if (_currentUserId == null || _isDisposed) {
-      print(
-        '⚠️ [SearchViewModel] Cannot join group: currentUserId is null or disposed',
-      );
-      return false;
-    }
-
-    try {
-      print('📤 [SearchViewModel] User $_currentUserId joining group $groupId');
-      await _groupRequest.joinGroup(groupId, _currentUserId!);
-
-      if (_isDisposed) return false;
-
-      // Cập nhật trạng thái trong danh sách
-      final index = _groupResults.indexWhere((g) => g.id == groupId);
-      if (index != -1) {
-        final updatedGroup = _groupResults[index];
-        _groupResults[index] = GroupModel(
-          id: updatedGroup.id,
-          ownerId: updatedGroup.ownerId,
-          name: updatedGroup.name,
-          description: updatedGroup.description,
-          coverImage: updatedGroup.coverImage,
-          managers: updatedGroup.managers,
-          members: [...updatedGroup.members, _currentUserId!],
-          settings: updatedGroup.settings,
-          status: updatedGroup.status,
-          type: updatedGroup.type,
-          createdAt: updatedGroup.createdAt,
-        );
-        _safeNotifyListeners();
-        print('✅ [SearchViewModel] Updated group members list in cache');
-      }
-
-      print('✅ [SearchViewModel] Joined group successfully');
-      return true;
-    } catch (e) {
-      print('❌ [SearchViewModel] Error joining group: $e');
-      if (!_isDisposed) {
-        _actionError = e.toString();
-        _safeNotifyListeners();
-      }
-      return false;
-    }
+  
+  Future<String> joinGroup(String groupId) async {
+  if (_currentUserId == null || _isDisposed) {
+    print('⚠️ [SearchViewModel] Cannot join group: currentUserId is null or disposed');
+    _actionError = 'Vui lòng đăng nhập để tham gia nhóm';
+    _safeNotifyListeners();
+    return 'error';
   }
+
+  try {
+    print('📤 [SearchViewModel] User $_currentUserId joining group $groupId');
+    await _groupRequest.joinGroup(groupId, _currentUserId!);
+
+    if (_isDisposed) return 'error';
+
+    // Nếu thành công -> cập nhật members list
+    final index = _groupResults.indexWhere((g) => g.id == groupId);
+    if (index != -1) {
+      final updatedGroup = _groupResults[index];
+      _groupResults[index] = GroupModel(
+        id: updatedGroup.id,
+        ownerId: updatedGroup.ownerId,
+        name: updatedGroup.name,
+        description: updatedGroup.description,
+        coverImage: updatedGroup.coverImage,
+        managers: updatedGroup.managers,
+        members: [...updatedGroup.members, _currentUserId!],
+        settings: updatedGroup.settings,
+        status: updatedGroup.status,
+        type: updatedGroup.type,
+        createdAt: updatedGroup.createdAt,
+      );
+      _safeNotifyListeners();
+    }
+
+    print('✅ [SearchViewModel] Joined group successfully');
+    _actionError = null;
+    return 'success';
+  } catch (e) {
+    print('❌ [SearchViewModel] Error joining group: $e');
+    final errorMsg = e.toString().replaceAll('Exception: ', '');
+    
+    if (!_isDisposed) {
+      // ✅ Kiểm tra prefix "REQUEST_SENT:" để phát hiện gửi request thành công
+      if (errorMsg.startsWith('REQUEST_SENT:')) {
+        _actionError = errorMsg.replaceFirst('REQUEST_SENT:', '');
+        _safeNotifyListeners();
+        return 'pending'; // Trả về 'pending' để View biết gửi request thành công
+      } else {
+        _actionError = errorMsg;
+        _safeNotifyListeners();
+        return 'error';
+      }
+    }
+    return 'error';
+  }
+}
+
 
   /// Clear search results
   void clearSearch() {

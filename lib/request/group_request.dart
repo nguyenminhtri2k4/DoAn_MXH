@@ -1,6 +1,8 @@
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:mangxahoi/model/model_group.dart';
 import 'package:mangxahoi/model/model_user.dart';
+import 'package:mangxahoi/model/model_join_request.dart'; // Đảm bảo import model này
 
 class GroupRequest {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -28,7 +30,7 @@ class GroupRequest {
         managers: [ownerId],
         description: '',
         coverImage: '',
-        settings:{},
+        settings: {},
         status: 'active',
         type: type,
         createdAt: DateTime.now(),
@@ -62,12 +64,53 @@ class GroupRequest {
     }
   }
 
-  
-// =====================================================================
-// FILE: group_request.dart - Cập nhật hàm joinGroup
-// =====================================================================
 
-Future<void> joinGroup(String groupId, String userId) async {
+  // =====================================================================
+  // FILE: group_request.dart - Cập nhật hàm joinGroup
+  // =====================================================================
+
+  // Future<void> joinGroup(String groupId, String userId) async {
+  //   try {
+  //     print('🔄 [GroupRequest] User $userId joining group $groupId');
+
+  //     final groupDoc = await _firestore.collection(_collectionName).doc(groupId).get();
+  //     if (!groupDoc.exists) {
+  //       throw Exception('Nhóm không tồn tại');
+  //     }
+
+  //     final joinPermission = groupDoc.data()?['settings']?['join_permission'] ?? 'requires_approval';
+
+  //     // Kiểm tra điều kiện tham gia
+  //     if (joinPermission == 'closed') {
+  //       throw Exception('Nhóm này đã khóa, không thể tham gia');
+  //     }
+
+  //     // ✅ LOGIC MỚI: Nếu cần phê duyệt -> Gửi request
+  //     if (joinPermission == 'requires_approval') {
+  //       print('⚠️ [GroupRequest] Group requires approval. Sending request...');
+  //       // Gọi hàm gửi yêu cầu
+  //       await sendJoinRequest(groupId, userId);
+        
+  //       // Ném exception với thông báo để ViewModel hiển thị SnackBar và KHÔNG cập nhật UI thành "Đã tham gia"
+  //       throw Exception('Đã gửi yêu cầu tham gia. Vui lòng chờ phê duyệt.');
+  //     }
+
+  //     // joinPermission == 'open' → Thêm thành viên ngay
+  //     await _firestore.collection(_collectionName).doc(groupId).update({
+  //       'members': FieldValue.arrayUnion([userId]),
+  //     });
+
+  //     await _firestore.collection(_userCollectionName).doc(userId).update({
+  //       'groups': FieldValue.arrayUnion([groupId]),
+  //     });
+
+  //     print('✅ [GroupRequest] Sync join success');
+  //   } catch (e) {
+  //     print('❌ [GroupRequest] Error joining group: $e');
+  //     rethrow;
+  //   }
+  // }
+  Future<void> joinGroup(String groupId, String userId) async {
   try {
     print('🔄 [GroupRequest] User $userId joining group $groupId');
 
@@ -83,8 +126,21 @@ Future<void> joinGroup(String groupId, String userId) async {
       throw Exception('Nhóm này đã khóa, không thể tham gia');
     }
 
+    // ✅ LOGIC MỚI: Nếu cần phê duyệt -> Gửi request và throw exception đặc biệt
     if (joinPermission == 'requires_approval') {
-      throw Exception('Nhóm này yêu cầu phê duyệt. Vui lòng gửi yêu cầu');
+      print('⚠️ [GroupRequest] Group requires approval. Sending request...');
+      
+      try {
+        await sendJoinRequest(groupId, userId);
+        // ✅ Gửi request thành công -> throw exception với prefix "REQUEST_SENT" để ViewModel nhận diện
+        throw JoinRequestPendingException('REQUEST_SENT:Đã gửi yêu cầu tham gia nhóm. Vui lòng chờ phê duyệt.');
+      } catch (e) {
+        if (e is JoinRequestPendingException) {
+          rethrow; // Re-throw exception đặc biệt này để ViewModel xử lý
+        } else {
+          throw Exception(e.toString());
+        }
+      }
     }
 
     // joinPermission == 'open' → Thêm thành viên ngay
@@ -421,8 +477,6 @@ Future<void> joinGroup(String groupId, String userId) async {
   // ============================ SEARCH GROUPS ==========================
   // =====================================================================
 
-  /// 🔍 Tìm kiếm nhóm theo tên — CHỈ NHÓM BÀI ĐĂNG (type = "post")
-  /// ✅ FIX: Không dùng isNotEqualTo để tránh lỗi composite index
   Future<List<GroupModel>> searchGroups(String query) async {
     if (query.trim().isEmpty) {
       print('⚠️ [GroupRequest] Empty query, returning empty list');
@@ -436,12 +490,10 @@ Future<void> joinGroup(String groupId, String userId) async {
 
       final queryLower = query.toLowerCase().trim();
 
-      // ✅ CHỈ FILTER type="post" TRÊN SERVER
-      // Không dùng isNotEqualTo để tránh cần composite index
       final snapshot =
           await _firestore
               .collection(_collectionName)
-              .where('type', isEqualTo: 'post') // CHỈ LẤY NHÓM BÀI ĐĂNG
+              .where('type', isEqualTo: 'post')
               .limit(100)
               .get();
 
@@ -451,23 +503,9 @@ Future<void> joinGroup(String groupId, String userId) async {
 
       if (snapshot.docs.isEmpty) {
         print('⚠️ [GroupRequest] No documents found with type="post"');
-        print(
-          '💡 [GroupRequest] Check if any groups have type="post" in Firestore',
-        );
         return [];
       }
 
-      // Debug: In ra TẤT CẢ documents
-      print('📋 [GroupRequest] Documents found:');
-      for (var doc in snapshot.docs) {
-        final data = doc.data();
-        print('   📄 ID: ${doc.id}');
-        print('      └─ name: ${data['name']}');
-        print('      └─ type: ${data['type']}');
-        print('      └─ status: ${data['status']}');
-      }
-
-      // Parse và filter ở client
       final results =
           snapshot.docs
               .map((doc) {
@@ -480,23 +518,16 @@ Future<void> joinGroup(String groupId, String userId) async {
               })
               .whereType<GroupModel>()
               .where((g) {
-                // Loại bỏ nhóm đã xóa
                 if (g.status == 'deleted') {
-                  print('   🗑️ Filtered out deleted group: ${g.name}');
                   return false;
                 }
 
-                // Filter theo tên hoặc mô tả
                 final nameLower = g.name.toLowerCase();
                 final descLower = g.description.toLowerCase();
 
                 final matches =
                     nameLower.contains(queryLower) ||
                     descLower.contains(queryLower);
-
-                if (matches) {
-                  print('   ✓ Match found: "${g.name}"');
-                }
 
                 return matches;
               })
@@ -508,13 +539,10 @@ Future<void> joinGroup(String groupId, String userId) async {
       return results;
     } catch (e) {
       print('❌ [GroupRequest] searchGroups error: $e');
-      print('   Stack trace: ${StackTrace.current}');
       return [];
     }
   }
 
-  /// 🔍 Alternative: Tìm kiếm KHÔNG CẦN biết type (lấy tất cả)
-  /// Dùng khi cần test hoặc debug
   Future<List<GroupModel>> searchAllGroups(String query) async {
     if (query.trim().isEmpty) return [];
 
@@ -523,7 +551,6 @@ Future<void> joinGroup(String groupId, String userId) async {
 
       final queryLower = query.toLowerCase().trim();
 
-      // Lấy tất cả nhóm (không filter gì cả)
       final snapshot =
           await _firestore.collection(_collectionName).limit(500).get();
 
@@ -540,7 +567,6 @@ Future<void> joinGroup(String groupId, String userId) async {
               })
               .whereType<GroupModel>()
               .where((g) {
-                // Filter ở client: type=post, status!=deleted, tên khớp
                 if (g.type != 'post') return false;
                 if (g.status == 'deleted') return false;
 
@@ -599,21 +625,22 @@ Future<void> joinGroup(String groupId, String userId) async {
   }
 
   /// Cập nhật cài đặt nhóm (Settings Map)
-    Future<void> updateGroupSettings(String groupId, Map<String, dynamic> newSettings) async {
-      try {
-        print('🔄 [GroupRequest] Updating settings for group $groupId');
-        
-        await _firestore.collection(_collectionName).doc(groupId).update({
-          'settings': newSettings,
-        });
-        
-        print('✅ [GroupRequest] Settings updated successfully');
-      } catch (e) {
-        print('❌ [GroupRequest] Error updating settings: $e');
-        rethrow;
-      }
+  Future<void> updateGroupSettings(String groupId, Map<String, dynamic> newSettings) async {
+    try {
+      print('🔄 [GroupRequest] Updating settings for group $groupId');
+      
+      await _firestore.collection(_collectionName).doc(groupId).update({
+        'settings': newSettings,
+      });
+      
+      print('✅ [GroupRequest] Settings updated successfully');
+    } catch (e) {
+      print('❌ [GroupRequest] Error updating settings: $e');
+      rethrow;
     }
-    Future<void> updateMessagingPermission(
+  }
+
+  Future<void> updateMessagingPermission(
     String groupId,
     String permission,
   ) async {
@@ -622,7 +649,6 @@ Future<void> joinGroup(String groupId, String userId) async {
 
       final groupRef = _firestore.collection(_collectionName).doc(groupId);
 
-      // Lấy settings hiện tại
       final groupDoc = await groupRef.get();
       if (!groupDoc.exists) {
         throw Exception('Group not found');
@@ -631,10 +657,8 @@ Future<void> joinGroup(String groupId, String userId) async {
       final currentSettings =
           Map<String, dynamic>.from(groupDoc.data()?['settings'] ?? {});
 
-      // Cập nhật riêng messaging_permission
       currentSettings['messaging_permission'] = permission;
 
-      // Lưu lên Firestore
       await groupRef.update({
         'settings': currentSettings,
       });
@@ -647,7 +671,8 @@ Future<void> joinGroup(String groupId, String userId) async {
       rethrow;
     }
   }
-    Future<void> updateJoinPermission(
+
+  Future<void> updateJoinPermission(
     String groupId,
     String permission,
   ) async {
@@ -680,34 +705,150 @@ Future<void> joinGroup(String groupId, String userId) async {
   }
 
   Future<void> updatePostPermission(
-  String groupId,
-  String permission,
-) async {
-  try {
-    print('🔄 [GroupRequest] Updating post permission for group $groupId');
+    String groupId,
+    String permission,
+  ) async {
+    try {
+      print('🔄 [GroupRequest] Updating post permission for group $groupId');
 
-    final groupRef = _firestore.collection(_collectionName).doc(groupId);
-    final groupDoc = await groupRef.get();
+      final groupRef = _firestore.collection(_collectionName).doc(groupId);
+      final groupDoc = await groupRef.get();
 
-    if (!groupDoc.exists) {
-      throw Exception('Group not found');
+      if (!groupDoc.exists) {
+        throw Exception('Group not found');
+      }
+
+      final currentSettings =
+          Map<String, dynamic>.from(groupDoc.data()?['settings'] ?? {});
+
+      currentSettings['post_permission'] = permission;
+
+      await groupRef.update({
+        'settings': currentSettings,
+      });
+
+      print(
+        '✅ [GroupRequest] Post permission updated to: $permission',
+      );
+    } catch (e) {
+      print('❌ [GroupRequest] Error updating post permission: $e');
+      rethrow;
     }
+  }
 
-    final currentSettings =
-        Map<String, dynamic>.from(groupDoc.data()?['settings'] ?? {});
+  /// Gửi yêu cầu tham gia nhóm
+  /// Lưu vào: Group/{groupId}/requests/{requestId} (Sub-collection)
+  Future<void> sendJoinRequest(String groupId, String userId) async {
+    try {
+      print('🔄 [GroupRequest] Sending join request: User $userId -> Group $groupId');
+      
+      // 1. Kiểm tra xem user này đã có yêu cầu nào đang 'pending' trong sub-collection chưa
+      final existingQuery = await _firestore
+          .collection(_collectionName) // Truy cập Collection 'Group'
+          .doc(groupId)                // Truy cập Document nhóm cụ thể
+          .collection('requests')      // 👉 ĐI VÀO SUB-COLLECTION 'requests'
+          .where('userId', isEqualTo: userId)
+          .where('status', isEqualTo: 'pending')
+          .get();
 
-    currentSettings['post_permission'] = permission;
+      if (existingQuery.docs.isNotEmpty) {
+        throw Exception('Bạn đã gửi yêu cầu tham gia rồi, vui lòng chờ phê duyệt.');
+      }
 
-    await groupRef.update({
-      'settings': currentSettings,
-    });
+      final request = JoinRequestModel(
+        id: '',
+        groupId: groupId,
+        userId: userId,
+        createdAt: DateTime.now(),
+        status: 'pending',
+      );
 
-    print(
-      '✅ [GroupRequest] Post permission updated to: $permission',
-    );
-  } catch (e) {
-    print('❌ [GroupRequest] Error updating post permission: $e');
-    rethrow;
+      // 2. Thêm yêu cầu mới vào sub-collection
+      await _firestore
+          .collection(_collectionName) // 'Group'
+          .doc(groupId)                // id nhóm
+          .collection('requests')      // 👉 SUB-COLLECTION
+          .add(request.toMap());
+
+      print('✅ [GroupRequest] Join request sent successfully to Sub-collection');
+    } catch (e) {
+      print('❌ [GroupRequest] Error sending join request: $e');
+      rethrow;
+    }
+  }
+
+  /// Lấy danh sách yêu cầu đang chờ (Pending) từ Sub-collection
+  Stream<List<JoinRequestModel>> getPendingJoinRequests(String groupId) {
+    return _firestore
+        .collection(_collectionName) // 'Group'
+        .doc(groupId)                // id nhóm
+        .collection('requests')      // 👉 SUB-COLLECTION
+        .where('status', isEqualTo: 'pending')
+        .orderBy('createdAt', descending: true)
+        .snapshots()
+        .map((snapshot) => snapshot.docs
+            .map((doc) => JoinRequestModel.fromMap(doc.id, doc.data()))
+            .toList());
+  }
+
+  /// Chấp nhận yêu cầu tham gia
+  Future<void> approveJoinRequest(String groupId, String requestId, String userId) async {
+    try {
+      print('🔄 [GroupRequest] Approving request $requestId for user $userId');
+      
+      final batch = _firestore.batch();
+
+      // 1. Cập nhật trạng thái trong Sub-collection thành 'approved'
+      final requestRef = _firestore
+          .collection(_collectionName) // 'Group'
+          .doc(groupId)
+          .collection('requests')      // 👉 SUB-COLLECTION
+          .doc(requestId);
+      
+      batch.update(requestRef, {'status': 'approved'});
+
+      // 2. Thêm user vào mảng members của Group (Document cha)
+      final groupRef = _firestore.collection(_collectionName).doc(groupId);
+      batch.update(groupRef, {
+        'members': FieldValue.arrayUnion([userId]),
+      });
+
+      // 3. Thêm group vào mảng groups của User (Đồng bộ 2 chiều)
+      final userRef = _firestore.collection(_userCollectionName).doc(userId);
+      batch.update(userRef, {
+        'groups': FieldValue.arrayUnion([groupId]),
+      });
+
+      await batch.commit();
+      print('✅ [GroupRequest] Request approved & Member synced');
+    } catch (e) {
+      print('❌ [GroupRequest] Error approving request: $e');
+      rethrow;
+    }
+  }
+
+  /// Từ chối yêu cầu tham gia
+  Future<void> rejectJoinRequest(String groupId, String requestId) async {
+    try {
+      print('🔄 [GroupRequest] Rejecting request $requestId');
+      // Cập nhật trạng thái trong Sub-collection thành 'rejected'
+      await _firestore
+          .collection(_collectionName)
+          .doc(groupId)
+          .collection('requests')      // 👉 SUB-COLLECTION
+          .doc(requestId)
+          .update({'status': 'rejected'});
+      print('✅ [GroupRequest] Request rejected');
+    } catch (e) {
+      print('❌ [GroupRequest] Error rejecting request: $e');
+      rethrow;
+    }
   }
 }
+class JoinRequestPendingException implements Exception {
+  final String message;
+  JoinRequestPendingException(this.message);
+  
+  @override
+  String toString() => message;
 }
