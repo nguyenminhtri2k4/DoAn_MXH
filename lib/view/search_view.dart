@@ -360,68 +360,83 @@ class _SearchViewContent extends StatelessWidget {
   }
 
   Widget _buildGroupResultTile(
-    BuildContext context,
-    GroupModel group,
-    SearchViewModel vm,
-  ) {
-    final currentUserId = vm.currentUserId;
-    final isMember =
-        currentUserId != null && group.members.contains(currentUserId);
+  BuildContext context,
+  GroupModel group,
+  SearchViewModel vm,
+) {
+  final currentUserId = vm.currentUserId;
+  final isMember =
+      currentUserId != null && group.members.contains(currentUserId);
 
-    return ListTile(
-      leading: CircleAvatar(
-        radius: 24,
-        backgroundImage:
-            group.coverImage.isNotEmpty ? NetworkImage(group.coverImage) : null,
-        backgroundColor: Colors.blue[100],
-        child:
-            group.coverImage.isEmpty
-                ? const Icon(Icons.group, size: 24, color: Colors.blue)
-                : null,
-      ),
-      title: Text(
-        group.name,
-        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-      ),
-      subtitle: Text(
-        '${group.members.length} thành viên',
-        style: TextStyle(color: Colors.grey[600], fontSize: 13),
-      ),
-      trailing: ElevatedButton(
-        onPressed:
-            isMember
-                ? null
-                : () async {
-                  final success = await vm.joinGroup(group.id);
+  return ListTile(
+    leading: CircleAvatar(
+      radius: 24,
+      backgroundImage:
+          group.coverImage.isNotEmpty ? NetworkImage(group.coverImage) : null,
+      backgroundColor: Colors.blue[100],
+      child:
+          group.coverImage.isEmpty
+              ? const Icon(Icons.group, size: 24, color: Colors.blue)
+              : null,
+    ),
+    title: Text(
+      group.name,
+      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+    ),
+    subtitle: Text(
+      '${group.members.length} thành viên',
+      style: TextStyle(color: Colors.grey[600], fontSize: 13),
+    ),
+    trailing: ElevatedButton(
+      onPressed:
+          isMember
+              ? null
+              : () async {
+                  print('🐛 [SearchView] Button tapped for group: ${group.name}');
+                  final result = await vm.joinGroup(group.id);
+                  
+                  print('🐛 [SearchView] Result: $result');
+                  print('🐛 [SearchView] ActionError: ${vm.actionError}');
+                  
                   if (!context.mounted) return;
 
-                  if (success == 'success') {
+                  // ✅ Xử lý 3 trường hợp
+                  if (result == 'success') {
+                    print('✅ [SearchView] Case: success');
                     NotificationService().showSuccessDialog(
                       context: context,
                       title: 'Thành công',
                       message: 'Đã tham gia nhóm ${group.name}!',
                     );
+                  } else if (result == 'pending') {
+                    print('✅ [SearchView] Case: pending');
+                    NotificationService().showSuccessDialog(
+                      context: context,
+                      title: 'Yêu cầu đã gửi',
+                      message: vm.actionError ?? 'Đã gửi yêu cầu tham gia nhóm. Vui lòng chờ phê duyệt.',
+                    );
                   } else {
+                    print('❌ [SearchView] Case: error');
                     NotificationService().showWarningDialog(
                       context: context,
                       title: 'Thất bại',
-                      message: 'Không thể tham gia nhóm.',
+                      message: vm.actionError ?? 'Không thể tham gia nhóm.',
                     );
                   }
                 },
-        style: ElevatedButton.styleFrom(
-          backgroundColor:
-              isMember ? AppColors.backgroundDark : AppColors.primaryLight,
-          foregroundColor:
-              isMember ? AppColors.textPrimary : AppColors.textWhite,
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          minimumSize: const Size(100, 36),
-        ),
-        child: Text(isMember ? 'Đã tham gia' : 'Tham gia'),
+      style: ElevatedButton.styleFrom(
+        backgroundColor:
+            isMember ? AppColors.backgroundDark : AppColors.primaryLight,
+        foregroundColor:
+            isMember ? AppColors.textPrimary : AppColors.textWhite,
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        minimumSize: const Size(100, 36),
       ),
-      onTap: () {
-        Navigator.pushNamed(context, '/post_group', arguments: group);
-      },
-    );
-  }
+      child: Text(isMember ? 'Đã tham gia' : 'Tham gia'),
+    ),
+    onTap: () {
+      Navigator.pushNamed(context, '/post_group', arguments: group);
+    },
+  );
+}
 }

@@ -415,31 +415,37 @@ class _SearchResultsContentState extends State<_SearchResultsContent> {
 
   return TextButton(
     onPressed: () async {
+      // ✅ joinGroup() trả về String: 'success', 'pending', hoặc 'error'
       final result = await vm.joinGroup(group.id);
-      
+        print('🐛 [SearchResultsView] Result: $result');
+    print('🐛 [SearchResultsView] ActionError: ${vm.actionError}');
+    print('🐛 [SearchResultsView] Mounted: $mounted');
       if (!mounted) return;
 
-      // ✅ Kiểm tra result
+      // ✅ LOGIC: Xử lý dựa trên status trả về
       if (result == 'success') {
-        // Đã tham gia nhóm (open join)
+        // Case 1: Vào nhóm luôn
+        if (!mounted) return;
         NotificationService().showSuccessDialog(
           context: context,
           title: 'Thành công',
           message: 'Đã tham gia nhóm ${group.name}!',
         );
       } else if (result == 'pending') {
-        // Gửi request thành công (requires_approval)
+        // Case 2: Chờ phê duyệt -> Hiển thị Dialog Thành công (Màu xanh)
+        if (!mounted) return;
         NotificationService().showSuccessDialog(
           context: context,
           title: 'Yêu cầu đã gửi',
-          message: vm.actionError ?? 'Yêu cầu tham gia đã được gửi. Vui lòng chờ phê duyệt.',
+          message: vm.actionError ?? 'Đã gửi yêu cầu tham gia nhóm. Vui lòng chờ phê duyệt.',
         );
       } else {
-        // Lỗi
+        // Case 3: Lỗi thực sự -> Hiển thị Dialog Cảnh báo (Màu cam/đỏ)
+        if (!mounted) return;
         NotificationService().showWarningDialog(
           context: context,
-          title: 'Thất bại',
-          message: vm.actionError ?? 'Không thể tham gia nhóm.',
+          title: 'Không thể tham giaaaaaa',
+          message: vm.actionError ?? 'Có lỗi xảy ra. Vui lòng thử lại.',
         );
       }
     },
@@ -451,4 +457,5 @@ class _SearchResultsContentState extends State<_SearchResultsContent> {
     child: const Text('Tham gia'),
   );
 }
+
 }
