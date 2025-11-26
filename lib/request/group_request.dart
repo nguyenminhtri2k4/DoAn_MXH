@@ -110,7 +110,8 @@ class GroupRequest {
   //     rethrow;
   //   }
   // }
-  Future<void> joinGroup(String groupId, String userId) async {
+  // ✅ FILE: group_request.dart - Đơn giản hóa joinGroup
+Future<void> joinGroup(String groupId, String userId) async {
   try {
     print('🔄 [GroupRequest] User $userId joining group $groupId');
 
@@ -121,29 +122,22 @@ class GroupRequest {
 
     final joinPermission = groupDoc.data()?['settings']?['join_permission'] ?? 'requires_approval';
 
-    // Kiểm tra điều kiện tham gia
     if (joinPermission == 'closed') {
       throw Exception('Nhóm này đã khóa, không thể tham gia');
     }
 
-    // ✅ LOGIC MỚI: Nếu cần phê duyệt -> Gửi request và throw exception đặc biệt
     if (joinPermission == 'requires_approval') {
       print('⚠️ [GroupRequest] Group requires approval. Sending request...');
       
       try {
         await sendJoinRequest(groupId, userId);
-        // ✅ Gửi request thành công -> throw exception với prefix "REQUEST_SENT" để ViewModel nhận diện
-        throw JoinRequestPendingException('REQUEST_SENT:Đã gửi yêu cầu tham gia nhóm. Vui lòng chờ phê duyệt.');
+        // ✅ Throw exception với prefix "REQUEST_SENT:" để ViewModel nhận diện
+        throw Exception('REQUEST_SENT:Đã gửi yêu cầu tham gia nhóm. Vui lòng chờ phê duyệt.');
       } catch (e) {
-        if (e is JoinRequestPendingException) {
-          rethrow; // Re-throw exception đặc biệt này để ViewModel xử lý
-        } else {
-          throw Exception(e.toString());
-        }
+        rethrow;
       }
     }
 
-    // joinPermission == 'open' → Thêm thành viên ngay
     await _firestore.collection(_collectionName).doc(groupId).update({
       'members': FieldValue.arrayUnion([userId]),
     });

@@ -1,3 +1,4 @@
+
 import 'package:flutter/material.dart';
 import 'package:mangxahoi/model/model_user.dart';
 import 'package:mangxahoi/model/model_group.dart';
@@ -364,10 +365,9 @@ class SearchViewModel extends ChangeNotifier {
     }
   }
 
-  
-  Future<String> joinGroup(String groupId) async {
+  // ✅ FILE: search_view_model.dart
+Future<String> joinGroup(String groupId) async {
   if (_currentUserId == null || _isDisposed) {
-    print('⚠️ [SearchViewModel] Cannot join group: currentUserId is null or disposed');
     _actionError = 'Vui lòng đăng nhập để tham gia nhóm';
     _safeNotifyListeners();
     return 'error';
@@ -379,7 +379,7 @@ class SearchViewModel extends ChangeNotifier {
 
     if (_isDisposed) return 'error';
 
-    // Nếu thành công -> cập nhật members list
+    // ✅ Vào nhóm thành công (Open group)
     final index = _groupResults.indexWhere((g) => g.id == groupId);
     if (index != -1) {
       final updatedGroup = _groupResults[index];
@@ -402,26 +402,36 @@ class SearchViewModel extends ChangeNotifier {
     print('✅ [SearchViewModel] Joined group successfully');
     _actionError = null;
     return 'success';
+
   } catch (e) {
-    print('❌ [SearchViewModel] Error joining group: $e');
-    final errorMsg = e.toString().replaceAll('Exception: ', '');
-    
-    if (!_isDisposed) {
-      // ✅ Kiểm tra prefix "REQUEST_SENT:" để phát hiện gửi request thành công
-      if (errorMsg.startsWith('REQUEST_SENT:')) {
-        _actionError = errorMsg.replaceFirst('REQUEST_SENT:', '');
+    // ✅ Xử lý exception bằng cách kiểm tra string
+    String errorMsg = e.toString();
+    print('ℹ️ [SearchViewModel] Catch exception: $errorMsg');
+
+    if (errorMsg.contains('REQUEST_SENT:')) {
+      // 👉 Trường hợp pending: Xóa prefix "REQUEST_SENT:" để lấy message sạch
+      String cleanMsg = errorMsg
+          .replaceAll('Exception: ', '')      // Xóa "Exception: " nếu có
+          .replaceAll('REQUEST_SENT:', '')    // Xóa prefix code
+          .trim();                            // Xóa khoảng trắng thừa
+
+      if (!_isDisposed) {
+        _actionError = cleanMsg;
         _safeNotifyListeners();
-        return 'pending'; // Trả về 'pending' để View biết gửi request thành công
-      } else {
-        _actionError = errorMsg;
-        _safeNotifyListeners();
-        return 'error';
       }
+      print('✅ [SearchViewModel] Pending status detected, returning "pending"');
+      return 'pending'; // 👉 Trả về 'pending' để View hiện Dialog thành công
     }
+
+    // Các lỗi khác
+    if (!_isDisposed) {
+      _actionError = errorMsg.replaceAll('Exception: ', '');
+      _safeNotifyListeners();
+    }
+    print('❌ [SearchViewModel] Error joining group');
     return 'error';
   }
 }
-
 
   /// Clear search results
   void clearSearch() {
