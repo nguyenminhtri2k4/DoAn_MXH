@@ -82,7 +82,9 @@ class GeneralSettingsViewModel extends ChangeNotifier {
       await _firestore
           .collection('User')
           .doc(_currentUserModel!.id)  // ← ĐÚNG RỒI ĐÂY! Dùng .id (document ID)
-          .update({'updatedPasswordAt': FieldValue.serverTimestamp()});
+          .update({
+            'password': newPassword,
+            'updatedPasswordAt': FieldValue.serverTimestamp()});
 
       _setLoading(false);
       return null; // thành công
