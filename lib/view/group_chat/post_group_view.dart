@@ -725,43 +725,16 @@ class _PostGroupViewContent extends StatelessWidget {
           return ListView(
             padding: const EdgeInsets.symmetric(vertical: 8.0),
             children: [
-              // ✅ HIỂN THỊ Ô ĐĂNG BÀI DỰA TRÊN QUYỀN (ĐÃ SỬA)
-              
-              // Trường hợp 1: Được phép đăng -> Hiện ô đăng
-              if (vm.isMember && canPost) _buildCreatePostSection(context, vm),
-              
-              // Trường hợp 2: Bị chặn -> Hiện thông báo (Tương tự bên Chat)
-              if (vm.isMember && !canPost)
-                Container(
-                  margin: const EdgeInsets.fromLTRB(12, 0, 12, 8),
-                  padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: Colors.grey.shade200),
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.lock_outline, size: 18, color: Colors.grey[600]),
-                      const SizedBox(width: 8),
-                      Text(
-                        restrictionReason,
-                        style: TextStyle(
-                          color: Colors.grey[600],
-                          fontWeight: FontWeight.w500,
-                          fontSize: 14,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
+              // ✅ SỬA: Luôn hiện ô đăng bài nếu là thành viên (Backend sẽ lo việc duyệt)
+              if (vm.isMember) _buildCreatePostSection(context, vm),
 
-              // Các nút chức năng nhanh
+              // Các nút chức năng nhanh (Thành viên / Sự kiện / ...)
               if (vm.isMember) const SizedBox(height: 8),
               if (vm.isMember) _buildQuickActions(context, vm),
               
               if (posts.isNotEmpty) const SizedBox(height: 8),
+              
+              // Widget hiển thị khi không có bài viết
               if (posts.isEmpty)
                 Container(
                   padding: const EdgeInsets.symmetric(vertical: 40),
@@ -782,7 +755,7 @@ class _PostGroupViewContent extends StatelessWidget {
                       const SizedBox(height: 8),
                       Text(
                         vm.isMember
-                            ? (canPost ? "Hãy là người đầu tiên chia sẻ điều gì đó!" : "")
+                            ? "Hãy là người đầu tiên chia sẻ điều gì đó!"
                             : "Tham gia nhóm để xem và chia sẻ bài viết",
                         style: TextStyle(fontSize: 14, color: Colors.grey[500]),
                       ),
@@ -790,6 +763,7 @@ class _PostGroupViewContent extends StatelessWidget {
                   ),
                 ),
 
+              // Danh sách bài viết
               ...posts.map(
                 (post) => Padding(
                   padding: const EdgeInsets.only(bottom: 8.0),
