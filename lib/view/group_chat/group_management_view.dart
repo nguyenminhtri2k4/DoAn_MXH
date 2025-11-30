@@ -12,7 +12,7 @@ import 'package:mangxahoi/view/group_chat/group_members_list_view.dart';
 import 'package:mangxahoi/view/group_chat/group_disbanded_view.dart';
 import '../../view/group_chat/group_settings_view.dart';
 import 'package:mangxahoi/view/group_chat/join_requests_view.dart';
-
+import 'package:mangxahoi/view/group_chat/group_management_requests_view.dart';
 class GroupManagementView extends StatelessWidget {
   final String groupId;
 
@@ -95,33 +95,42 @@ class _GroupManagementContent extends StatelessWidget {
         onPressed: () => Navigator.pop(context),
       ),
       actions: [
-        // Chỉ hiện nút cài đặt nếu là Owner hoặc Manager
-        if (vm.isOwner || (vm.group != null && vm.group!.managers.contains(vm.currentUserId)))
+        // 1. Nút Cài đặt (Settings) - Hiện cho Owner và Manager
+        if (vm.isOwner || vm.isManager)
           IconButton(
             icon: const Icon(Icons.settings, color: Colors.white),
+            tooltip: 'Cài đặt nhóm',
             onPressed: () {
-               // Chuyển sang trang GroupSettingsView
-               Navigator.push(
-                 context, 
-                 MaterialPageRoute(
-                   builder: (context) => GroupSettingsView(group: vm.group!),
-                 ),
-               );
-            },
-          ),
-          if (vm.isOwner)
-            IconButton(
-              icon: const Icon(Icons.playlist_add_check, color: Colors.white),
-              onPressed: () {
-                // Chuyển sang trang JoinRequestsView
+              // Kiểm tra null an toàn trước khi chuyển trang
+              if (vm.group != null) {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (context) => JoinRequestsView(groupId: vm.groupId),
+                    builder: (context) => GroupSettingsView(group: vm.group!),
                   ),
                 );
-              },
-            ),
+              }
+            },
+          ),
+
+        // 2. Nút Duyệt Yêu Cầu (Thành viên & Bài viết) - Hiện cho Owner và Manager
+        if (vm.isOwner || vm.isManager)
+          IconButton(
+            icon: const Icon(Icons.playlist_add_check, color: Colors.white),
+            tooltip: 'Duyệt yêu cầu',
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  // Sử dụng GroupManagementRequestsView chứa cả 2 tab
+                  builder: (context) => GroupManagementRequestsView(
+                    groupId: vm.groupId,
+                    groupName: vm.group?.name ?? 'Nhóm',
+                  ),
+                ),
+              );
+            },
+          ),
       ],
       flexibleSpace: FlexibleSpaceBar(
         background: Stack(

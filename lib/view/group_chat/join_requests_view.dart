@@ -18,18 +18,6 @@ class JoinRequestsView extends StatelessWidget {
       create: (_) => JoinRequestsViewModel(groupId: groupId),
       child: Scaffold(
         backgroundColor: Colors.white,
-        appBar: AppBar(
-          backgroundColor: Colors.white,
-          elevation: 0.5,
-          leading: IconButton(
-            icon: const Icon(Icons.arrow_back, color: Colors.black),
-            onPressed: () => Navigator.pop(context),
-          ),
-          title: const Text(
-            'Yêu cầu tham gia',
-            style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
-          ),
-        ),
         body: Consumer<JoinRequestsViewModel>(
           builder: (context, vm, _) {
             return StreamBuilder<List<JoinRequestModel>>(
