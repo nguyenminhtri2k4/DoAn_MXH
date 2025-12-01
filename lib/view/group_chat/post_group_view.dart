@@ -12,6 +12,8 @@ import 'package:mangxahoi/view/group_chat/add_members_view.dart';
 import 'package:mangxahoi/view/group_chat/group_management_view.dart';
 import 'package:mangxahoi/view/group_chat/search_post_group_view.dart';
 import 'package:mangxahoi/view/group_chat/group_members_list_view.dart';
+import 'group_events_view.dart';
+import 'package:provider/provider.dart';
 
 class PostGroupView extends StatelessWidget {
   final GroupModel group;
@@ -889,19 +891,23 @@ class _PostGroupViewContent extends StatelessWidget {
           ),
           Container(width: 1, height: 24, color: Colors.grey[300]),
           Expanded(
-            child: _buildQuickActionButton(
-              icon: Icons.event_outlined,
-              label: 'Sự kiện',
-              onTap: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Tính năng sự kiện đang được phát triển'),
-                    duration: Duration(seconds: 2),
-                  ),
-                );
-              },
-            ),
+          child: _buildQuickActionButton(
+            icon: Icons.event_outlined,
+            label: 'Sự kiện',
+            onTap: () {
+              // Lấy ViewModel từ context hiện tại
+              final vm = Provider.of<PostGroupViewModel>(context, listen: false);
+              
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  // Truyền vm vào GroupEventsView
+                  builder: (context) => GroupEventsView(viewModel: vm),
+                ),
+              );
+            },
           ),
+        ),
           Container(width: 1, height: 24, color: Colors.grey[300]),
           Expanded(
             child: _buildQuickActionButton(
@@ -950,4 +956,6 @@ class _PostGroupViewContent extends StatelessWidget {
       ),
     );
   }
+
+  
 }
