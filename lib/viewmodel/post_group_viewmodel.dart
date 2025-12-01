@@ -6,12 +6,16 @@ import 'package:mangxahoi/model/model_user.dart';
 import 'package:mangxahoi/request/post_request.dart';
 import 'package:mangxahoi/request/user_request.dart';
 import 'package:mangxahoi/request/group_request.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:mangxahoi/model/model_event.dart';
+import 'package:cloud_firestore/cloud_firestore.dart'; // <--- Thêm dòng này
 
 class PostGroupViewModel extends ChangeNotifier {
   final PostRequest _postRequest = PostRequest();
   final UserRequest _userRequest = UserRequest();
   final GroupRequest _groupRequest = GroupRequest();
   final FirebaseAuth _auth = FirebaseAuth.instance;
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   bool get isGroupDeleted => group.status.toLowerCase() == 'deleted';
 
   final GroupModel group;
@@ -141,6 +145,54 @@ class PostGroupViewModel extends ChangeNotifier {
         message: 'Có lỗi xảy ra khi rời nhóm: ${e.toString()}',
       );
     }
+  }
+
+  // Hàm tạo sự kiện mới
+  // 1. Hàm tạo sự kiện (Đã bỏ tham số groupId)
+  Future<void> createEvent({
+    required String title,
+    required String description,
+    required String location,
+    required DateTime startTime,
+  }) async {
+    try {
+      String currentUserId = _auth.currentUser!.uid;
+      String eventId = DateTime.now().millisecondsSinceEpoch.toString();
+
+      ModelEvent newEvent = ModelEvent(
+        id: eventId,
+        groupId: group.id, // ✅ Dùng trực tiếp group.id của ViewModel
+        creatorId: currentUserId,
+        title: title,
+        description: description,
+        location: location,
+        startTime: Timestamp.fromDate(startTime),
+        participants: [currentUserId],
+      );
+
+      await _firestore
+          .collection('groups')
+          .doc(group.id) // ✅ Dùng trực tiếp group.id
+          .collection('events')
+          .doc(eventId)
+          .set(newEvent.toMap());
+    } catch (e) {
+      print("Lỗi tạo sự kiện: $e");
+      rethrow;
+    }
+  }
+
+  // 2. Stream lấy danh sách sự kiện (Đã bỏ tham số groupId)
+  Stream<List<ModelEvent>> getGroupEvents() {
+    return _firestore
+        .collection('groups')
+        .doc(group.id) // ✅ Dùng trực tiếp group.id
+        .collection('events')
+        .orderBy('startTime', descending: false)
+        .snapshots()
+        .map((snapshot) {
+      return snapshot.docs.map((doc) => ModelEvent.fromMap(doc.data())).toList();
+    });
   }
 }
 
