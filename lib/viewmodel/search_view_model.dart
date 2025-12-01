@@ -1,12 +1,15 @@
-
 import 'package:flutter/material.dart';
 import 'package:mangxahoi/model/model_user.dart';
 import 'package:mangxahoi/model/model_group.dart';
+import 'package:mangxahoi/model/model_post.dart';
 import 'package:mangxahoi/request/user_request.dart';
 import 'package:mangxahoi/request/group_request.dart';
+import 'package:mangxahoi/request/post_request.dart';
 import 'package:mangxahoi/request/friend_request_manager.dart';
+import 'package:mangxahoi/utils/post_privacy_helper.dart';
 import 'dart:async';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class SearchUserResult {
   final UserModel user;
@@ -18,12 +21,19 @@ class SearchUserResult {
 class SearchViewModel extends ChangeNotifier {
   final UserRequest _userRequest = UserRequest();
   final GroupRequest _groupRequest = GroupRequest();
+  final PostRequest _postRequest = PostRequest();
   final FriendRequestManager _requestManager = FriendRequestManager();
   final TextEditingController searchController = TextEditingController();
 
   List<UserModel> _allUsersCache = [];
+  
   List<SearchUserResult> _searchResults = [];
   List<GroupModel> _groupResults = [];
+  List<PostModel> _postResults = [];
+
+  List<String> _friendIds = [];
+  Set<String> _blockedUserIds = {};
+  UserModel? _currentUserModel;
 
   bool _isLoading = false;
   String? _errorMessage;
@@ -35,6 +45,7 @@ class SearchViewModel extends ChangeNotifier {
 
   List<SearchUserResult> get searchResults => _searchResults;
   List<GroupModel> get groupResults => _groupResults;
+  List<PostModel> get postResults => _postResults;
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
   String? get actionError => _actionError;
@@ -42,7 +53,7 @@ class SearchViewModel extends ChangeNotifier {
 
   SearchViewModel() {
     print('🚀 [SearchViewModel] Initializing...');
-    _getCurrentUserDocId();
+    _initializeData();
     searchController.addListener(_onSearchChanged);
     _loadAllUsersCache();
   }
@@ -71,8 +82,7 @@ class SearchViewModel extends ChangeNotifier {
     }
   }
 
-  /// Lấy currentUserId từ Firebase Auth
-  void _getCurrentUserDocId() async {
+  void _initializeData() async {
     if (_isDisposed) return;
 
     try {
@@ -80,12 +90,17 @@ class SearchViewModel extends ChangeNotifier {
       final firebaseUser = FirebaseAuth.instance.currentUser;
 
       if (firebaseUser != null && !_isDisposed) {
-        print('📧 [SearchViewModel] Firebase user UID: ${firebaseUser.uid}');
-        final user = await _userRequest.getUserByUid(firebaseUser.uid);
+        final uid = firebaseUser.uid;
+        print('📧 [SearchViewModel] Firebase user UID: $uid');
+        
+        final user = await _userRequest.getUserByUid(uid);
 
         if (!_isDisposed && user != null) {
           _currentUserId = user.id;
+          _currentUserModel = user;
           print('✅ [SearchViewModel] Current user ID: $_currentUserId');
+
+          await _fetchPrivacyData(uid);
         } else {
           print('⚠️ [SearchViewModel] User not found in Firestore');
         }
@@ -93,11 +108,46 @@ class SearchViewModel extends ChangeNotifier {
         print('⚠️ [SearchViewModel] No Firebase user logged in');
       }
     } catch (e) {
-      print('❌ [SearchViewModel] Error getting current user: $e');
+      print('❌ [SearchViewModel] Error initializing data: $e');
     }
   }
 
-  /// Load tất cả user vào cache để tìm kiếm nhanh
+  Future<void> _fetchPrivacyData(String uid) async {
+    if (_isDisposed) return;
+    try {
+      print('🔒 [SearchViewModel] Fetching privacy data (Friends & Blocked)...');
+
+      final q1 = await FirebaseFirestore.instance
+          .collection('Friend')
+          .where('user1', isEqualTo: uid)
+          .where('status', isEqualTo: 'accepted')
+          .get();
+
+      final q2 = await FirebaseFirestore.instance
+          .collection('Friend')
+          .where('user2', isEqualTo: uid)
+          .where('status', isEqualTo: 'accepted')
+          .get();
+
+      final friends1 = q1.docs.map((d) => d['user2'] as String).toList();
+      final friends2 = q2.docs.map((d) => d['user1'] as String).toList();
+      
+      _friendIds = [...friends1, ...friends2].toSet().toList();
+      print('   👥 Friends count: ${_friendIds.length}');
+
+      final blockQuery = await FirebaseFirestore.instance
+          .collection('Block')
+          .where('blockerId', isEqualTo: uid)
+          .get();
+      
+      _blockedUserIds = blockQuery.docs.map((d) => d['blockedId'] as String).toSet();
+      print('   🚫 Blocked count: ${_blockedUserIds.length}');
+
+    } catch (e) {
+      print('⚠️ [SearchViewModel] Error fetching privacy data: $e');
+    }
+  }
+
   Future<void> _loadAllUsersCache() async {
     if (_isDisposed) return;
 
@@ -109,11 +159,7 @@ class SearchViewModel extends ChangeNotifier {
       _allUsersCache = await _userRequest.getAllUsersForCache(limit: 1000);
 
       if (_isDisposed) return;
-
       _errorMessage = null;
-      print(
-        '✅ [SearchViewModel] Loaded ${_allUsersCache.length} users into cache',
-      );
     } catch (e) {
       print('❌ [SearchViewModel] Error loading user cache: $e');
       if (!_isDisposed) {
@@ -127,29 +173,24 @@ class SearchViewModel extends ChangeNotifier {
     }
   }
 
-  /// Listener khi searchController thay đổi
   void _onSearchChanged() {
     if (_isDisposed) return;
 
     final query = searchController.text.trim();
-    print('⌨️ [SearchViewModel] Search text changed: "$query"');
 
-    // Cancel debounce cũ
     _debounce?.cancel();
     _debounce = null;
 
-    // Nếu query rỗng → clear results
     if (query.isEmpty) {
-      print('🧹 [SearchViewModel] Query empty, clearing results');
       _searchResults = [];
       _groupResults = [];
+      _postResults = [];
       _errorMessage = null;
       _safeNotifyListeners();
       return;
     }
 
-    // Debounce 300ms trước khi search
-    _debounce = Timer(const Duration(milliseconds: 300), () {
+    _debounce = Timer(const Duration(milliseconds: 500), () {
       if (!_isDisposed) {
         print('⏱️ [SearchViewModel] Debounce triggered, starting search...');
         _searchAll(query);
@@ -157,24 +198,19 @@ class SearchViewModel extends ChangeNotifier {
     });
   }
 
-  /// Tìm kiếm cả user và group
   void _searchAll(String query) async {
-    if (_isDisposed) {
-      print('⚠️ [SearchViewModel] Disposed, cancelling search');
-      return;
-    }
+    if (_isDisposed) return;
 
     if (query.isEmpty) {
-      print('⚠️ [SearchViewModel] Empty query, skipping search');
       _searchResults = [];
       _groupResults = [];
+      _postResults = [];
       _errorMessage = null;
       _safeNotifyListeners();
       return;
     }
 
     if (_currentUserId == null) {
-      print('⚠️ [SearchViewModel] Current user ID is null, skipping search');
       _errorMessage = 'Vui lòng đăng nhập để tìm kiếm';
       _safeNotifyListeners();
       return;
@@ -186,32 +222,29 @@ class SearchViewModel extends ChangeNotifier {
     _safeNotifyListeners();
 
     try {
-      print('📡 [SearchViewModel] Searching users and groups in parallel...');
+      print('📡 [SearchViewModel] Searching Users, Groups & Posts in parallel...');
 
-      // Tìm kiếm song song
       final results = await Future.wait([
         _searchUsersLocal(query),
         _searchGroups(query),
+        _searchPosts(query),
       ]);
 
-      if (_isDisposed) {
-        print('⚠️ [SearchViewModel] Disposed during search');
-        return;
-      }
+      if (_isDisposed) return;
 
       _searchResults = results[0] as List<SearchUserResult>;
       _groupResults = results[1] as List<GroupModel>;
+      _postResults = results[2] as List<PostModel>;
 
       print('📊 [SearchViewModel] Search completed:');
-      print('   👥 Users found: ${_searchResults.length}');
-      print('   👥 Groups found: ${_groupResults.length}');
+      print('   👥 Users: ${_searchResults.length}');
+      print('   👥 Groups: ${_groupResults.length}');
+      print('   📝 Posts: ${_postResults.length}');
 
-      if (_searchResults.isEmpty && _groupResults.isEmpty) {
+      if (_searchResults.isEmpty && _groupResults.isEmpty && _postResults.isEmpty) {
         _errorMessage = 'Không tìm thấy kết quả nào khớp với "$query".';
-        print('⚠️ [SearchViewModel] No results found');
       } else {
         _errorMessage = null;
-        print('✅ [SearchViewModel] Search successful');
       }
     } catch (e) {
       print('❌ [SearchViewModel] Search error: $e');
@@ -226,124 +259,112 @@ class SearchViewModel extends ChangeNotifier {
     }
   }
 
-  /// Tìm kiếm user từ cache (local search)
   Future<List<SearchUserResult>> _searchUsersLocal(String query) async {
     if (_isDisposed) return [];
-
     try {
-      print('🔍 [SearchViewModel] Searching users locally...');
       final lowerCaseQuery = query.toLowerCase();
-
-      final filteredUsers =
-          _allUsersCache.where((user) {
-            final userNameLower = user.name.toLowerCase();
-            final userEmailLower = user.email.toLowerCase();
-            final userPhone = user.phone;
-
-            return userNameLower.contains(lowerCaseQuery) ||
-                userEmailLower.contains(lowerCaseQuery) ||
-                userPhone.contains(lowerCaseQuery);
-          }).toList();
-
-      print(
-        '👥 [SearchViewModel] Found ${filteredUsers.length} matching users',
-      );
-
-      if (_isDisposed) return [];
+      final filteredUsers = _allUsersCache.where((user) {
+        return user.name.toLowerCase().contains(lowerCaseQuery) ||
+            user.email.toLowerCase().contains(lowerCaseQuery) ||
+            user.phone.contains(lowerCaseQuery);
+      }).toList();
 
       List<SearchUserResult> resultsWithStatus = [];
-
       for (var user in filteredUsers) {
         if (_isDisposed) return [];
-
         final status = await _requestManager.getFriendshipStatus(
           _currentUserId!,
           user.id,
         );
-
-        if (_isDisposed) return [];
-
         resultsWithStatus.add(SearchUserResult(user: user, status: status));
       }
-
-      print(
-        '✅ [SearchViewModel] User search complete with ${resultsWithStatus.length} results',
-      );
       return resultsWithStatus;
     } catch (e) {
-      print('❌ [SearchViewModel] User search error: $e');
+      print('❌ User search error: $e');
       return [];
     }
   }
 
-  /// Tìm kiếm group (CHỈ NHÓM BÀI ĐĂNG)
   Future<List<GroupModel>> _searchGroups(String query) async {
     if (_isDisposed) return [];
+    try {
+      final allGroups = await _groupRequest.searchGroups(query);
+      return allGroups.where((group) => group.type == 'post').toList();
+    } catch (e) {
+      print('❌ Group search error: $e');
+      return [];
+    }
+  }
+
+  Future<List<PostModel>> _searchPosts(String query) async {
+    if (_isDisposed || _currentUserId == null || _currentUserModel == null) return [];
 
     try {
-      print('🔍 [SearchViewModel] Searching groups with query: "$query"');
-
-      final allGroups = await _groupRequest.searchGroups(query);
+      print('📝 [SearchViewModel] Searching posts...');
+      
+      final allRecentPosts = await _postRequest.getPostsForSearch(limit: 500);
 
       if (_isDisposed) return [];
 
-      print(
-        '📦 [SearchViewModel] Total groups returned from API: ${allGroups.length}',
-      );
+      final queryLower = query.toLowerCase();
+      final contentMatches = allRecentPosts.where((post) {
+        return post.content.toLowerCase().contains(queryLower);
+      }).toList();
 
-      // Debug: In ra thông tin các nhóm tìm được
-      for (var group in allGroups) {
-        print(
-          '   📁 Group: "${group.name}" | Type: "${group.type}" | Status: "${group.status}" | Members: ${group.members.length}',
-        );
+      if (contentMatches.isEmpty) {
+        return [];
       }
 
-      // Lọc chỉ lấy nhóm type = 'post'
-      final postGroups =
-          allGroups.where((group) => group.type == 'post').toList();
+      print('   Found ${contentMatches.length} posts matching content. Checking privacy...');
 
-      print(
-        '✅ [SearchViewModel] Found ${postGroups.length} post groups (filtered from ${allGroups.length})',
-      );
+      final groupIds = contentMatches
+          .where((p) => p.groupId != null && p.groupId!.isNotEmpty)
+          .map((p) => p.groupId!)
+          .toSet();
 
-      if (postGroups.isEmpty && allGroups.isNotEmpty) {
-        print(
-          '⚠️ [SearchViewModel] WARNING: All groups were filtered out! Check if "type" field is correct.',
-        );
-        print('   Expected: type == "post"');
-        print(
-          '   Found types: ${allGroups.map((g) => g.type).toSet().toList()}',
-        );
+      Map<String, GroupModel> groupsMap = {};
+      
+      for (var gid in groupIds) {
+        if (_isDisposed) return [];
+        try {
+          final group = await _groupRequest.getGroupById(gid);
+          if (group != null) {
+            groupsMap[gid] = group;
+          }
+        } catch (_) {}
       }
 
-      return postGroups;
+      final visiblePosts = PostPrivacyHelper.filterPosts(
+        posts: contentMatches,
+        currentUser: _currentUserModel!,
+        groupsMap: groupsMap,
+        blockedUserIds: _blockedUserIds,
+      );
+
+      final finalPosts = visiblePosts.where((post) {
+        if (post.visibility == 'friends') {
+          final isFriend = _friendIds.contains(post.authorId);
+          final isMe = post.authorId == _currentUserId;
+          return isFriend || isMe;
+        }
+        return true;
+      }).toList();
+
+      print('✅ [SearchViewModel] Found ${finalPosts.length} visible posts');
+      return finalPosts;
+
     } catch (e) {
-      print('❌ [SearchViewModel] Group search error: $e');
-      print('   Stack trace: ${StackTrace.current}');
+      print('❌ [SearchViewModel] Post search error: $e');
       return [];
     }
   }
 
-  /// Gửi lời mời kết bạn
   Future<bool> sendFriendRequest(String toUserId) async {
-    if (_currentUserId == null || _isDisposed) {
-      print(
-        '⚠️ [SearchViewModel] Cannot send friend request: currentUserId is null or disposed',
-      );
-      return false;
-    }
-
+    if (_currentUserId == null || _isDisposed) return false;
     _actionError = null;
-
     try {
-      print(
-        '📤 [SearchViewModel] Sending friend request from $_currentUserId to $toUserId',
-      );
       await _requestManager.sendRequest(_currentUserId!, toUserId);
-
       if (_isDisposed) return false;
-
-      // Cập nhật trạng thái trong danh sách
       final index = _searchResults.indexWhere((r) => r.user.id == toUserId);
       if (index != -1) {
         _searchResults[index] = SearchUserResult(
@@ -352,11 +373,8 @@ class SearchViewModel extends ChangeNotifier {
         );
         _safeNotifyListeners();
       }
-
-      print('✅ [SearchViewModel] Friend request sent successfully');
       return true;
     } catch (e) {
-      print('❌ [SearchViewModel] Error sending friend request: $e');
       if (!_isDisposed) {
         _actionError = e.toString().replaceAll("Exception: ", "");
         _safeNotifyListeners();
@@ -365,84 +383,64 @@ class SearchViewModel extends ChangeNotifier {
     }
   }
 
-  // ✅ FILE: search_view_model.dart
-Future<String> joinGroup(String groupId) async {
-  if (_currentUserId == null || _isDisposed) {
-    _actionError = 'Vui lòng đăng nhập để tham gia nhóm';
-    _safeNotifyListeners();
-    return 'error';
-  }
-
-  try {
-    print('📤 [SearchViewModel] User $_currentUserId joining group $groupId');
-    await _groupRequest.joinGroup(groupId, _currentUserId!);
-
-    if (_isDisposed) return 'error';
-
-    // ✅ Vào nhóm thành công (Open group)
-    final index = _groupResults.indexWhere((g) => g.id == groupId);
-    if (index != -1) {
-      final updatedGroup = _groupResults[index];
-      _groupResults[index] = GroupModel(
-        id: updatedGroup.id,
-        ownerId: updatedGroup.ownerId,
-        name: updatedGroup.name,
-        description: updatedGroup.description,
-        coverImage: updatedGroup.coverImage,
-        managers: updatedGroup.managers,
-        members: [...updatedGroup.members, _currentUserId!],
-        settings: updatedGroup.settings,
-        status: updatedGroup.status,
-        type: updatedGroup.type,
-        createdAt: updatedGroup.createdAt,
-      );
+  Future<String> joinGroup(String groupId) async {
+    if (_currentUserId == null || _isDisposed) {
+      _actionError = 'Vui lòng đăng nhập để tham gia nhóm';
       _safeNotifyListeners();
+      return 'error';
     }
+    try {
+      await _groupRequest.joinGroup(groupId, _currentUserId!);
+      if (_isDisposed) return 'error';
 
-    print('✅ [SearchViewModel] Joined group successfully');
-    _actionError = null;
-    return 'success';
-
-  } catch (e) {
-    // ✅ Xử lý exception bằng cách kiểm tra string
-    String errorMsg = e.toString();
-    print('ℹ️ [SearchViewModel] Catch exception: $errorMsg');
-
-    if (errorMsg.contains('REQUEST_SENT:')) {
-      // 👉 Trường hợp pending: Xóa prefix "REQUEST_SENT:" để lấy message sạch
-      String cleanMsg = errorMsg
-          .replaceAll('Exception: ', '')      // Xóa "Exception: " nếu có
-          .replaceAll('REQUEST_SENT:', '')    // Xóa prefix code
-          .trim();                            // Xóa khoảng trắng thừa
-
+      final index = _groupResults.indexWhere((g) => g.id == groupId);
+      if (index != -1) {
+        final group = _groupResults[index];
+        if (group.status != 'private') {
+           _groupResults[index] = GroupModel(
+            id: group.id,
+            ownerId: group.ownerId,
+            name: group.name,
+            description: group.description,
+            coverImage: group.coverImage,
+            managers: group.managers,
+            members: [...group.members, _currentUserId!],
+            settings: group.settings,
+            status: group.status,
+            type: group.type,
+            createdAt: group.createdAt,
+          );
+          _safeNotifyListeners();
+        }
+      }
+      return 'success';
+    } catch (e) {
+      String errorMsg = e.toString();
+      if (errorMsg.contains('REQUEST_SENT:')) {
+        String cleanMsg = errorMsg.replaceAll('Exception: ', '').replaceAll('REQUEST_SENT:', '').trim();
+        if (!_isDisposed) {
+          _actionError = cleanMsg;
+          _safeNotifyListeners();
+        }
+        return 'pending';
+      }
       if (!_isDisposed) {
-        _actionError = cleanMsg;
+        _actionError = errorMsg.replaceAll('Exception: ', '');
         _safeNotifyListeners();
       }
-      print('✅ [SearchViewModel] Pending status detected, returning "pending"');
-      return 'pending'; // 👉 Trả về 'pending' để View hiện Dialog thành công
+      return 'error';
     }
-
-    // Các lỗi khác
-    if (!_isDisposed) {
-      _actionError = errorMsg.replaceAll('Exception: ', '');
-      _safeNotifyListeners();
-    }
-    print('❌ [SearchViewModel] Error joining group');
-    return 'error';
   }
-}
 
-  /// Clear search results
   void clearSearch() {
     print('🧹 [SearchViewModel] Clearing search results');
     _searchResults = [];
     _groupResults = [];
+    _postResults = [];
     _errorMessage = null;
     _safeNotifyListeners();
   }
 
-  /// Debug method - gọi để test search groups trực tiếp
   Future<void> debugSearchGroups(String query) async {
     print('\n🐛 [SearchViewModel] === DEBUG SEARCH GROUPS ===');
     print('Query: "$query"');
