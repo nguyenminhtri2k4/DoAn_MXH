@@ -167,6 +167,26 @@ class PostRequest {
 
   // ==================== CHỨC NĂNG: LẤY BÀI VIẾT ====================
 
+  /// Lấy danh sách bài viết active để phục vụ tìm kiếm (Client-side filtering)
+  /// Hàm này lấy về một lượng lớn bài viết mới nhất để ViewModel lọc nội dung
+  Future<List<PostModel>> getPostsForSearch({int limit = 1000}) async {
+    try {
+      final snapshot = await _firestore
+          .collection(_collectionName)
+          .where('status', isEqualTo: 'active')
+          .orderBy('createdAt', descending: true)
+          .limit(limit)
+          .get();
+
+      return snapshot.docs
+          .map((doc) => PostModel.fromMap(doc.id, doc.data()))
+          .toList();
+    } catch (e) {
+      print('❌ Lỗi khi lấy danh sách bài viết tìm kiếm: $e');
+      return [];
+    }
+  }
+
   /// Lấy các bài viết công khai và của bạn bè (có phân trang)
   Future<List<PostModel>> getPostsPaginated({
     required String currentUserId,
