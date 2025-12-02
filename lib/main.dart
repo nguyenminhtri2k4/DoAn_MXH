@@ -56,7 +56,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:mangxahoi/services/notification_badge_service.dart';
 import 'package:mangxahoi/viewmodel/notification_view_model.dart';
-import 'package:firebase_app_check/firebase_app_check.dart'; // <--- Thêm dòng này
+import 'package:firebase_app_check/firebase_app_check.dart'; 
+import 'package:mangxahoi/view/banned_view.dart';
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
@@ -391,7 +392,9 @@ class _MyAppState extends State<MyApp> {
     }
   }
 
+  
   Widget _buildHomeScreen(UserService userService) {
+    // Trường hợp 1: Đang tải dữ liệu
     if (userService.isLoading) {
       return const Scaffold(
         body: Center(
@@ -407,10 +410,19 @@ class _MyAppState extends State<MyApp> {
       );
     }
 
+    // Trường hợp 2: Đã xác định được người dùng
     if (userService.currentUser != null) {
+      // KIỂM TRA TRẠNG THÁI TÀI KHOẢN
+      // Nếu status là 'banned' -> Chuyển hướng sang màn hình khóa
+      if (userService.currentUser!.statusAccount == 'banned') {
+        return const BannedView();
+      }
+
+      // Các trạng thái khác (active, Pro,...) -> Vào trang chủ bình thường
       return const HomeView();
     }
 
+    // Trường hợp 3: Chưa đăng nhập
     return const LoginView();
   }
 
