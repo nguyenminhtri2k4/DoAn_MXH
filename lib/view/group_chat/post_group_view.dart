@@ -909,20 +909,20 @@ class _PostGroupViewContent extends StatelessWidget {
           ),
         ),
           Container(width: 1, height: 24, color: Colors.grey[300]),
-          Expanded(
-            child: _buildQuickActionButton(
-              icon: Icons.more_horiz,
-              label: 'Thêm',
-              onTap: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Tính năng đang được phát triển'),
-                    duration: Duration(seconds: 2),
-                  ),
-                );
-              },
-            ),
-          ),
+          // Expanded(
+          //   child: _buildQuickActionButton(
+          //     icon: Icons.more_horiz,
+          //     label: 'Thêm',
+          //     onTap: () {
+          //       ScaffoldMessenger.of(context).showSnackBar(
+          //         const SnackBar(
+          //           content: Text('Tính năng đang được phát triển'),
+          //           duration: Duration(seconds: 2),
+          //         ),
+          //       );
+          //     },
+          //   ),
+          // ),
         ],
       ),
     );
