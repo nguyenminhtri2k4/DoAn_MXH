@@ -66,10 +66,10 @@ class _MessageVideoPlayerState extends State<MessageVideoPlayer> {
                     ),
                     Container(
                       padding: const EdgeInsets.all(6),
-                      decoration: BoxDecoration(
-                        color: Colors.black.withOpacity(0.4),
-                        shape: BoxShape.circle,
-                      ),
+                      // decoration: BoxDecoration(
+                      //   color: Colors.black.withOpacity(0.4),
+                      //   shape: BoxShape.circle,
+                      // ),
                       child: const Icon(
                         Icons.play_arrow,
                         color: Colors.white,
