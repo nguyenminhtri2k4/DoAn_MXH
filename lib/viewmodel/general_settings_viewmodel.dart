@@ -105,6 +105,43 @@ class GeneralSettingsViewModel extends ChangeNotifier {
     }
   }
 
+
+  // ===================================================================
+  // CẬP NHẬT CÀI ĐẶT KHUÔN MẶT (Lưu trong notificationSettings)
+  // ===================================================================
+  Future<bool> updateFaceAuthSetting(bool isEnabled) async {
+    _setLoading(true);
+    try {
+      if (_currentUserModel == null) await _loadCurrentUser();
+      if (_currentUserModel == null) return false;
+
+      // Tạo map mới từ settings cũ để tránh lỗi reference
+      final Map<String, bool> newSettings = Map<String, bool>.from(_currentUserModel!.notificationSettings);
+
+      if (isEnabled) {
+        newSettings['security_face_auth'] = true; // Lưu bật
+      } else {
+        newSettings.remove('security_face_auth'); // Tắt thì xóa key đi
+      }
+
+      // Cập nhật lên Firestore
+      await _firestore
+          .collection('User')
+          .doc(_currentUserModel!.id)
+          .update({'notificationSettings': newSettings});
+
+      // Cập nhật lại model cục bộ
+      _currentUserModel = _currentUserModel!.copyWith(notificationSettings: newSettings);
+      
+      _setLoading(false);
+      return true;
+    } catch (e) {
+      print('Lỗi cập nhật Face Auth: $e');
+      _setLoading(false);
+      return false;
+    }
+  }
+
   // ===================================================================
   // XÓA TÀI KHOẢN – SOFT DELETE CHÍNH XÁC 100%
   // ===================================================================
