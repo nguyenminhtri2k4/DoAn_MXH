@@ -175,6 +175,44 @@ class _GeneralSettingsViewContentState extends State<_GeneralSettingsViewContent
                 const SizedBox(height: 12),
               ],
 
+              // --- SECTION BẢO MẬT (FACE AUTH) ---
+              Container(
+                color: Colors.white,
+                child: SwitchListTile(
+                  secondary: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.blueAccent.withOpacity(0.1),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(Icons.face_retouching_natural, color: Colors.blueAccent),
+                  ),
+                  title: const Text('Bảo mật khuôn mặt', style: TextStyle(fontWeight: FontWeight.w600)),
+                  subtitle: const Text(
+                    'Yêu cầu quét khuôn mặt khi mở ứng dụng.',
+                    style: TextStyle(fontSize: 12, color: Colors.grey),
+                  ),
+                  // Kiểm tra trong notificationSettings xem có key 'security_face_auth' không
+                  value: currentUser?.notificationSettings['security_face_auth'] == true,
+                  activeColor: Colors.blueAccent,
+                  onChanged: vm.isLoading ? null : (bool value) async {
+                    // Gọi hàm trong ViewModel
+                    bool success = await vm.updateFaceAuthSetting(value);
+                    if (success && mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(value ? '✅ Đã bật xác thực khuôn mặt' : 'Đã tắt xác thực khuôn mặt'),
+                          backgroundColor: value ? Colors.green : Colors.grey,
+                          duration: const Duration(seconds: 1),
+                        ),
+                      );
+                    }
+                  },
+                ),
+              ),
+              
+              const SizedBox(height: 12),
+
               // --- SECTION THÔNG BÁO ---
               Container(
                 color: Colors.white,

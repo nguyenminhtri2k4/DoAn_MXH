@@ -23,6 +23,8 @@ import 'package:mangxahoi/view/group_chat/qr_scanner_view.dart';
 // 👇 1. THÊM IMPORT NÀY
 import 'package:mangxahoi/view/settings/general_settings_view.dart';
 import 'package:mangxahoi/services/notification_badge_service.dart';
+import 'package:mangxahoi/view/security/face_auth_view.dart';
+
 class NotificationBadge extends StatelessWidget {
   final int count;
   
@@ -95,6 +97,9 @@ class _HomeViewContentState extends State<_HomeViewContent> {
   void initState() {
     super.initState();
     _scrollController.addListener(_handleScroll);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+    _checkFaceSecurity();
+  });
 
     // ✅ Khởi tạo list pages 1 LẦN trong initState
     // Chỉ _HomePageBody là động, các trang khác là const
@@ -151,6 +156,26 @@ class _HomeViewContentState extends State<_HomeViewContent> {
     
     // Logic tải thêm bài viết đã được chuyển vào _HomePageBody
   }
+
+  void _checkFaceSecurity() {
+  final userProvider = Provider.of<UserService>(context, listen: false);
+  final user = userProvider.currentUser;
+
+  // Kiểm tra nếu bật tính năng này
+  if (user != null && user.notificationSettings['security_face_auth'] == true) {
+    // Đẩy màn hình FaceAuth đè lên
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => FaceAuthView(
+          onSuccess: () {
+            // Xác thực ok thì đóng màn hình FaceAuth, quay lại Home
+            Navigator.of(context).pop(); 
+          },
+        ),
+      ),
+    );
+  }
+}
 
   void _onTabTapped(int index) {
     if (index == 0 && _selectedIndex == 0 && _scrollController.hasClients) {
