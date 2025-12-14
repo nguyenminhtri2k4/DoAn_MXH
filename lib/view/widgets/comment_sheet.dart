@@ -84,6 +84,7 @@ class _CommentSheetState extends State<CommentSheet> {
                                     setState(() => _replyingToComment = parentComment);
                                     _commentFocusNode.requestFocus();
                                   },
+                                  currentUserDocId: widget.currentUserDocId,
                                 ),
                                 if (commentReplies.isNotEmpty)
                                   Padding(
@@ -96,6 +97,7 @@ class _CommentSheetState extends State<CommentSheet> {
                                           setState(() => _replyingToComment = parentComment);
                                           _commentFocusNode.requestFocus();
                                         },
+                                        currentUserDocId: widget.currentUserDocId,
                                       )).toList(),
                                     ),
                                   ),

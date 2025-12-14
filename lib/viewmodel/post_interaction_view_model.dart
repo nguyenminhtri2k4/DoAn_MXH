@@ -6,8 +6,8 @@ import 'package:mangxahoi/model/model_comment.dart';
 
 class PostInteractionViewModel extends ChangeNotifier {
   final String postId;
-  final _reactionRequest = ReactionRequest();
-  final _commentRequest = CommentRequest();
+  final ReactionRequest _reactionRequest = ReactionRequest();
+  final CommentRequest _commentRequest = CommentRequest();
 
   late Stream<List<CommentModel>> commentsStream;
   final TextEditingController commentController = TextEditingController();
@@ -32,7 +32,7 @@ class PostInteractionViewModel extends ChangeNotifier {
         await _reactionRequest.removeReaction(
           postId, 
           userDocId, 
-          reactionType, // Dùng reactionType thay vì oldReactionType
+          reactionType,
         );
         print('🔄 Đã xóa reaction: $reactionType');
       } else {

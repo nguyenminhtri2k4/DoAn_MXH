@@ -227,4 +227,74 @@ class PostActivityRequest {
       print('❌ Lỗi onCommentDeleted: $e');
     }
   }
+
+  // Thêm 2 method này vào class PostActivityRequest
+
+/// Khi user reaction vào comment
+Future<void> onCommentReactionAdded({
+  required String postId,
+  required String commentId,
+  required String userId,
+  required String reactionType,
+}) async {
+  try {
+    // Lấy thông tin người tạo comment
+    final commentDoc = await _firestore
+        .collection('Post')
+        .doc(postId)
+        .collection('comments')
+        .doc(commentId)
+        .get();
+
+    if (!commentDoc.exists) return;
+
+    final commentData = commentDoc.data() as Map<String, dynamic>;
+    final commentAuthorId = commentData['authorId'] as String?;
+
+    if (commentAuthorId == null || commentAuthorId == userId) return; // Không notify chính mình
+
+    // Tạo notification
+    final notification = {
+      'postId': postId,
+      'commentId': commentId,
+      'userId': userId,
+      'type': 'comment_reaction',
+      'reactionType': reactionType,
+      'createdAt': FieldValue.serverTimestamp(),
+      'read': false,
+    };
+
+    await _firestore
+        .collection('Notifications')
+        .doc(commentAuthorId)
+        .collection('items')
+        .add(notification);
+  } catch (e) {
+    print('❌ Lỗi onCommentReactionAdded: $e');
+  }
+}
+
+/// Khi user xóa reaction khỏi comment
+Future<void> onCommentReactionRemoved({
+  required String postId,
+  required String commentId,
+  required String userId,
+}) async {
+  try {
+    // Xóa notification liên quan
+    final query = await _firestore
+        .collection('Notifications')
+        .doc(userId)
+        .collection('items')
+        .where('type', isEqualTo: 'comment_reaction')
+        .where('commentId', isEqualTo: commentId)
+        .get();
+
+    for (var doc in query.docs) {
+      await doc.reference.delete();
+    }
+  } catch (e) {
+    print('❌ Lỗi onCommentReactionRemoved: $e');
+  }
+}
 }

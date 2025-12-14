@@ -85,17 +85,27 @@ void main() {
         authorId: 'author1',
         content: 'Nice post',
         createdAt: DateTime.now(),
-        likes: ['user1', 'user2'],
+        // Thay đổi: Sử dụng Map reactions thay vì List likes
+        reactions: {
+          'user1': 'like',
+          'user2': 'love', // Test thử 2 loại reaction khác nhau
+        },
         commentsCount: 5,
       );
 
       final map = comment.toMap();
+      
       expect(map['content'], 'Nice post');
-      expect(map['likesCount'], isA<List>());
+      
+      // Thay đổi: Kiểm tra field reactions là Map
+      expect(map['reactions'], isA<Map>());
+      expect((map['reactions'] as Map).length, 2);
+      expect(map['reactions']['user1'], 'like');
+      
       expect(map['commentsCount'], 5);
       expect(map['status'], 'active'); // Giá trị mặc định
     });
-  });
+});
 
   // ==========================================
   // 4. FRIEND REQUEST MODEL TEST
