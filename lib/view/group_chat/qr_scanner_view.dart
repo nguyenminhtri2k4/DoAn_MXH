@@ -531,19 +531,23 @@ class _QRScannerViewState extends State<QRScannerView> {
             onPressed: () => cameraController.switchCamera(),
           ),
           IconButton(
-            icon: ValueListenableBuilder(
-              valueListenable: cameraController.torchState,
-              builder: (context, state, child) {
-                switch (state) {
-                  case TorchState.off:
-                    return const Icon(Icons.flash_off);
-                  case TorchState.on:
-                    return const Icon(Icons.flash_on);
-                }
-              },
-            ),
-            onPressed: () => cameraController.toggleTorch(),
+          icon: ValueListenableBuilder(
+            valueListenable: cameraController, // Lắng nghe trực tiếp controller
+            builder: (context, state, child) {
+              switch (state.torchState) { // Gọi state.torchState
+                case TorchState.off:
+                  return const Icon(Icons.flash_off);
+                case TorchState.on:
+                  return const Icon(Icons.flash_on);
+                case TorchState.auto:
+                  return const Icon(Icons.flash_auto);
+                case TorchState.unavailable:
+                  return const Icon(Icons.no_flash, color: Colors.grey);
+              }
+            },
           ),
+          onPressed: () => cameraController.toggleTorch(),
+        ),
         ],
       ),
       body: Stack(
