@@ -176,6 +176,7 @@ class _GeneralSettingsViewContentState extends State<_GeneralSettingsViewContent
               ],
 
               // --- SECTION BẢO MẬT (FACE AUTH) ---
+             
               Container(
                 color: Colors.white,
                 child: SwitchListTile(
@@ -192,22 +193,42 @@ class _GeneralSettingsViewContentState extends State<_GeneralSettingsViewContent
                     'Yêu cầu quét khuôn mặt khi mở ứng dụng.',
                     style: TextStyle(fontSize: 12, color: Colors.grey),
                   ),
-                  // Kiểm tra trong notificationSettings xem có key 'security_face_auth' không
+                  // Logic hiển thị: Nếu key tồn tại và là true thì Bật, ngược lại Tắt
                   value: currentUser?.notificationSettings['security_face_auth'] == true,
                   activeColor: Colors.blueAccent,
-                  onChanged: vm.isLoading ? null : (bool value) async {
-                    // Gọi hàm trong ViewModel
-                    bool success = await vm.updateFaceAuthSetting(value);
-                    if (success && mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text(value ? '✅ Đã bật xác thực khuôn mặt' : 'Đã tắt xác thực khuôn mặt'),
-                          backgroundColor: value ? Colors.green : Colors.grey,
-                          duration: const Duration(seconds: 1),
-                        ),
-                      );
-                    }
-                  },
+                  onChanged: vm.isLoading
+                      ? null
+                      : (bool value) async {
+                          // 1. Gọi API cập nhật Firestore
+                          bool success = await vm.updateFaceAuthSetting(value);
+
+                          if (success && mounted && currentUser != null) {
+                            // 2. Xử lý logic Map Local: Bật thì thêm/update, Tắt thì xóa
+                            // SỬA LỖI TẠI ĐÂY: Dùng Map<String, bool> thay vì dynamic
+                            final updatedSettings = Map<String, bool>.from(currentUser.notificationSettings);
+                            
+                            if (value) {
+                              updatedSettings['security_face_auth'] = true;
+                            } else {
+                              updatedSettings.remove('security_face_auth');
+                            }
+
+                            // 3. Cập nhật UI Local ngay lập tức
+                            userService.setCurrentUser(
+                              currentUser.copyWith(
+                                notificationSettings: updatedSettings, // Giờ kiểu dữ liệu đã khớp
+                              ),
+                            );
+
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(value ? '✅ Đã bật xác thực khuôn mặt' : 'Đã tắt xác thực khuôn mặt'),
+                                backgroundColor: value ? Colors.green : Colors.grey,
+                                duration: const Duration(seconds: 1),
+                              ),
+                            );
+                          }
+                        },
                 ),
               ),
               

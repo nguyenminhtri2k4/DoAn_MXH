@@ -5,6 +5,7 @@ import 'package:mangxahoi/viewmodel/search_view_model.dart';
 import 'package:mangxahoi/model/model_group.dart';
 import 'package:mangxahoi/notification/notification_service.dart';
 import 'package:mangxahoi/view/widgets/post_widget.dart';
+import 'package:mangxahoi/view/search/visual_search_view.dart'; // Import màn hình quét
 
 class SearchView extends StatelessWidget {
   const SearchView({super.key});
@@ -49,20 +50,57 @@ class _SearchViewContent extends StatelessWidget {
               height: 40,
               child: TextField(
                 controller: vm.searchController,
-                autofocus: true,
+                autofocus: false,
                 onChanged: (_) => vm.notifyListeners(),
                 decoration: InputDecoration(
-                  hintText: 'Tìm kiếm người dùng, nhóm hoặc bài viết',
+                  hintText: 'Tìm kiếm...',
+                  hintStyle: const TextStyle(fontSize: 14), // Chỉnh lại font size hint cho đẹp
                   prefixIcon: const Icon(Icons.search, color: AppColors.textSecondary),
-                  suffixIcon: vm.searchController.text.isNotEmpty
-                      ? IconButton(
-                          icon: const Icon(Icons.clear, color: AppColors.textSecondary),
+                  
+                  // --- CẬP NHẬT PHẦN NÀY ---
+                  suffixIcon: Row(
+                    mainAxisSize: MainAxisSize.min, // Quan trọng: Để icon không chiếm hết chỗ
+                    children: [
+                      // 1. Nút Xóa (Chỉ hiện khi có text)
+                      if (vm.searchController.text.isNotEmpty)
+                        IconButton(
+                          icon: const Icon(Icons.clear, color: AppColors.textSecondary, size: 20),
                           onPressed: () {
                             vm.searchController.clear();
                             vm.clearSearch();
                           },
-                        )
-                      : null,
+                        ),
+                        
+                      // 2. Nút Visual Search (Giống TikTok/Shopee)
+                      IconButton(
+                        // Icon máy ảnh hoặc quét mã
+                        icon: const Icon(Icons.center_focus_weak, color: AppColors.textPrimary), 
+                        tooltip: 'Tìm bằng hình ảnh',
+                        onPressed: () async {
+                          // Tắt bàn phím trước khi chuyển màn hình
+                          FocusScope.of(context).unfocus();
+
+                          // Chuyển sang màn hình Visual Search và đợi kết quả
+                          final result = await Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (_) => const VisualSearchView()),
+                          );
+
+                          // Xử lý kết quả trả về
+                          if (result != null && result is String) {
+                            vm.searchController.text = result; // Điền từ khóa vào ô
+                            vm.notifyListeners(); // Cập nhật UI nút xóa
+                            
+                            // Gọi hàm tìm kiếm (bạn chọn hàm phù hợp với logic app)
+                            // Ví dụ: Tìm tất cả hoặc tìm bài viết
+                            // vm.searchAll(result); // Nếu ViewModel có hàm này
+                          }
+                        },
+                      ),
+                    ],
+                  ),
+                  // --------------------------
+
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(30),
                     borderSide: BorderSide.none,

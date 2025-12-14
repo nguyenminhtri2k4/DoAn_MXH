@@ -5,9 +5,14 @@ plugins {
     id("dev.flutter.flutter-gradle-plugin")
 }
 
+// THÊM ĐOẠN NÀY ĐỂ FIX LỖI DUPLICATE CLASS
+configurations.all {
+    exclude(group = "com.google.firebase", module = "firebase-iid")
+}
+
 android {
     namespace = "com.example.mangxahoi"
-    compileSdk = flutter.compileSdkVersion
+    compileSdk = 35
     ndkVersion = "27.0.12077973"
 
     compileOptions {

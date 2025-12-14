@@ -19,38 +19,43 @@ dependencies:
   firebase_app_check: ^0.4.1+2
   flutter_launcher_icons: ^0.14.4
   flutter_native_splash: ^2.4.6
-  intl: ^0.19.0
+  intl: ^0.20.2
   image_picker: ^1.1.2  
   video_player: ^2.8.6
   cached_network_image: ^3.3.1
   visibility_detector: ^0.4.0+2
   flutter_image_compress: ^2.3.0
   timeago: ^3.6.0
-  smooth_page_indicator: ^1.1.0
+  smooth_page_indicator: 1.1.0
   path: ^1.9.0 
   zego_express_engine: ^3.0.0
   permission_handler: ^12.0.1
   uuid: ^4.2.1              # Dùng để tạo ID cuộc gọi duy nhất
   audioplayers: ^6.0.0
-  flutter_reaction_button: ^2.0.1+1
+  flutter_reaction_button: ^3.0.0+3
   lottie: ^3.1.2
   file_picker: ^10.3.3       
-  just_audio: ^0.9.38       
+  just_audio: ^0.10.5       
   percent_indicator: ^4.2.3
   qr_flutter: ^4.1.0  # Tạo QR code
-  mobile_scanner: ^3.5.5  # Quét QR code
-  share_plus: ^7.2.1  # Để chia sẻ QR code
-  google_sign_in: ^6.2.1
+  mobile_scanner: 5.2.3  # Quét QR code
+  share_plus: ^12.0.1  # Để chia sẻ QR code
+  google_sign_in: 6.2.1
   rxdart: ^0.28.0
-  google_mlkit_smart_reply: ^0.11.0
+  google_mlkit_smart_reply: ^0.13.0
   google_generative_ai: ^0.4.0
   firebase_messaging: ^16.0.0  # Đã dùng
   flutter_local_notifications: ^19.0.0
-  geolocator: ^11.0.0
+  geolocator: ^14.0.2
   url_launcher: ^6.2.5
   fake_cloud_firestore: 4.0.0
-  camera: ^0.10.5
-  google_mlkit_face_detection: ^0.7.0
+  camera: ^0.11.2+1
+  google_mlkit_face_detection: ^0.12.0
+  google_mlkit_image_labeling: ^0.13.0 # Thêm gói này
+  google_mlkit_commons: ^0.9.0
+  google_mlkit_object_detection: ^0.14.0
+  google_mlkit_translation: ^0.12.0
+  google_mlkit_language_id: ^0.13.0
 
 dev_dependencies:
   flutter_test:
