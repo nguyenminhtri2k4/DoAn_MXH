@@ -7,7 +7,10 @@ class CommentModel {
   final String authorId;
   final String content;
   final String? parentCommentId;
-  final List<String> likes;      // danh sách userId đã like (nếu lưu ids)
+  
+  // Thay đổi: Lưu map { userId : reactionType } thay vì List likes
+  final Map<String, String> reactions; 
+  
   final List<String> mediaIds;
   final int commentsCount;       // số reply count
   final int shareCount;
@@ -22,7 +25,7 @@ class CommentModel {
     required this.authorId,
     required this.content,
     this.parentCommentId,
-    this.likes = const [],
+    this.reactions = const {}, // Mặc định là map rỗng
     this.mediaIds = const [],
     this.commentsCount = 0,
     this.shareCount = 0,
@@ -54,6 +57,18 @@ class CommentModel {
     return [];
   }
 
+  // Hàm parse Map reaction từ Firestore
+  static Map<String, String> _parseReactions(dynamic v) {
+    if (v == null || v is! Map) return {};
+    try {
+      return Map<String, String>.from(
+        v.map((key, value) => MapEntry(key.toString(), value.toString()))
+      );
+    } catch (e) {
+      return {};
+    }
+  }
+
   factory CommentModel.fromDoc(String postId, DocumentSnapshot doc) {
     final data = doc.data() as Map<String, dynamic>;
     return CommentModel(
@@ -62,7 +77,10 @@ class CommentModel {
       authorId: data['authorId'] ?? '',
       content: data['content'] ?? '',
       parentCommentId: data['parentCommentId'],
-      likes: _parseList(data['likesCount']), // nếu likesCount là list of userIds
+      
+      // Parse reactions thay vì likesCount
+      reactions: _parseReactions(data['reactions']), 
+      
       mediaIds: _parseList(data['mediaIds']),
       commentsCount: _parseCount(data['commentsCount']),
       shareCount: _parseCount(data['shareCount']),
@@ -80,7 +98,10 @@ class CommentModel {
       'authorId': authorId,
       'content': content,
       'parentCommentId': parentCommentId ?? '',
-      'likesCount': likes,
+      
+      // Lưu reactions xuống Firestore
+      'reactions': reactions,
+      
       'mediaIds': mediaIds,
       'commentsCount': commentsCount,
       'shareCount': shareCount,
