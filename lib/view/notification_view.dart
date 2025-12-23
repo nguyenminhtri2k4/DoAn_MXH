@@ -1,4 +1,5 @@
 
+
 import 'package:flutter/material.dart';
 import 'package:mangxahoi/model/model_notification.dart';
 import 'package:mangxahoi/viewmodel/notification_view_model.dart';
@@ -6,9 +7,9 @@ import 'package:mangxahoi/viewmodel/notification_view_model.dart';
 // Widget con hiển thị item
 class NotificationItem extends StatelessWidget {
   final NotificationModel notification;
-  final VoidCallback onTap;        // Tap vào nội dung
-  final VoidCallback onDelete;     // Vuốt xóa
-  final VoidCallback onAvatarTap;  // 🔥 Tap vào Avatar
+  final VoidCallback onTap; // Tap vào nội dung
+  final VoidCallback onDelete; // Vuốt xóa
+  final VoidCallback onAvatarTap; // 🔥 Tap vào Avatar
   final String timeAgo;
 
   const NotificationItem({
@@ -23,8 +24,9 @@ class NotificationItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // Kiểm tra ảnh hợp lệ (không rỗng và bắt đầu bằng http để tránh crash NetworkImage)
-    bool isValidAvatar = notification.fromUserAvatar.isNotEmpty && 
-                         notification.fromUserAvatar.startsWith('http');
+    bool isValidAvatar =
+        notification.fromUserAvatar.isNotEmpty &&
+        notification.fromUserAvatar.startsWith('http');
 
     return Dismissible(
       key: Key(notification.id),
@@ -39,7 +41,10 @@ class NotificationItem extends StatelessWidget {
       child: InkWell(
         onTap: onTap,
         child: Container(
-          color: notification.isRead ? Colors.transparent : Colors.blue.withOpacity(0.05),
+          color:
+              notification.isRead
+                  ? Colors.transparent
+                  : Colors.blue.withOpacity(0.05),
           padding: const EdgeInsets.all(12),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -50,9 +55,11 @@ class NotificationItem extends StatelessWidget {
                 child: CircleAvatar(
                   radius: 28,
                   backgroundColor: Colors.grey[200],
-                  backgroundImage: isValidAvatar
-                      ? NetworkImage(notification.fromUserAvatar)
-                      : const AssetImage('assets/logoapp.png') as ImageProvider,
+                  backgroundImage:
+                      isValidAvatar
+                          ? NetworkImage(notification.fromUserAvatar)
+                          : const AssetImage('assets/logoapp.png')
+                              as ImageProvider,
                 ),
               ),
               const SizedBox(width: 12),
@@ -62,7 +69,10 @@ class NotificationItem extends StatelessWidget {
                   children: [
                     Text(
                       notification.title,
-                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 15,
+                      ),
                     ),
                     const SizedBox(height: 4),
                     Text(
@@ -110,85 +120,104 @@ class _NotificationViewState extends State<NotificationView> {
   void _showDeleteAllDialog() {
     showDialog(
       context: context,
-      builder: (ctx) => Dialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        elevation: 0,
-        backgroundColor: Colors.transparent,
-        child: Container(
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(16),
-          ),
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 64,
-                height: 64,
-                decoration: BoxDecoration(
-                  color: Colors.red.shade50,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Icon(
-                  Icons.delete_sweep_outlined,
-                  color: Colors.red.shade600,
-                  size: 32,
-                ),
+      builder:
+          (ctx) => Dialog(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
+            elevation: 0,
+            backgroundColor: Colors.transparent,
+            child: Container(
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
               ),
-              const SizedBox(height: 16),
-              const Text(
-                'Xóa tất cả thông báo?',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black87),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'Hành động này không thể hoàn tác',
-                style: TextStyle(fontSize: 14, color: Colors.grey[600]),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 24),
-              Row(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  Expanded(
-                    child: TextButton(
-                      onPressed: () => Navigator.of(ctx).pop(),
-                      style: TextButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                      ),
-                      child: Text(
-                        'Hủy',
-                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Colors.grey[600]),
-                      ),
+                  Container(
+                    width: 64,
+                    height: 64,
+                    decoration: BoxDecoration(
+                      color: Colors.red.shade50,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Icon(
+                      Icons.delete_sweep_outlined,
+                      color: Colors.red.shade600,
+                      size: 32,
                     ),
                   ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: ElevatedButton(
-                      onPressed: () {
-                        _viewModel.deleteAllNotifications();
-                        Navigator.of(ctx).pop();
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.red.shade500,
-                        elevation: 0,
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                      ),
-                      child: const Text(
-                        'Xóa',
-                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Colors.white),
-                      ),
+                  const SizedBox(height: 16),
+                  const Text(
+                    'Xóa tất cả thông báo?',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black87,
                     ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Hành động này không thể hoàn tác',
+                    style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 24),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextButton(
+                          onPressed: () => Navigator.of(ctx).pop(),
+                          style: TextButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                          ),
+                          child: Text(
+                            'Hủy',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.grey[600],
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: ElevatedButton(
+                          onPressed: () {
+                            _viewModel.deleteAllNotifications();
+                            Navigator.of(ctx).pop();
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.red.shade500,
+                            elevation: 0,
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                          ),
+                          child: const Text(
+                            'Xóa',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
-            ],
+            ),
           ),
-        ),
-      ),
     );
   }
 
@@ -196,17 +225,45 @@ class _NotificationViewState extends State<NotificationView> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Thông báo', style: TextStyle(fontWeight: FontWeight.bold)),
+        title: const Text(
+          'Thông báo',
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
         centerTitle: false,
         elevation: 1,
         actions: [
-          Tooltip(
-            message: 'Xóa tất cả thông báo',
-            child: IconButton(
-              icon: Icon(Icons.delete_sweep_outlined, color: Colors.red.shade600, size: 24),
-              onPressed: _showDeleteAllDialog,
-              splashRadius: 24,
+          // Nút đánh dấu tất cả đã đọc
+          IconButton(
+            icon: Icon(Icons.done_all, color: Colors.blue.shade700, size: 26),
+            tooltip: 'Đánh dấu tất cả đã đọc',
+            onPressed: () async {
+              await _viewModel.markAllAsRead();
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Row(
+                      children: const [
+                        Icon(Icons.check_circle, color: Colors.white),
+                        SizedBox(width: 8),
+                        Text('Đã đánh dấu tất cả là đã đọc'),
+                      ],
+                    ),
+                    backgroundColor: Colors.green,
+                    duration: const Duration(seconds: 2),
+                  ),
+                );
+              }
+            },
+          ),
+          // Nút xóa tất cả
+          IconButton(
+            icon: Icon(
+              Icons.delete_sweep_outlined,
+              color: Colors.red.shade600,
+              size: 26,
             ),
+            tooltip: 'Xóa tất cả thông báo',
+            onPressed: _showDeleteAllDialog,
           ),
           const SizedBox(width: 8),
         ],
@@ -230,7 +287,11 @@ class _NotificationViewState extends State<NotificationView> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.notifications_off_outlined, size: 60, color: Colors.grey[400]),
+                  Icon(
+                    Icons.notifications_off_outlined,
+                    size: 60,
+                    color: Colors.grey[400],
+                  ),
                   const SizedBox(height: 10),
                   Text(
                     'Không có thông báo nào',
@@ -250,7 +311,8 @@ class _NotificationViewState extends State<NotificationView> {
                 // 1. Tap nội dung
                 onTap: () => _viewModel.handleNotificationTap(context, notif),
                 // 2. Tap Avatar -> Qua profile
-                onAvatarTap: () => _viewModel.handleAvatarTap(context, notif.fromUserId),
+                onAvatarTap:
+                    () => _viewModel.handleAvatarTap(context, notif.fromUserId),
                 // 3. Xóa
                 onDelete: () => _viewModel.deleteNotification(notif.id),
                 timeAgo: _viewModel.formatTime(notif.createdAt),

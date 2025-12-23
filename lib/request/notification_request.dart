@@ -1,3 +1,4 @@
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:mangxahoi/model/model_notification.dart';
 
@@ -50,18 +51,20 @@ class NotificationRequest {
         .where('userId', isEqualTo: userId)
         .orderBy('createdAt', descending: true)
         .snapshots()
-        .map((snapshot) => snapshot.docs
-            .map((doc) => NotificationModel.fromDoc(doc))
-            .toList());
+        .map(
+          (snapshot) =>
+              snapshot.docs
+                  .map((doc) => NotificationModel.fromDoc(doc))
+                  .toList(),
+        );
   }
 
   // 3. Đánh dấu đã đọc
   Future<void> markAsRead(String notificationId) async {
     try {
-      await _firestore
-          .collection(_collection)
-          .doc(notificationId)
-          .update({'isRead': true});
+      await _firestore.collection(_collection).doc(notificationId).update({
+        'isRead': true,
+      });
     } catch (e) {
       print("❌ Lỗi markAsRead: $e");
       rethrow;
@@ -81,10 +84,11 @@ class NotificationRequest {
   // 5. Xóa tất cả thông báo của User (Dùng Batch)
   Future<void> deleteAllNotifications(String userId) async {
     try {
-      final snapshot = await _firestore
-          .collection(_collection)
-          .where('userId', isEqualTo: userId)
-          .get();
+      final snapshot =
+          await _firestore
+              .collection(_collection)
+              .where('userId', isEqualTo: userId)
+              .get();
 
       if (snapshot.docs.isEmpty) return;
 
@@ -107,6 +111,43 @@ class NotificationRequest {
       }
     } catch (e) {
       print("❌ Lỗi deleteAllNotifications: $e");
+      rethrow;
+    }
+  }
+
+  // 6. Đánh dấu tất cả thông báo đã đọc
+  Future<void> markAllAsRead(String userId) async {
+    try {
+      final snapshot =
+          await _firestore
+              .collection(_collection)
+              .where('userId', isEqualTo: userId)
+              .where('isRead', isEqualTo: false)
+              .get();
+
+      if (snapshot.docs.isEmpty) return;
+
+      WriteBatch batch = _firestore.batch();
+      int count = 0;
+
+      for (var doc in snapshot.docs) {
+        batch.update(doc.reference, {'isRead': true});
+        count++;
+
+        if (count >= 400) {
+          await batch.commit();
+          batch = _firestore.batch();
+          count = 0;
+        }
+      }
+
+      if (count > 0) {
+        await batch.commit();
+      }
+
+      print("✅ [Đánh dấu] Đã đánh dấu $count thông báo là đã đọc");
+    } catch (e) {
+      print("❌ Lỗi markAllAsRead: $e");
       rethrow;
     }
   }

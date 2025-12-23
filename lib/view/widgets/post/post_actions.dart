@@ -1,3 +1,4 @@
+
 // lib/view/widgets/post/post_actions.dart
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -21,19 +22,24 @@ class PostActions extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final viewModel = Provider.of<PostInteractionViewModel>(context, listen: false);
+    final viewModel = Provider.of<PostInteractionViewModel>(
+      context,
+      listen: false,
+    );
 
     return StreamBuilder<DocumentSnapshot>(
-      stream: FirebaseFirestore.instance
-          .collection('Post')
-          .doc(post.id)
-          .collection('reactions')
-          .doc(currentUserDocId)
-          .snapshots(),
+      stream:
+          FirebaseFirestore.instance
+              .collection('Post')
+              .doc(post.id)
+              .collection('reactions')
+              .doc(currentUserDocId)
+              .snapshots(),
       builder: (context, snapshot) {
-        final String? currentReactionType = (snapshot.hasData && snapshot.data!.exists)
-            ? (snapshot.data!.data() as Map<String, dynamic>)['type']
-            : null;
+        final String? currentReactionType =
+            (snapshot.hasData && snapshot.data!.exists)
+                ? (snapshot.data!.data() as Map<String, dynamic>)['type']
+                : null;
 
         return Row(
           mainAxisAlignment: MainAxisAlignment.spaceAround,
@@ -55,10 +61,12 @@ class PostActions extends StatelessWidget {
                   context: context,
                   isScrollControlled: true,
                   backgroundColor: Colors.transparent,
-                  builder: (_) => CommentSheet(
-                    postId: post.id,
-                    currentUserDocId: currentUserDocId,
-                  ),
+                  builder:
+                      (_) => CommentSheet(
+                        postId: post.id,
+                        currentUserDocId: currentUserDocId,
+                        postAuthorId: post.authorId,
+                      ),
                 );
               },
             ),
@@ -71,11 +79,11 @@ class PostActions extends StatelessWidget {
                   context: context,
                   backgroundColor: Colors.white,
                   shape: const RoundedRectangleBorder(
-                    borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+                    borderRadius: BorderRadius.vertical(
+                      top: Radius.circular(20),
+                    ),
                   ),
-                  builder: (_) => ShareBottomSheet(
-                    post: post,
-                  ),
+                  builder: (_) => ShareBottomSheet(post: post),
                 );
               },
             ),
@@ -95,10 +103,7 @@ class PostActions extends StatelessWidget {
       child: TextButton.icon(
         onPressed: onPressed,
         icon: Icon(icon, color: color, size: 20),
-        label: Text(
-          label,
-          style: TextStyle(color: color, fontSize: 13),
-        ),
+        label: Text(label, style: TextStyle(color: color, fontSize: 13)),
         style: TextButton.styleFrom(
           padding: const EdgeInsets.symmetric(vertical: 10),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
@@ -142,27 +147,28 @@ class _CustomReactionButtonState extends State<_CustomReactionButton> {
     var offset = renderBox.localToGlobal(Offset.zero);
 
     return OverlayEntry(
-      builder: (context) => GestureDetector(
-        onTap: _hideReactionBox,
-        behavior: HitTestBehavior.translucent,
-        child: Stack(
-          children: [
-            Positioned(
-              left: offset.dx,
-              top: offset.dy - 70,
-              child: Material(
-                color: Colors.transparent,
-                child: _ReactionBoxWidget(
-                  onReactionSelected: (reaction) {
-                    widget.onReactionSelected(reaction);
-                    _hideReactionBox();
-                  },
+      builder:
+          (context) => GestureDetector(
+            onTap: _hideReactionBox,
+            behavior: HitTestBehavior.translucent,
+            child: Stack(
+              children: [
+                Positioned(
+                  left: offset.dx,
+                  top: offset.dy - 70,
+                  child: Material(
+                    color: Colors.transparent,
+                    child: _ReactionBoxWidget(
+                      onReactionSelected: (reaction) {
+                        widget.onReactionSelected(reaction);
+                        _hideReactionBox();
+                      },
+                    ),
+                  ),
                 ),
-              ),
+              ],
             ),
-          ],
-        ),
-      ),
+          ),
     );
   }
 
@@ -218,12 +224,36 @@ class _ReactionBoxWidgetState extends State<_ReactionBoxWidget>
   final List<GlobalKey> _reactionKeys = List.generate(6, (_) => GlobalKey());
 
   final List<Map<String, dynamic>> _reactions = [
-    {'type': reaction_helper.ReactionType.like, 'asset': 'assets/reactions/like.png', 'color': Colors.blue},
-    {'type': reaction_helper.ReactionType.love, 'asset': 'assets/reactions/love.png', 'color': Colors.red},
-    {'type': reaction_helper.ReactionType.haha, 'asset': 'assets/reactions/haha.png', 'color': Colors.orange},
-    {'type': reaction_helper.ReactionType.wow, 'asset': 'assets/reactions/wow.png', 'color': Colors.orange},
-    {'type': reaction_helper.ReactionType.sad, 'asset': 'assets/reactions/sad.png', 'color': Colors.orange},
-    {'type': reaction_helper.ReactionType.angry, 'asset': 'assets/reactions/angry.png', 'color': Colors.red},
+    {
+      'type': reaction_helper.ReactionType.like,
+      'asset': 'assets/reactions/like.png',
+      'color': Colors.blue,
+    },
+    {
+      'type': reaction_helper.ReactionType.love,
+      'asset': 'assets/reactions/love.png',
+      'color': Colors.red,
+    },
+    {
+      'type': reaction_helper.ReactionType.haha,
+      'asset': 'assets/reactions/haha.png',
+      'color': Colors.orange,
+    },
+    {
+      'type': reaction_helper.ReactionType.wow,
+      'asset': 'assets/reactions/wow.png',
+      'color': Colors.orange,
+    },
+    {
+      'type': reaction_helper.ReactionType.sad,
+      'asset': 'assets/reactions/sad.png',
+      'color': Colors.orange,
+    },
+    {
+      'type': reaction_helper.ReactionType.angry,
+      'asset': 'assets/reactions/angry.png',
+      'color': Colors.red,
+    },
   ];
 
   @override
@@ -248,11 +278,12 @@ class _ReactionBoxWidgetState extends State<_ReactionBoxWidget>
 
   void _handleDragUpdate(DragUpdateDetails details) {
     for (int i = 0; i < _reactionKeys.length; i++) {
-      final RenderBox? box = _reactionKeys[i].currentContext?.findRenderObject() as RenderBox?;
+      final RenderBox? box =
+          _reactionKeys[i].currentContext?.findRenderObject() as RenderBox?;
       if (box != null) {
         final position = box.localToGlobal(Offset.zero);
         final size = box.size;
-        
+
         if (details.globalPosition.dx >= position.dx &&
             details.globalPosition.dx <= position.dx + size.width &&
             details.globalPosition.dy >= position.dy &&
@@ -305,25 +336,25 @@ class _ReactionBoxWidgetState extends State<_ReactionBoxWidget>
                 child: AnimatedContainer(
                   duration: const Duration(milliseconds: 100),
                   curve: Curves.easeOut,
-                  margin: EdgeInsets.symmetric(
-                    horizontal: isHovered ? 6 : 4,
-                  ),
+                  margin: EdgeInsets.symmetric(horizontal: isHovered ? 6 : 4),
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       AnimatedContainer(
                         duration: const Duration(milliseconds: 100),
                         curve: Curves.easeOut,
-                        transform: Matrix4.identity()
-                          ..translate(0.0, isHovered ? -10.0 : 0.0)
-                          ..scale(scale),
+                        transform:
+                            Matrix4.identity()
+                              ..translate(0.0, isHovered ? -10.0 : 0.0)
+                              ..scale(scale),
                         child: Container(
                           width: 40,
                           height: 40,
                           decoration: BoxDecoration(
-                            color: isHovered
-                                ? reaction['color'].withOpacity(0.1)
-                                : Colors.transparent,
+                            color:
+                                isHovered
+                                    ? reaction['color'].withOpacity(0.1)
+                                    : Colors.transparent,
                             shape: BoxShape.circle,
                           ),
                           alignment: Alignment.center,

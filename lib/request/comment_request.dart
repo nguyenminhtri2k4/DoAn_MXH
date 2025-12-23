@@ -6,12 +6,15 @@ import 'package:mangxahoi/request/post_activity_request.dart';
 class CommentRequest {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final PostActivityRequest _postActivityRequest = PostActivityRequest();
-  
+
   final String _postCollection = 'Post';
   final String _commentSubcollection = 'comments';
 
   CollectionReference _getCommentsCollection(String postId) {
-    return _firestore.collection(_postCollection).doc(postId).collection(_commentSubcollection);
+    return _firestore
+        .collection(_postCollection)
+        .doc(postId)
+        .collection(_commentSubcollection);
   }
 
   /// Thêm comment mới
@@ -27,10 +30,11 @@ class CommentRequest {
       });
 
       // 3. Nếu là reply, tăng số reply trên comment cha
-      if (comment.parentCommentId != null && comment.parentCommentId!.isNotEmpty) {
-        await _getCommentsCollection(postId).doc(comment.parentCommentId).update({
-          'commentsCount': FieldValue.increment(1),
-        });
+      if (comment.parentCommentId != null &&
+          comment.parentCommentId!.isNotEmpty) {
+        await _getCommentsCollection(postId)
+            .doc(comment.parentCommentId)
+            .update({'commentsCount': FieldValue.increment(1)});
       }
 
       // 🔥 GỬI THÔNG BÁO
@@ -43,15 +47,16 @@ class CommentRequest {
         );
       } else {
         // Reply comment - cần lấy thông tin comment cha
-        final parentComment = await _getCommentsCollection(postId)
-            .doc(comment.parentCommentId)
-            .get();
-        
+        final parentComment =
+            await _getCommentsCollection(
+              postId,
+            ).doc(comment.parentCommentId).get();
+
         if (parentComment.exists) {
           // ✅ FIX: Cast sang Map<String, dynamic> trước khi truy cập []
           final parentData = parentComment.data() as Map<String, dynamic>?;
           final parentAuthorId = parentData?['authorId'] as String?;
-          
+
           if (parentAuthorId != null) {
             await _postActivityRequest.onReplyAdded(
               postId: postId,
@@ -73,17 +78,24 @@ class CommentRequest {
     return _getCommentsCollection(postId)
         .orderBy('createdAt', descending: false)
         .snapshots()
-        .map((snapshot) => snapshot.docs
-            .map((doc) => CommentModel.fromDoc(postId, doc))
-            .toList());
+        .map(
+          (snapshot) =>
+              snapshot.docs
+                  .map((doc) => CommentModel.fromDoc(postId, doc))
+                  .where(
+                    (comment) => comment.status == 'active',
+                  ) // Chỉ lấy comment active
+                  .toList(),
+        );
   }
 
   /// Xóa comment
   Future<void> deleteComment(String postId, String commentId) async {
     try {
       // 1. Lấy thông tin comment để cập nhật counter
-      final commentDoc = await _getCommentsCollection(postId).doc(commentId).get();
-      
+      final commentDoc =
+          await _getCommentsCollection(postId).doc(commentId).get();
+
       if (commentDoc.exists) {
         // ✅ FIX: Cast sang Map<String, dynamic> trước khi truy cập []
         final commentData = commentDoc.data() as Map<String, dynamic>?;
@@ -107,7 +119,7 @@ class CommentRequest {
         // 🔥 GỌI HÀM XÓA (nếu cần)
         await _postActivityRequest.onCommentDeleted(postId: postId);
       }
-      
+
       print('✅ Comment đã được xóa');
     } catch (e) {
       print('❌ Lỗi khi xóa comment: $e');
@@ -129,6 +141,49 @@ class CommentRequest {
       print('✅ Comment đã được cập nhật');
     } catch (e) {
       print('❌ Lỗi khi cập nhật comment: $e');
+      rethrow;
+    }
+  }
+
+  /// Ẩn comment (set status = 'hidden') và giảm commentsCount
+  Future<void> hideComment(String postId, String commentId) async {
+    try {
+      // 1. Lấy thông tin comment để kiểm tra trạng thái hiện tại
+      final commentDoc =
+          await _getCommentsCollection(postId).doc(commentId).get();
+
+      if (commentDoc.exists) {
+        final commentData = commentDoc.data() as Map<String, dynamic>?;
+        final currentStatus = commentData?['status'] as String?;
+        final parentCommentId = commentData?['parentCommentId'] as String?;
+
+        // Chỉ xử lý nếu comment đang active
+        if (currentStatus == 'active') {
+          // 2. Cập nhật status thành 'hidden'
+          await _getCommentsCollection(postId).doc(commentId).update({
+            'status': 'hidden',
+            'updatedAt': FieldValue.serverTimestamp(),
+          });
+
+          // 3. Giảm số lượng bình luận trên bài viết
+          await _firestore.collection(_postCollection).doc(postId).update({
+            'commentsCount': FieldValue.increment(-1),
+          });
+
+          // 4. Nếu là reply, giảm counter comment cha
+          if (parentCommentId != null && parentCommentId.isNotEmpty) {
+            await _getCommentsCollection(postId).doc(parentCommentId).update({
+              'commentsCount': FieldValue.increment(-1),
+            });
+          }
+
+          print('✅ Comment đã được ẩn và commentsCount đã giảm');
+        } else {
+          print('⚠️ Comment không ở trạng thái active, bỏ qua');
+        }
+      }
+    } catch (e) {
+      print('❌ Lỗi khi ẩn comment: $e');
       rethrow;
     }
   }
