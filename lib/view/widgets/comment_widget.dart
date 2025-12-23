@@ -209,17 +209,17 @@ class CommentWidget extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   // Nút xóa (chỉ hiện nếu là chủ bài viết hoặc chủ comment)
-                  if (isPostAuthor || isCommentAuthor)
-                    _buildOptionTile(
-                      icon: Icons.delete_outline,
-                      label: 'Xóa bình luận',
-                      iconColor: Colors.red,
-                      textColor: Colors.red,
-                      onTap: () {
-                        Navigator.pop(context);
-                        _deleteComment(context);
-                      },
-                    ),
+                  //if (isPostAuthor || isCommentAuthor)
+                    // _buildOptionTile(
+                    //   icon: Icons.delete_outline,
+                    //   label: 'Xóa bình luận',
+                    //   iconColor: Colors.red,
+                    //   textColor: Colors.red,
+                    //   onTap: () {
+                    //     Navigator.pop(context);
+                    //     _deleteComment(context);
+                    //   },
+                    // ),
                   if (isPostAuthor || isCommentAuthor)
                     const SizedBox(height: 12),
                   // Nút báo cáo (chỉ hiện nếu không phải chủ comment)
