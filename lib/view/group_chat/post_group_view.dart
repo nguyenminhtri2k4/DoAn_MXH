@@ -14,6 +14,7 @@ import 'package:mangxahoi/view/group_chat/search_post_group_view.dart';
 import 'package:mangxahoi/view/group_chat/group_members_list_view.dart';
 import 'group_events_view.dart';
 import 'package:provider/provider.dart';
+import 'package:mangxahoi/view/group_chat/group_status_check_widget.dart';
 
 class PostGroupView extends StatelessWidget {
   final GroupModel group;
@@ -22,9 +23,14 @@ class PostGroupView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider(
-      create: (_) => PostGroupViewModel(group: group),
-      child: const _PostGroupViewContent(),
+    // Sử dụng GroupStatusCheckWidget để tự động check status 'locked'
+    // và hiển thị GroupLockedView nếu cần.
+    return GroupStatusCheckWidget(
+      groupId: group.id,
+      child: ChangeNotifierProvider(
+        create: (_) => PostGroupViewModel(group: group),
+        child: const _PostGroupViewContent(),
+      ),
     );
   }
 }
