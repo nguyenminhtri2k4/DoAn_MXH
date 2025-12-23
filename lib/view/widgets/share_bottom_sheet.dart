@@ -59,14 +59,14 @@ class ShareBottomSheet extends StatelessWidget {
               );
             },
           ),
-           ListTile(
-            leading: const Icon(Icons.link, color: Colors.grey),
-            title: const Text('Sao chép liên kết'),
-            onTap: () {
-              Navigator.pop(context);
-              NotificationService().showSuccessDialog(context: context, title: 'Thành công', message: 'Đã sao chép liên kết!');
-            },
-          ),
+          //  ListTile(
+          //   leading: const Icon(Icons.link, color: Colors.grey),
+          //   title: const Text('Sao chép liên kết'),
+          //   onTap: () {
+          //     Navigator.pop(context);
+          //     NotificationService().showSuccessDialog(context: context, title: 'Thành công', message: 'Đã sao chép liên kết!');
+          //   },
+          // ),
         ],
       ),
     );
