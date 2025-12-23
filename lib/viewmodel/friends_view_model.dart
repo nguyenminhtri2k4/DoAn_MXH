@@ -18,6 +18,9 @@ class FriendsViewModel extends ChangeNotifier {
   Stream<List<FriendRequestModel>>? incomingRequestsStream;
   Stream<List<FriendRequestModel>>? sentRequestsStream;
 
+  List<Map<String, dynamic>> _suggestions = [];
+  List<Map<String, dynamic>> get suggestions => _suggestions;
+
   bool _isLoading = true;
   String? _errorMessage;
 
@@ -36,49 +39,130 @@ class FriendsViewModel extends ChangeNotifier {
   }
 
   // ✅ Init tự động như các ViewModel khác
+  // Future<void> _init() async {
+  //   print('🔧 [FriendsVM] Bắt đầu khởi tạo...');
+  //   _isLoading = true;
+  //   notifyListeners();
+
+  //   try {
+  //     final firebaseUser = _auth.currentUser;
+  //     if (firebaseUser == null) {
+  //       print('⚠️ [FriendsVM] Chưa đăng nhập Firebase Auth');
+  //       _errorMessage = 'Người dùng chưa đăng nhập.';
+  //       _isLoading = false;
+  //       notifyListeners();
+  //       return;
+  //     }
+
+  //     print('🔍 [FriendsVM] Đang tìm user với UID: ${firebaseUser.uid}');
+  //     _currentUser = await _userRequest.getUserByUid(firebaseUser.uid);
+
+  //     if (_currentUser != null) {
+  //       _currentUserDocId = _currentUser!.id;
+  //       print('✅ [FriendsVM] Đã lấy currentUserDocId: $_currentUserDocId');
+
+  //       // Khởi tạo streams
+  //       incomingRequestsStream = _requestManager.getIncomingRequests(
+  //         _currentUserDocId!,
+  //       );
+  //       sentRequestsStream = _requestManager.getSentRequests(
+  //         _currentUserDocId!,
+  //       );
+
+  //       print('✅ [FriendsVM] Đã khởi tạo friend request streams');
+  //     } else {
+  //       print('⚠️ [FriendsVM] Không tìm thấy user trong Firestore');
+  //       _errorMessage = 'Không tìm thấy thông tin người dùng.';
+  //     }
+  //   } catch (e, stackTrace) {
+  //     print('❌ [FriendsVM] Lỗi khi init: $e');
+  //     print('❌ [FriendsVM] StackTrace: $stackTrace');
+  //     _errorMessage = 'Lỗi tải dữ liệu: $e';
+  //   } finally {
+  //     _isLoading = false;
+  //     notifyListeners();
+  //     print('✅ [FriendsVM] Khởi tạo hoàn tất');
+  //   }
+  // }
   Future<void> _init() async {
-    print('🔧 [FriendsVM] Bắt đầu khởi tạo...');
-    _isLoading = true;
-    notifyListeners();
+  print('🔧 [FriendsVM] Bắt đầu khởi tạo...');
+  _isLoading = true;
+  notifyListeners();
 
-    try {
-      final firebaseUser = _auth.currentUser;
-      if (firebaseUser == null) {
-        print('⚠️ [FriendsVM] Chưa đăng nhập Firebase Auth');
-        _errorMessage = 'Người dùng chưa đăng nhập.';
-        _isLoading = false;
-        notifyListeners();
-        return;
-      }
-
-      print('🔍 [FriendsVM] Đang tìm user với UID: ${firebaseUser.uid}');
-      _currentUser = await _userRequest.getUserByUid(firebaseUser.uid);
-
-      if (_currentUser != null) {
-        _currentUserDocId = _currentUser!.id;
-        print('✅ [FriendsVM] Đã lấy currentUserDocId: $_currentUserDocId');
-
-        // Khởi tạo streams
-        incomingRequestsStream = _requestManager.getIncomingRequests(
-          _currentUserDocId!,
-        );
-        sentRequestsStream = _requestManager.getSentRequests(
-          _currentUserDocId!,
-        );
-
-        print('✅ [FriendsVM] Đã khởi tạo friend request streams');
-      } else {
-        print('⚠️ [FriendsVM] Không tìm thấy user trong Firestore');
-        _errorMessage = 'Không tìm thấy thông tin người dùng.';
-      }
-    } catch (e, stackTrace) {
-      print('❌ [FriendsVM] Lỗi khi init: $e');
-      print('❌ [FriendsVM] StackTrace: $stackTrace');
-      _errorMessage = 'Lỗi tải dữ liệu: $e';
-    } finally {
+  try {
+    final firebaseUser = _auth.currentUser;
+    if (firebaseUser == null) {
+      print('⚠️ [FriendsVM] Chưa đăng nhập Firebase Auth');
+      _errorMessage = 'Người dùng chưa đăng nhập.';
       _isLoading = false;
       notifyListeners();
-      print('✅ [FriendsVM] Khởi tạo hoàn tất');
+      return;
+    }
+
+    print('🔍 [FriendsVM] Đang tìm user với UID: ${firebaseUser.uid}');
+    _currentUser = await _userRequest.getUserByUid(firebaseUser.uid);
+
+    if (_currentUser != null) {
+      _currentUserDocId = _currentUser!.id;
+      print('✅ [FriendsVM] Đã lấy currentUserDocId: $_currentUserDocId');
+
+      // Khởi tạo các stream lời mời
+      incomingRequestsStream = _requestManager.getIncomingRequests(_currentUserDocId!);
+      sentRequestsStream = _requestManager.getSentRequests(_currentUserDocId!);
+
+      print('✅ [FriendsVM] Đã khởi tạo friend request streams');
+
+      // 🔥 LOGIC MỚI: Load gợi ý bạn bè ngay sau khi có thông tin User
+      await _loadSuggestions();
+      
+    } else {
+      print('⚠️ [FriendsVM] Không tìm thấy user trong Firestore');
+      _errorMessage = 'Không tìm thấy thông tin người dùng.';
+    }
+  } catch (e, stackTrace) {
+    print('❌ [FriendsVM] Lỗi khi init: $e');
+    print('❌ [FriendsVM] StackTrace: $stackTrace');
+    _errorMessage = 'Lỗi tải dữ liệu: $e';
+  } finally {
+    _isLoading = false;
+    notifyListeners();
+    print('✅ [FriendsVM] Khởi tạo hoàn tất');
+  }
+}
+
+  Future<void> _loadSuggestions() async {
+  if (_currentUser == null) return;
+    try {
+      // Lấy toàn bộ user từ cache (UserRequest của bạn đã có hàm này)
+      final allUsers = await _userRequest.getAllUsersForCache();
+      final myFriendIds = _currentUser!.friends;
+
+      List<Map<String, dynamic>> tempSuggestions = [];
+
+      for (var user in allUsers) {
+        // Điều kiện lọc: 
+        // - Không phải bản thân
+        // - Chưa có trong danh sách bạn bè
+        if (user.id == _currentUserDocId || myFriendIds.contains(user.id)) continue;
+
+        // Thuật toán tìm bạn chung: Giao điểm của 2 mảng ID bạn bè
+        final mutualFriends = user.friends.where((id) => myFriendIds.contains(id)).toList();
+
+        if (mutualFriends.isNotEmpty) {
+          tempSuggestions.add({
+            'user': user,
+            'mutualCount': mutualFriends.length,
+          });
+        }
+      }
+
+      // Sắp xếp: Ai nhiều bạn chung hơn thì hiện lên trước
+      tempSuggestions.sort((a, b) => b['mutualCount'].compareTo(a['mutualCount']));
+      
+      _suggestions = tempSuggestions;
+      notifyListeners();
+    } catch (e) {
+      print('❌ [FriendsVM] Lỗi gợi ý: $e');
     }
   }
 

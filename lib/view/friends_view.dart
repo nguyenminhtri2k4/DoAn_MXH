@@ -1,3 +1,4 @@
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -8,6 +9,8 @@ import 'package:mangxahoi/authanet/firestore_listener.dart';
 import 'package:mangxahoi/model/model_user.dart';
 import 'package:mangxahoi/model/model_friend.dart';
 import 'package:mangxahoi/request/friend_request_manager.dart';
+import 'package:mangxahoi/view/all_suggestions_view.dart';
+
 
 class FriendsView extends StatefulWidget {
   final int initialIndex;
@@ -176,34 +179,140 @@ class _SuggestionsTab extends StatelessWidget {
     return vm.isLoading
         ? const Center(child: CircularProgressIndicator())
         : (vm.incomingRequestsStream == null)
-        ? const Center(child: Text('Đang chờ dữ liệu người dùng...'))
-        : SingleChildScrollView(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+            ? const Center(child: Text('Đang chờ dữ liệu người dùng...'))
+            : SingleChildScrollView(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // 1. PHẦN GỢI Ý BẠN BÈ (Chỉ hiện nếu có gợi ý)
+                    if (vm.suggestions.isNotEmpty) ...[
+                      _buildSuggestionsSection(context, vm),
+                      const SizedBox(height: 20),
+                    ],
+
+                    // 2. PHẦN LỜI MỜI KẾT BẠN (ĐẾN)
+                    _buildRequestSection(
+                      context,
+                      title: 'Lời mời kết bạn',
+                      icon: Icons.person_add_alt_1_rounded,
+                      stream: vm.incomingRequestsStream!,
+                      vm: vm,
+                      isIncoming: true,
+                    ),
+                    const SizedBox(height: 20),
+
+                    // 3. PHẦN LỜI MỜI ĐÃ GỬI (ĐI)
+                    _buildRequestSection(
+                      context,
+                      title: 'Lời mời đã gửi',
+                      icon: Icons.send_rounded,
+                      stream: vm.sentRequestsStream!,
+                      vm: vm,
+                      isIncoming: false,
+                    ),
+                  ],
+                ),
+              );
+  }
+
+  // --- WIDGET GỢI Ý (HIỆN 3 ĐỨA) ---
+  Widget _buildSuggestionsSection(BuildContext context, FriendsViewModel vm) {
+    final displayList = vm.suggestions.take(3).toList();
+    // Lấy manager hiện tại từ context trước khi chuyển trang
+    final manager = context.read<FriendRequestManager>();
+
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              _buildRequestSection(
-                context,
-                title: 'Lời mời kết bạn',
-                icon: Icons.person_add_alt_1_rounded,
-                stream: vm.incomingRequestsStream!,
-                vm: vm,
-                isIncoming: true,
+              const Text(
+                'Gợi ý kết bạn',
+                style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFF2C3E50)),
               ),
-              const SizedBox(height: 20),
-              _buildRequestSection(
-                context,
-                title: 'Lời mời đã gửi',
-                icon: Icons.send_rounded,
-                stream: vm.sentRequestsStream!,
-                vm: vm,
-                isIncoming: false,
+              TextButton(
+                onPressed: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    // SỬA TẠI ĐÂY: Bao bọc trang mới bằng MultiProvider.value
+                    builder: (_) => MultiProvider(
+                      providers: [
+                        ChangeNotifierProvider.value(value: vm),
+                        Provider.value(value: manager),
+                      ],
+                      child: const AllSuggestionsView(),
+                    ),
+                  ),
+                ),
+                child: const Text('Xem thêm'),
               ),
             ],
           ),
-        );
+          const Divider(),
+          ...displayList.map((item) {
+            final user = item['user'] as UserModel;
+            return ListTile(
+              contentPadding: EdgeInsets.zero,
+              onTap: () =>
+                  Navigator.pushNamed(context, '/profile', arguments: user.id),
+              leading: Container(
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(color: Colors.grey[200]!, width: 1),
+                ),
+                child: CircleAvatar(
+                  radius: 24,
+                  backgroundImage: user.avatar.isNotEmpty
+                      ? NetworkImage(user.avatar.first)
+                      : null,
+                  child: user.avatar.isEmpty ? const Icon(Icons.person) : null,
+                ),
+              ),
+              title: Text(user.name,
+                  style:
+                      const TextStyle(fontWeight: FontWeight.w500, fontSize: 15)),
+              subtitle: Text('${item['mutualCount']} bạn chung',
+                  style: TextStyle(color: Colors.grey[600], fontSize: 13)),
+              trailing: ElevatedButton(
+                onPressed: () => manager.sendRequest(vm.currentUserDocId!, user.id),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  foregroundColor: Colors.white,
+                  elevation: 0,
+                  minimumSize: const Size(70, 32),
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8)),
+                ),
+                child: const Text('Thêm',
+                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+              ),
+            );
+          }).toList(),
+        ],
+      ),
+    );
   }
 
+  // --- WIDGET HIỂN THỊ CÁC SECTION LỜI MỜI ---
   Widget _buildRequestSection(
     BuildContext context, {
     required String title,
@@ -219,11 +328,7 @@ class _SuggestionsTab extends StatelessWidget {
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.04),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
-          ),
+          BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 10, offset: const Offset(0, 2)),
         ],
       ),
       padding: const EdgeInsets.all(20),
@@ -248,32 +353,18 @@ class _SuggestionsTab extends StatelessWidget {
                   Expanded(
                     child: Text(
                       title,
-                      style: const TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w600,
-                        color: Color(0xFF2C3E50),
-                      ),
+                      style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: Color(0xFF2C3E50)),
                     ),
                   ),
                   Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 6,
-                    ),
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                     decoration: BoxDecoration(
-                      color:
-                          count > 0
-                              ? AppColors.primary.withOpacity(0.1)
-                              : Colors.grey[100],
+                      color: count > 0 ? AppColors.primary.withOpacity(0.1) : Colors.grey[100],
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: Text(
                       '$count',
-                      style: TextStyle(
-                        color: count > 0 ? AppColors.primary : Colors.grey[600],
-                        fontWeight: FontWeight.w600,
-                        fontSize: 14,
-                      ),
+                      style: TextStyle(color: count > 0 ? AppColors.primary : Colors.grey[600], fontWeight: FontWeight.w600, fontSize: 14),
                     ),
                   ),
                 ],
@@ -286,63 +377,25 @@ class _SuggestionsTab extends StatelessWidget {
           StreamBuilder<List<FriendRequestModel>>(
             stream: stream,
             builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting &&
-                  !snapshot.hasData) {
-                return const Center(
-                  child: Padding(
-                    padding: EdgeInsets.all(20.0),
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  ),
-                );
+              if (snapshot.connectionState == ConnectionState.waiting && !snapshot.hasData) {
+                return const Center(child: Padding(padding: EdgeInsets.all(20.0), child: CircularProgressIndicator(strokeWidth: 2)));
               }
-
               final requests = snapshot.data ?? [];
-
               if (requests.isEmpty) {
-                return Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 30.0),
-                  child: Center(
-                    child: Column(
-                      children: [
-                        Icon(
-                          isIncoming
-                              ? Icons.inbox_outlined
-                              : Icons.send_outlined,
-                          size: 48,
-                          color: Colors.grey[300],
-                        ),
-                        const SizedBox(height: 12),
-                        Text(
-                          isIncoming
-                              ? 'Chưa có lời mời kết bạn'
-                              : 'Chưa gửi lời mời nào',
-                          style: TextStyle(
-                            color: Colors.grey[500],
-                            fontSize: 15,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ],
-                    ),
+                return Center(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 20),
+                    child: Text(isIncoming ? 'Không có lời mời kết bạn nào' : 'Bạn chưa gửi lời mời nào',
+                        style: TextStyle(color: Colors.grey[400], fontSize: 14)),
                   ),
                 );
               }
-
               return Column(
-                children:
-                    requests.map((request) {
-                      final targetUserId =
-                          isIncoming ? request.fromUserId : request.toUserId;
-                      final user = listener.getUserById(targetUserId);
-
-                      return _buildRequestTile(
-                        context,
-                        request,
-                        user,
-                        vm,
-                        isIncoming,
-                      );
-                    }).toList(),
+                children: requests.map((request) {
+                  final targetUserId = isIncoming ? request.fromUserId : request.toUserId;
+                  final user = listener.getUserById(targetUserId);
+                  return _buildRequestTile(context, request, user, vm, isIncoming);
+                }).toList(),
               );
             },
           ),
@@ -351,6 +404,7 @@ class _SuggestionsTab extends StatelessWidget {
     );
   }
 
+  // --- WIDGET TỪNG DÒNG LỜI MỜI ---
   Widget _buildRequestTile(
     BuildContext context,
     FriendRequestModel request,
@@ -358,168 +412,70 @@ class _SuggestionsTab extends StatelessWidget {
     FriendsViewModel vm,
     bool isIncoming,
   ) {
-    if (user == null) {
-      return Padding(
-        padding: const EdgeInsets.symmetric(vertical: 8.0),
-        child: Row(
-          children: [
-            CircleAvatar(
-              radius: 30,
-              backgroundColor: Colors.grey[200],
-              child: const Icon(Icons.person, size: 30, color: Colors.grey),
-            ),
-            const SizedBox(width: 12),
-            const Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Đang tải...',
-                    style: TextStyle(fontWeight: FontWeight.w600),
-                  ),
-                  SizedBox(height: 4),
-                  Text(
-                    'Vui lòng chờ',
-                    style: TextStyle(color: Colors.grey, fontSize: 13),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      );
-    }
+    if (user == null) return const SizedBox.shrink();
 
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 10.0),
-      child: InkWell(
+      child: GestureDetector(
         onTap: () {
-          Navigator.pushNamed(context, '/profile', arguments: user.id);
+          Navigator.pushNamed(
+            context,
+            '/profile',
+            arguments: user.id,
+          );
         },
         child: Row(
           children: [
-            Container(
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                border: Border.all(color: Colors.grey[200]!, width: 2),
-              ),
-              child: CircleAvatar(
-                radius: 32,
-                backgroundColor: Colors.grey[100],
-                backgroundImage:
-                    user.avatar.isNotEmpty
-                        ? NetworkImage(user.avatar.first)
-                        : null,
-                child:
-                    user.avatar.isEmpty
-                        ? Icon(Icons.person, size: 32, color: Colors.grey[400])
-                        : null,
-              ),
+            CircleAvatar(
+              radius: 28,
+              backgroundColor: Colors.grey[100],
+              backgroundImage: user.avatar.isNotEmpty ? NetworkImage(user.avatar.first) : null,
+              child: user.avatar.isEmpty ? const Icon(Icons.person, color: Colors.grey) : null,
             ),
             const SizedBox(width: 14),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    user.name,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.w600,
-                      fontSize: 16,
-                      color: Color(0xFF2C3E50),
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    user.bio.isNotEmpty
-                        ? user.bio
-                        : (isIncoming
-                            ? 'Muốn kết bạn với bạn'
-                            : 'Chờ phản hồi'),
-                    style: TextStyle(color: Colors.grey[600], fontSize: 14),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
+                  Text(user.name, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15)),
+                  const SizedBox(height: 2),
+                  Text(isIncoming ? 'Muốn kết bạn' : 'Đang chờ phản hồi', style: TextStyle(color: Colors.grey[600], fontSize: 13)),
                 ],
               ),
             ),
-            const SizedBox(width: 12),
-            isIncoming
-                ? Column(
-                  children: [
-                    SizedBox(
-                      width: 100,
-                      height: 38,
-                      child: ElevatedButton(
-                        onPressed: () => vm.acceptRequest(request),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.primary,
-                          foregroundColor: Colors.white,
-                          elevation: 0,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          padding: EdgeInsets.zero,
-                        ),
-                        child: const Text(
-                          'Chấp nhận',
-                          style: TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    SizedBox(
-                      width: 100,
-                      height: 38,
-                      child: OutlinedButton(
-                        onPressed: () => vm.rejectOrCancelRequest(request.id),
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: Colors.grey[700],
-                          side: BorderSide(color: Colors.grey[300]!),
-                          backgroundColor: Colors.grey[50],
-                          elevation: 0,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          padding: EdgeInsets.zero,
-                        ),
-                        child: const Text(
-                          'Xóa',
-                          style: TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                )
-                : SizedBox(
-                  width: 100,
-                  height: 38,
-                  child: OutlinedButton(
-                    onPressed: () => vm.rejectOrCancelRequest(request.id),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: Colors.grey[700],
-                      side: BorderSide(color: Colors.grey[300]!),
-                      backgroundColor: Colors.grey[50],
-                      elevation: 0,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                    ),
-                    child: const Text(
-                      'Hủy',
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
+            const SizedBox(width: 8),
+            if (isIncoming) ...[
+              ElevatedButton(
+                onPressed: () => vm.acceptRequest(request),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  foregroundColor: Colors.white,
+                  minimumSize: const Size(80, 36),
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                 ),
+                child: const Text('Chấp nhận', style: TextStyle(fontSize: 12)),
+              ),
+              const SizedBox(width: 6),
+              OutlinedButton(
+                onPressed: () => vm.rejectOrCancelRequest(request.id),
+                style: OutlinedButton.styleFrom(
+                  minimumSize: const Size(60, 36),
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                ),
+                child: const Text('Xóa', style: TextStyle(fontSize: 12)),
+              ),
+            ] else
+              OutlinedButton(
+                onPressed: () => vm.rejectOrCancelRequest(request.id),
+                style: OutlinedButton.styleFrom(
+                  minimumSize: const Size(80, 36),
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                ),
+                child: const Text('Hủy', style: TextStyle(fontSize: 12)),
+              ),
           ],
         ),
       ),
