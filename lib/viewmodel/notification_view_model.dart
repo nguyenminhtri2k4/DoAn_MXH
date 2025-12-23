@@ -52,14 +52,26 @@ class NotificationViewModel extends ChangeNotifier {
     }
   }
 
+  Future<void> markAllAsRead() async {
+    if (_realUserDocId != null) {
+      await _notificationRequest.markAllAsRead(_realUserDocId!);
+      debugPrint("✅ Đã đánh dấu tất cả thông báo là đã đọc");
+    }
+  }
+
   // 🔥 XỬ LÝ KHI NHẤN VÀO NỘI DUNG THÔNG BÁO
-  void handleNotificationTap(BuildContext context, NotificationModel notification) {
+  void handleNotificationTap(
+    BuildContext context,
+    NotificationModel notification,
+  ) {
     // Đánh dấu đã đọc
     if (!notification.isRead) {
       markAsRead(notification.id);
     }
 
-    print("👉 Tap nội dung thông báo - Type: ${notification.type}, TargetType: ${notification.targetType}");
+    print(
+      "👉 Tap nội dung thông báo - Type: ${notification.type}, TargetType: ${notification.targetType}",
+    );
 
     // Điều hướng dựa trên targetType
     if (notification.targetType == 'post') {
@@ -71,13 +83,11 @@ class NotificationViewModel extends ChangeNotifier {
         ),
       );
       print('✅ [Handle] Mở Post: ${notification.targetId}');
-    } 
-    else if (notification.targetType == 'request') {
+    } else if (notification.targetType == 'request') {
       // Điều hướng đến danh sách friend request (bỏ comment nếu chưa có)
       // Navigator.pushNamed(context, '/friend_requests');
       print('✅ [Handle] Mở Friend Requests');
-    } 
-    else if (notification.targetType == 'user') {
+    } else if (notification.targetType == 'user') {
       // Mở profile người gửi
       Navigator.push(
         context,
@@ -93,10 +103,10 @@ class NotificationViewModel extends ChangeNotifier {
   void handleAvatarTap(BuildContext context, String fromUserId) {
     if (fromUserId.isEmpty) return;
     print("👉 Tap Avatar -> Mở Profile User: $fromUserId");
-    
+
     Navigator.push(
-      context, 
-      MaterialPageRoute(builder: (_) => ProfileView(userId: fromUserId))
+      context,
+      MaterialPageRoute(builder: (_) => ProfileView(userId: fromUserId)),
     );
   }
 
