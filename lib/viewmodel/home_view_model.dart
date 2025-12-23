@@ -195,18 +195,45 @@ class HomeViewModel extends ChangeNotifier {
     }
   }
 
-  List<PostModel> _filterPostsByPrivacy(
-    List<PostModel> allPosts,
-    UserModel currentUser,
-    Map<String, GroupModel> groupsMap,
-  ) {
-    return PostPrivacyHelper.filterPosts(
-      posts: allPosts,
-      currentUser: currentUser,
-      groupsMap: groupsMap,
-      blockedUserIds: _blockedUserIds,
-    );
-  }
+  // lib/viewmodel/home_view_model.dart
+
+    List<PostModel> _filterPostsByPrivacy(
+      List<PostModel> allPosts,
+      UserModel currentUser,
+      Map<String, GroupModel> groupsMap,
+    ) {
+      // Đầu tiên gọi helper cũ để lọc theo các tiêu chí cơ bản (chặn, privacy cá nhân)
+      List<PostModel> filtered = PostPrivacyHelper.filterPosts(
+        posts: allPosts,
+        currentUser: currentUser,
+        groupsMap: groupsMap,
+        blockedUserIds: _blockedUserIds,
+      );
+
+      // Sau đó lọc thêm điều kiện về Nhóm riêng tư
+      return filtered.where((post) {
+        // Nếu bài đăng không thuộc nhóm nào, cho phép hiển thị (dựa trên visibility cá nhân)
+        if (post.groupId == null || post.groupId!.isEmpty) return true;
+
+        final group = groupsMap[post.groupId];
+        if (group == null) return false; // Không tìm thấy thông tin nhóm thì ẩn để an toàn
+
+        // Kiểm tra cài đặt nhóm có phải là riêng tư không
+        // Giả sử trong settings của GroupModel có field 'privacy'
+        bool isPrivateGroup = group.settings['privacy'] == 'private';
+
+        if (isPrivateGroup) {
+          // Nếu là nhóm riêng tư, chỉ cho phép thành viên hoặc quản lý xem
+          bool isMember = group.members.contains(currentUser.id);
+          bool isManager = group.managers.contains(currentUser.id);
+          bool isOwner = group.ownerId == currentUser.id;
+
+          return isMember || isManager || isOwner;
+        }
+
+        return true; // Nhóm công khai (public) thì hiển thị bình thường
+      }).toList();
+    }
 
   void _preloadVideosForPosts(BuildContext context, List<PostModel> newPosts) {
     if (_isDisposed) return;
