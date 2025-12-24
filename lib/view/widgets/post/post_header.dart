@@ -7,6 +7,7 @@ import 'package:mangxahoi/constant/app_colors.dart';
 import 'package:mangxahoi/authanet/firestore_listener.dart';
 import 'package:provider/provider.dart';
 import 'package:mangxahoi/request/follow_request.dart';
+import 'package:mangxahoi/view/widgets/post/tagged_users_view.dart';
 
 class PostHeader extends StatefulWidget {
   final PostModel post;
@@ -223,18 +224,44 @@ Widget _buildUserAvatar() {
               style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
             ),
           ),
+          // if (widget.post.taggedUserIds != null && widget.post.taggedUserIds!.isNotEmpty)
+          //   Padding(
+          //     padding: const EdgeInsets.only(left: 4.0),
+          //     child: Text(
+          //       '— cùng với ${widget.post.taggedUserIds!.length} người khác',
+          //       style: const TextStyle(
+          //         fontWeight: FontWeight.w500,
+          //         fontSize: 14,
+          //         color: AppColors.textPrimary,
+          //       ),
+          //     ),
+          //   ),
           if (widget.post.taggedUserIds != null && widget.post.taggedUserIds!.isNotEmpty)
-            Padding(
+          GestureDetector(
+            onTap: () {
+              // Điều hướng sang trang danh sách người được gắn thẻ
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => TaggedUsersListView(
+                    taggedUserIds: widget.post.taggedUserIds!,
+                  ),
+                ),
+              );
+            },
+            child: Padding(
               padding: const EdgeInsets.only(left: 4.0),
               child: Text(
                 '— cùng với ${widget.post.taggedUserIds!.length} người khác',
                 style: const TextStyle(
                   fontWeight: FontWeight.w500,
                   fontSize: 14,
-                  color: AppColors.textPrimary,
+                  color: AppColors.primary, // Đổi sang màu primary để người dùng biết là bấm được
+                  decoration: TextDecoration.underline, // Thêm gạch chân (tùy chọn UI)
                 ),
               ),
             ),
+          ),
         ],
       );
 
