@@ -102,23 +102,25 @@ class OngoingCallViewModel extends ChangeNotifier {
   }
 
   void _listenToCallStatus(BuildContext context) {
-    _callStatusSubscription = callService.getCallStatusStream(call.id).listen((snapshot) {
+    _callStatusSubscription = callService.getCallStatusStream(call.id).listen((
+      snapshot,
+    ) {
       if (!snapshot.exists || !context.mounted) return;
 
       Map<String, dynamic> data = snapshot.data() as Map<String, dynamic>;
       String status = data['status'];
 
-      // === LOGIC SỬA: NẾU NGƯỜI KIA CÚP MÁY ===
-      if ((status == CallStatus.ended.name || status == CallStatus.declined.name) && !_isCallEnded) {
+      // === NẾU NGƯỜI KIA CÚP MÁY ===
+      if ((status == CallStatus.ended.name ||
+              status == CallStatus.declined.name) &&
+          !_isCallEnded) {
         print("DEBUG [OngoingCall]: Người kia đã cúp máy (status: $status).");
-        _isCallEnded = true; 
+        _isCallEnded = true;
         _stopTimer();
+        cleanup();
 
-        // Gửi tin nhắn "completed"
-        // Người gửi tin nhắn là người kia (người đã cúp máy)
-        String remoteUserId = isReceiver ? call.callerId : call.receiverIds.first;
-        _sendCallMessage('completed_$formattedDuration', remoteUserId);
-
+        // Không gửi tin nhắn ở đây, vì người kia đã gửi rồi khi nhấn nút cúp máy
+        // Chỉ cần đóng màn hình
         if (Navigator.canPop(context)) {
           Navigator.pop(context);
         }
@@ -220,7 +222,7 @@ class OngoingCallViewModel extends ChangeNotifier {
     if (currentUserId != null) {
       await _sendCallMessage('completed_$formattedDuration', currentUserId);
     }
-    
+    cleanup();
     await callService.endCall(call);
     
     if (context.mounted && Navigator.canPop(context)) {
