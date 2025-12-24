@@ -67,6 +67,17 @@ class MessageComposer extends StatelessWidget {
                         },
                       ),
                     ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: _buildMediaOption(
+                        icon: Icons.file_present_outlined,
+                        label: 'Tài liệu',
+                        onTap: () {
+                          Navigator.pop(context);
+                          vm.pickFile();
+                        },
+                      ),
+                    ),
                   ],
                 ),
               ),

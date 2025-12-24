@@ -16,6 +16,7 @@ import 'package:mangxahoi/view/call/outgoing_call_screen.dart';
 import 'package:mangxahoi/request/friend_request_manager.dart';
 import 'package:mangxahoi/services/smartreply.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:file_picker/file_picker.dart';
 
 class ChatViewModel extends ChangeNotifier {
   final String chatId;
@@ -94,6 +95,40 @@ String? _lastProcessedMessageIdForGeneration; // ← (tùy chọn, càng tốt h
     }
     notifyListeners();
   }
+
+  Future<void> pickFile() async {
+  _clearError();
+  // Giới hạn số lượng tệp (nếu muốn dùng chung logic tối đa 3 tệp với media)
+  if (_selectedMedia.length >= 3) {
+    _setError('Bạn chỉ có thể chọn tối đa 3 tệp.');
+    return;
+  }
+
+  try {
+    FilePickerResult? result = await FilePicker.platform.pickFiles(
+      type: FileType.any, // Cho phép chọn mọi định dạng file
+      allowMultiple: false, 
+    );
+
+    if (result != null && result.files.single.path != null) {
+      PlatformFile file = result.files.first;
+
+      // Kiểm tra dung lượng (100MB = 100 * 1024 * 1024 bytes)
+      const int maxFileSize = 100 * 1024 * 1024;
+      if (file.size > maxFileSize) {
+        _setError('Dung lượng file không được vượt quá 100MB.');
+        return;
+      }
+
+      // Chuyển đổi PlatformFile sang XFile để tương thích với danh sách _selectedMedia hiện có
+      // Lưu ý: Logic gửi của bạn đang dùng XFile để upload qua _storageRequest
+      _selectedMedia.add(XFile(file.path!));
+      notifyListeners();
+    }
+  } catch (e) {
+    _setError('Lỗi khi chọn file: $e');
+  }
+}
 
   Future<void> _checkBlockedStatus() async {
     if (currentUserId == null || receiverUser == null) return;
