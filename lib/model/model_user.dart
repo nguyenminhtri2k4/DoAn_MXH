@@ -29,6 +29,7 @@ class UserModel {
   final DateTime? dateOfBirth;
   final DateTime? lastActive;
   final bool serviceGemini;
+  final bool isOnline; // <--- TRƯỜNG MỚI
 
   final Map<String, bool> notificationSettings;
 
@@ -56,12 +57,12 @@ class UserModel {
     required this.createAt,
     this.dateOfBirth,
     this.serviceGemini = false,
+    this.isOnline = false, // <--- DEFAULT LÀ FALSE
     this.lastActive,
     required this.notificationSettings,
     List<String>? locketFriends,
   }) : locketFriends = locketFriends ?? [];
 
-  // ✅ SỐ BẠN BÈ = friends.length
   int get friendsCount => friends.length;
 
   factory UserModel.fromFirestore(DocumentSnapshot doc) {
@@ -120,6 +121,7 @@ class UserModel {
           ? Map<String, bool>.from(data['notificationSettings'])
           : {},
       serviceGemini: data['servicegemini'] ?? false,
+      isOnline: data['isOnline'] ?? false, // <--- LẤY TỪ FIRESTORE
     );
   }
 
@@ -150,6 +152,7 @@ class UserModel {
       'lastActive': lastActive != null ? Timestamp.fromDate(lastActive!) : null,
       'notificationSettings': notificationSettings,
       'servicegemini': serviceGemini,
+      'isOnline': isOnline, // <--- LƯU VÀO FIRESTORE
     };
   }
 
@@ -174,6 +177,7 @@ class UserModel {
     DateTime? lastActive,
     Map<String, bool>? notificationSettings,
     bool? serviceGemini,
+    bool? isOnline, // <--- CẬP NHẬT QUA COPYWITH
   }) {
     return UserModel(
       id: id ?? this.id,
@@ -202,6 +206,7 @@ class UserModel {
       lastActive: lastActive ?? this.lastActive,
       notificationSettings: notificationSettings ?? this.notificationSettings,
       serviceGemini: serviceGemini ?? this.serviceGemini,
+      isOnline: isOnline ?? this.isOnline,
     );
   }
 }
