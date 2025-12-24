@@ -78,10 +78,9 @@ class CallService with ChangeNotifier {
 
       await ZegoExpressEngine.createEngineWithProfile(profile);
       print("✅ [SERVICE DEBUG] ZegoEngine đã init thành công!");
-      
+
       // ✅ Setup callback để debug
       _setupZegoCallbacks();
-
     } catch (e) {
       print("❌ [SERVICE DEBUG] Lỗi init ZegoEngine: $e");
       rethrow;
@@ -97,7 +96,7 @@ class CallService with ChangeNotifier {
       Map<String, dynamic> extendedData,
     ) {
       print("🏠 [ZEGO] Room state changed: $reason, errorCode: $errorCode");
-      
+
       if (errorCode == 1002067) {
         print("❌ [ZEGO] LỖI 1002067: Token/AppSign không hợp lệ!");
         print("   Kiểm tra:");
@@ -148,14 +147,16 @@ class CallService with ChangeNotifier {
     print("📞 [SERVICE DEBUG] Validated params:");
     print("   - userId: $validUserId (${validUserId.length} chars)");
     print("   - userName: ${_currentUser!.name}");
-    print("   - channelName: $validChannelName (${validChannelName.length} chars)");
+    print(
+      "   - channelName: $validChannelName (${validChannelName.length} chars)",
+    );
 
     ZegoUser user = ZegoUser(validUserId, _currentUser!.name);
     bool isVideoCall = (mediaType == CallMediaType.video);
 
     // ✅ TẠO TOKEN NẾU CẦN
     ZegoRoomConfig config = ZegoRoomConfig.defaultConfig();
-    
+
     // Nếu dùng token-based authentication (khuyến nghị cho production)
     // Uncomment đoạn này nếu bạn có server tạo token
     /*
@@ -232,32 +233,36 @@ class CallService with ChangeNotifier {
         .where('receiverIds', arrayContains: currentUserId)
         .where('status', isEqualTo: CallStatus.pending.name)
         .snapshots()
-        .listen((snapshot) {
-      print("📞 [LISTEN DEBUG] Nhận được ${snapshot.docs.length} cuộc gọi pending");
+        .listen(
+          (snapshot) {
+            print(
+              "📞 [LISTEN DEBUG] Nhận được ${snapshot.docs.length} cuộc gọi pending",
+            );
 
-      if (snapshot.docs.isNotEmpty) {
-        var callDoc = snapshot.docs.first;
-        var callData = callDoc.data() as Map<String, dynamic>;
+            if (snapshot.docs.isNotEmpty) {
+              var callDoc = snapshot.docs.first;
+              var callData = callDoc.data() as Map<String, dynamic>;
 
-        CallModel incomingCall = CallModel.fromJson(callData);
-        print("📞 [LISTEN DEBUG] Incoming call ID: ${incomingCall.id}");
+              CallModel incomingCall = CallModel.fromJson(callData);
+              print("📞 [LISTEN DEBUG] Incoming call ID: ${incomingCall.id}");
 
-        if (_currentCall == null) {
-          _currentCall = incomingCall;
-          _showIncomingCallScreen(incomingCall);
-        }
-      }
-    }, onError: (error) {
-      print("❌ [LISTEN DEBUG] Lỗi khi listen: $error");
-    });
+              // Hiển thị màn hình nếu đây là cuộc gọi mới (ID khác với cuộc gọi hiện tại)
+              if (_currentCall == null || _currentCall!.id != incomingCall.id) {
+                _currentCall = incomingCall;
+                _showIncomingCallScreen(incomingCall);
+              }
+            }
+          },
+          onError: (error) {
+            print("❌ [LISTEN DEBUG] Lỗi khi listen: $error");
+          },
+        );
   }
 
   void _showIncomingCallScreen(CallModel call) {
     print("📞 [SERVICE DEBUG] Hiển thị IncomingCallScreen");
     navigatorKey.currentState?.push(
-      MaterialPageRoute(
-        builder: (_) => IncomingCallScreen(call: call),
-      ),
+      MaterialPageRoute(builder: (_) => IncomingCallScreen(call: call)),
     );
   }
 
@@ -288,9 +293,10 @@ class CallService with ChangeNotifier {
       id: callId,
       callerId: currentUserId!,
       callerName: _currentUser!.name,
-      callerAvatar: _currentUser!.avatar.isNotEmpty
-          ? _currentUser!.avatar.first
-          : AppColors.defaultAvatar,
+      callerAvatar:
+          _currentUser!.avatar.isNotEmpty
+              ? _currentUser!.avatar.first
+              : AppColors.defaultAvatar,
       receiverIds: [receiverUser.id],
       status: CallStatus.pending,
       callType: CallType.oneToOne,
@@ -328,9 +334,9 @@ class CallService with ChangeNotifier {
     try {
       _currentCall = call.copyWith(status: CallStatus.accepted);
       print("📞 [SERVICE DEBUG] Đang update status sang accepted...");
-      await _callsCollection
-          .doc(call.id)
-          .update({'status': CallStatus.accepted.name});
+      await _callsCollection.doc(call.id).update({
+        'status': CallStatus.accepted.name,
+      });
       print("✅ [SERVICE DEBUG] Đã update status");
 
       print("📞 [SERVICE DEBUG] Người nhận đang join room...");
@@ -345,9 +351,10 @@ class CallService with ChangeNotifier {
 
   Future<void> rejectOrCancelCall(CallModel call) async {
     print("📞 [SERVICE DEBUG] rejectOrCancelCall được gọi");
-    CallStatus newStatus = (call.callerId == currentUserId)
-        ? CallStatus.ended
-        : CallStatus.declined;
+    CallStatus newStatus =
+        (call.callerId == currentUserId)
+            ? CallStatus.ended
+            : CallStatus.declined;
 
     await _callsCollection.doc(call.id).update({'status': newStatus.name});
     _cleanUp();
@@ -366,9 +373,9 @@ class CallService with ChangeNotifier {
       await ZegoExpressEngine.instance.logoutRoom(call.channelName);
 
       print("📞 [SERVICE DEBUG] Đang update Firestore...");
-      await _callsCollection
-          .doc(call.id)
-          .update({'status': CallStatus.ended.name});
+      await _callsCollection.doc(call.id).update({
+        'status': CallStatus.ended.name,
+      });
 
       _cleanUp();
       print("✅ [SERVICE DEBUG] endCall hoàn tất");
@@ -391,11 +398,11 @@ class CallService with ChangeNotifier {
     print("📞 [SERVICE DEBUG] Đang xin quyền ${mediaType.name}...");
     try {
       if (mediaType == CallMediaType.video) {
-        final statuses = await [
-          Permission.microphone,
-          Permission.camera
-        ].request();
-        print("✅ [SERVICE DEBUG] Permissions: mic=${statuses[Permission.microphone]}, cam=${statuses[Permission.camera]}");
+        final statuses =
+            await [Permission.microphone, Permission.camera].request();
+        print(
+          "✅ [SERVICE DEBUG] Permissions: mic=${statuses[Permission.microphone]}, cam=${statuses[Permission.camera]}",
+        );
       } else {
         final status = await Permission.microphone.request();
         print("✅ [SERVICE DEBUG] Permission: mic=$status");
