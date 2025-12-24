@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:mangxahoi/model/model_user.dart';
 import 'package:mangxahoi/model/model_group.dart';
 import 'package:mangxahoi/model/model_media.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class FirestoreListener extends ChangeNotifier {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -19,6 +20,11 @@ class FirestoreListener extends ChangeNotifier {
   String? _errorMessage;
 
   String? get errorMessage => _errorMessage;
+  UserModel? get currentUser {
+  final authUid = FirebaseAuth.instance.currentUser?.uid;
+  if (authUid == null) return null;
+  return getUserByAuthUid(authUid);
+}
 
   FirestoreListener() {
     _startListening();
@@ -43,6 +49,8 @@ class FirestoreListener extends ChangeNotifier {
         notifyListeners();
       }
     });
+
+  
 
     // Lắng nghe Group
     _firestore.collection('Group').snapshots().listen((snapshot) {
